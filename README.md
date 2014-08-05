@@ -8,7 +8,8 @@ normalises their output to a standard format. It is intended for use with
 editor/IDE integration.
 
 Currently supported linters are: golint, go tool vet, gotype, errcheck,
-varcheck and defercheck.
+varcheck and defercheck. Additional linters can be added through the
+command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
 ## Quickstart
 
