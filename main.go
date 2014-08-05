@@ -23,6 +23,16 @@ const (
 	Error   Severity = "error"
 )
 
+type Linter string
+
+func (l Linter) Command() string {
+	return string(l[0:strings.Index(string(l), ":")])
+}
+
+func (l Linter) Pattern() string {
+	return string(l[strings.Index(string(l), ":"):])
+}
+
 var (
 	predefinedPatterns = map[string]string{
 		"PATH:LINE:COL:MESSAGE": `(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
@@ -47,7 +57,15 @@ var (
 		"golint":   "warning",
 		"varcheck": "warning",
 	}
-	pathsArg           = kingpin.Arg("paths", "Directories to lint.").Required().Strings()
+	installMap = map[string]string{
+		"golint":     "go get github.com/golang/lint/golint",
+		"gotype":     "go get code.google.com/p/go.tools/cmd/gotype",
+		"errcheck":   "go get github.com/kisielk/errcheck",
+		"defercheck": "go get github.com/opennota/check/cmd/defercheck",
+		"varcheck":   "go get github.com/opennota/check/cmd/varcheck",
+	}
+	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
+	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Bool()
 	disableLintersFlag = kingpin.Flag("disable-linters", "List of linters to disable.").PlaceHolder("LINTER").Strings()
 	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Bool()
 	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Int()
@@ -92,8 +110,8 @@ func debug(format string, args ...interface{}) {
 func formatLinters() string {
 	out := &bytes.Buffer{}
 	for command, description := range lintersFlag {
-		parts := strings.SplitN(description, ":", 2)
-		fmt.Fprintf(out, "    %s -> %s -> %s\n", command, parts[0], parts[1])
+		linter := Linter(description)
+		fmt.Fprintf(out, "    %s -> %s -> %s\n", command, linter.Command(), linter.Pattern())
 	}
 	return out.String()
 }
@@ -106,6 +124,21 @@ Default linters:
 %s
 `, formatLinters())
 	kingpin.Parse()
+
+	if *installFlag {
+		for name, cmd := range installMap {
+			fmt.Printf("Installing %s -> %s\n", name, cmd)
+			c := exec.Command("/bin/sh", "-c", cmd)
+			c.Stdout = os.Stdout
+			c.Stderr = os.Stderr
+			err := c.Run()
+			if err != nil {
+				kingpin.CommandLine.Errorf(os.Stderr, "failed to install %s: %s", name, err)
+			}
+		}
+		return
+	}
+
 	runtime.GOMAXPROCS(*concurrencyFlag)
 
 	disable := map[string]bool{}
@@ -114,8 +147,7 @@ Default linters:
 	}
 
 	start := time.Now()
-
-	paths := strings.Join(*pathsArg, " ")
+	paths := *pathArg
 	concurrency := make(chan bool, *concurrencyFlag)
 	issues := make(chan *Issue, 1000)
 	wg := &sync.WaitGroup{}
@@ -164,9 +196,8 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 		if _, ok := err.(*exec.ExitError); !ok {
 			debug("warning: %s failed: %s", command, err)
 			return
-		} else {
-			debug("warning: %s returned %s", command, err)
 		}
+		debug("warning: %s returned %s", command, err)
 	}
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)

@@ -8,7 +8,41 @@ normalises their output to a standard format. It is intended for use with
 editor/IDE integration.
 
 Currently supported linters are: golint, go tool vet, gotype, errcheck,
-varcheck and defercheck: 
+varcheck and defercheck.
+
+## Quickstart
+
+Install gometalinter:
+
+```
+$ go get github.com/alecthomas/gometalinter
+```
+
+Install all known linters:
+
+```
+$ gometalinter --install
+Installing golint -> go get github.com/golang/lint/golint
+Installing gotype -> go get code.google.com/p/go.tools/cmd/gotype
+Installing errcheck -> go get github.com/kisielk/errcheck
+Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
+Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
+```
+
+Run it:
+
+```
+$ cd $GOPATH/src/github.com/alecthomas/gometalinter
+$ gometalinter
+main.go:18:6:warning: exported type Severity should have comment or be unexported
+main.go:26:6:warning: exported type Linter should have comment or be unexported
+main.go:28:1:warning: exported method Linter.Command should have comment or be unexported
+main.go:32:1:warning: exported method Linter.Pattern should have comment or be unexported
+main.go:80:6:warning: exported type Issue should have comment or be unexported
+main.go:96:6:warning: exported type Issues should have comment or be unexported
+```
+
+## Details
 
 ```
 $ gometalinter --help
@@ -44,7 +78,6 @@ Args:
 ```
 
 Additional linters can be configured via the command line:
-
 
 ```
 $ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf {paths}:PATH:LINE:MESSAGE' .
