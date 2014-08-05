@@ -108,12 +108,20 @@ func debug(format string, args ...interface{}) {
 }
 
 func formatLinters() string {
-	out := &bytes.Buffer{}
+	w := bytes.NewBuffer(nil)
 	for command, description := range lintersFlag {
 		linter := Linter(description)
-		fmt.Fprintf(out, "    %s -> %s -> %s\n", command, linter.Command(), linter.Pattern())
+		fmt.Fprintf(w, "    %s -> %s -> %s\n", command, linter.Command(), linter.Pattern())
 	}
-	return out.String()
+	return w.String()
+}
+
+func formatSeverity() string {
+	w := bytes.NewBuffer(nil)
+	for name, severity := range linterSeverityFlag {
+		fmt.Fprintf(w, "    %s -> %s\n", name, severity)
+	}
+	return w.String()
 }
 
 func main() {
@@ -122,7 +130,11 @@ func main() {
 Default linters:
 
 %s
-`, formatLinters())
+
+Severity override map (default is "error"):
+
+%s
+`, formatLinters(), formatSeverity())
 	kingpin.Parse()
 
 	if *installFlag {
