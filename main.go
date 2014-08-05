@@ -45,6 +45,7 @@ var (
 	linterSeverityFlag = map[string]string{
 		"errcheck": "warning",
 		"golint":   "warning",
+		"varcheck": "warning",
 	}
 	pathsArg           = kingpin.Arg("paths", "Directories to lint.").Required().Strings()
 	disableLintersFlag = kingpin.Flag("disable-linters", "List of linters to disable.").PlaceHolder("LINTER").Strings()
@@ -54,7 +55,7 @@ var (
 
 func init() {
 	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&lintersFlag)
-	kingpin.Flag("linter-message-overrides", "Override message from linter.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
+	kingpin.Flag("linter-message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
 	kingpin.Flag("linter-severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
 }
 
