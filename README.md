@@ -55,14 +55,14 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  defercheck -> defercheck {paths} -> :PATH:LINE:MESSAGE
-  golint -> golint {paths} -> :PATH:LINE:COL:MESSAGE
-  vet -> go tool vet {paths} -> :PATH:LINE:MESSAGE
-  gotype -> gotype {paths} -> :PATH:LINE:COL:MESSAGE
-  errcheck -> errcheck {paths} -> :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
-  varcheck -> varcheck {paths} -> :PATH:LINE:MESSAGE
+  vet -> go tool vet {path} -> :PATH:LINE:MESSAGE
+  gotype -> gotype {path} -> :PATH:LINE:COL:MESSAGE
+  errcheck -> errcheck {path} -> :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
+  varcheck -> varcheck {path} -> :PATH:LINE:MESSAGE
+  defercheck -> defercheck {path} -> :PATH:LINE:MESSAGE
+  golint -> golint {path} -> :PATH:LINE:COL:MESSAGE
 
-Severity map (default is "error"):
+Severity override map (default is "error"):
 
   errcheck -> warning
   golint -> warning
@@ -78,7 +78,8 @@ Flags:
   --linter=NAME:COMMAND:PATTERN
                     Specify a linter.
   --linter-message-overrides=LINTER:MESSAGE
-                    Override message from linter. {message} will be expanded to the original message.
+                    Override message from linter. {message} will be expanded to
+                    the original message.
   --linter-severity=LINTER:SEVERITY
                     Map of linter severities.
 

@@ -40,13 +40,13 @@ var (
 	}
 	lintersFlag = map[string]string{
 		// main.go:8:10: should omit type map[string]string from declaration of var linters; it will be inferred from the right-hand side
-		"golint": "golint {paths}:PATH:LINE:COL:MESSAGE",
+		"golint": "golint {path}:PATH:LINE:COL:MESSAGE",
 		// test/stutter.go:19: missing argument for Printf("%d"): format reads arg 1, have only 0 args
-		"vet":        "go tool vet {paths}:PATH:LINE:MESSAGE",
-		"gotype":     "gotype {paths}:PATH:LINE:COL:MESSAGE",
-		"errcheck":   `errcheck {paths}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
-		"varcheck":   "varcheck {paths}:PATH:LINE:MESSAGE",
-		"defercheck": "defercheck {paths}:PATH:LINE:MESSAGE",
+		"vet":        "go tool vet {path}:PATH:LINE:MESSAGE",
+		"gotype":     "gotype {path}:PATH:LINE:COL:MESSAGE",
+		"errcheck":   `errcheck {path}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
+		"varcheck":   "varcheck {path}:PATH:LINE:MESSAGE",
+		"defercheck": "defercheck {path}:PATH:LINE:MESSAGE",
 	}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck": "error return value not checked ({message})",
@@ -200,7 +200,7 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 	re, err := regexp.Compile(pattern)
 	kingpin.FatalIfError(err, "invalid pattern for '"+command+"'")
 
-	command = strings.Replace(command, "{paths}", paths, -1)
+	command = strings.Replace(command, "{path}", paths, -1)
 	debug("executing %s", command)
 	cmd := exec.Command("/bin/sh", "-c", command)
 	out, err := cmd.CombinedOutput()
