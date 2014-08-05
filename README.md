@@ -46,21 +46,28 @@ main.go:96:6:warning: exported type Issues should have comment or be unexported
 
 ```
 $ gometalinter --help
-usage: gometalinter [<flags>] <paths>
+usage: gometalinter [<flags>] [<path>]
 
 Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  golint -> golint {paths} -> PATH:LINE:COL:MESSAGE
-  vet -> go tool vet {paths} -> PATH:LINE:MESSAGE
-  gotype -> gotype {paths} -> PATH:LINE:COL:MESSAGE
-  errcheck -> errcheck {paths} -> (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
-  varcheck -> varcheck {paths} -> PATH:LINE:MESSAGE
-  defercheck -> defercheck {paths} -> PATH:LINE:MESSAGE
+  defercheck -> defercheck {paths} -> :PATH:LINE:MESSAGE
+  golint -> golint {paths} -> :PATH:LINE:COL:MESSAGE
+  vet -> go tool vet {paths} -> :PATH:LINE:MESSAGE
+  gotype -> gotype {paths} -> :PATH:LINE:COL:MESSAGE
+  errcheck -> errcheck {paths} -> :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
+  varcheck -> varcheck {paths} -> :PATH:LINE:MESSAGE
+
+Severity map (default is "error"):
+
+  errcheck -> warning
+  golint -> warning
+  varcheck -> warning
 
 Flags:
   --help            Show help.
+  --install         Attempt to install all known linters.
   --disable-linters=LINTER
                     List of linters to disable.
   --debug           Display messages for failed linters, etc.
@@ -68,13 +75,12 @@ Flags:
   --linter=NAME:COMMAND:PATTERN
                     Specify a linter.
   --linter-message-overrides=LINTER:MESSAGE
-                    Override message from linter. {message} will be expanded to
-                    the original message.
+                    Override message from linter. {message} will be expanded to the original message.
   --linter-severity=LINTER:SEVERITY
                     Map of linter severities.
 
 Args:
-  <paths>  Directories to lint.
+  [<path>]  Directory to lint.
 ```
 
 Additional linters can be configured via the command line:
