@@ -42,27 +42,31 @@ var (
 		// main.go:8:10: should omit type map[string]string from declaration of var linters; it will be inferred from the right-hand side
 		"golint": "golint {path}:PATH:LINE:COL:MESSAGE",
 		// test/stutter.go:19: missing argument for Printf("%d"): format reads arg 1, have only 0 args
-		"vet":        "go tool vet {path}:PATH:LINE:MESSAGE",
-		"gotype":     "gotype {path}:PATH:LINE:COL:MESSAGE",
-		"errcheck":   `errcheck {path}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
-		"varcheck":   "varcheck {path}:PATH:LINE:MESSAGE",
-		"defercheck": "defercheck {path}:PATH:LINE:MESSAGE",
+		"vet":         "go tool vet {path}:PATH:LINE:MESSAGE",
+		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
+		"errcheck":    `errcheck {path}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
+		"varcheck":    "varcheck {path}:PATH:LINE:MESSAGE",
+		"structcheck": "structcheck {path}:PATH:LINE:MESSAGE",
+		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 	}
 	linterMessageOverrideFlag = map[string]string{
-		"errcheck": "error return value not checked ({message})",
-		"varcheck": "unused global variable {message}",
+		"errcheck":    "error return value not checked ({message})",
+		"varcheck":    "unused global variable {message}",
+		"structcheck": "unused struct field {message}",
 	}
 	linterSeverityFlag = map[string]string{
-		"errcheck": "warning",
-		"golint":   "warning",
-		"varcheck": "warning",
+		"errcheck":    "warning",
+		"golint":      "warning",
+		"varcheck":    "warning",
+		"structcheck": "warning",
 	}
 	installMap = map[string]string{
-		"golint":     "go get github.com/golang/lint/golint",
-		"gotype":     "go get code.google.com/p/go.tools/cmd/gotype",
-		"errcheck":   "go get github.com/kisielk/errcheck",
-		"defercheck": "go get github.com/opennota/check/cmd/defercheck",
-		"varcheck":   "go get github.com/opennota/check/cmd/varcheck",
+		"golint":      "go get github.com/golang/lint/golint",
+		"gotype":      "go get code.google.com/p/go.tools/cmd/gotype",
+		"errcheck":    "go get github.com/kisielk/errcheck",
+		"defercheck":  "go get github.com/opennota/check/cmd/defercheck",
+		"varcheck":    "go get github.com/opennota/check/cmd/varcheck",
+		"structcheck": "go get github.com/opennota/check/cmd/structcheck",
 	}
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Bool()
