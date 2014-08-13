@@ -9,6 +9,10 @@ var (
 	unusedGlobal = true
 )
 
+type MyStruct struct {
+	Unused bool
+}
+
 type PublicUndocumented int // test for golint
 
 func doit() error { return nil }

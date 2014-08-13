@@ -70,15 +70,15 @@ var (
 	}
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Bool()
-	disableLintersFlag = kingpin.Flag("disable-linters", "List of linters to disable.").PlaceHolder("LINTER").Strings()
-	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Bool()
-	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Int()
+	disableLintersFlag = kingpin.Flag("disable", "List of linters to disable.").PlaceHolder("LINTER").Short('D').Strings()
+	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
+	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 )
 
 func init() {
 	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&lintersFlag)
-	kingpin.Flag("linter-message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
-	kingpin.Flag("linter-severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
+	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
+	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
 }
 
 type Issue struct {
