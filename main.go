@@ -69,6 +69,7 @@ var (
 		"structcheck": "go get github.com/opennota/check/cmd/structcheck",
 	}
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
+	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
 	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Bool()
 	disableLintersFlag = kingpin.Flag("disable", "List of linters to disable.").PlaceHolder("LINTER").Short('D').Strings()
 	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
@@ -140,6 +141,10 @@ Severity override map (default is "error"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
+
+	if *fastFlag {
+		*disableLintersFlag = append(*disableLintersFlag, "structcheck", "varcheck", "errcheck")
+	}
 
 	if *installFlag {
 		for name, cmd := range installMap {
