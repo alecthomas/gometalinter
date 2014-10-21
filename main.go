@@ -129,6 +129,17 @@ func formatSeverity() string {
 	return w.String()
 }
 
+func exArgs() (arg0 string, arg1 string) {
+	if runtime.GOOS == "windows" {
+		arg0 = "cmd"
+		arg1 = "/C"
+	} else {
+		arg0 = "/bin/sh"
+		arg1 = "-c"
+	}
+	return
+}
+
 func main() {
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
@@ -149,7 +160,8 @@ Severity override map (default is "error"):
 	if *installFlag {
 		for name, cmd := range installMap {
 			fmt.Printf("Installing %s -> %s\n", name, cmd)
-			c := exec.Command("/bin/sh", "-c", cmd)
+			arg0, arg1 := exArgs()
+			c := exec.Command(arg0, arg1, cmd)
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 			err := c.Run()
@@ -211,7 +223,8 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 
 	command = strings.Replace(command, "{path}", paths, -1)
 	debug("executing %s", command)
-	cmd := exec.Command("/bin/sh", "-c", command)
+	arg0, arg1 := exArgs()
+	cmd := exec.Command(arg0, arg1, command)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
