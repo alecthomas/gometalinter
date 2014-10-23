@@ -74,6 +74,7 @@ var (
 	disableLintersFlag = kingpin.Flag("disable", "List of linters to disable.").PlaceHolder("LINTER").Short('D').Strings()
 	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
+	excludeFlag        = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
 )
 
 func init() {
@@ -152,6 +153,10 @@ Severity override map (default is "error"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
+	var filter *regexp.Regexp
+	if *excludeFlag != "" {
+		filter = regexp.MustCompile(*excludeFlag)
+	}
 
 	if *fastFlag {
 		*disableLintersFlag = append(*disableLintersFlag, "structcheck", "varcheck", "errcheck")
@@ -205,6 +210,9 @@ Severity override map (default is "error"):
 	wg.Wait()
 	close(issues)
 	for issue := range issues {
+		if filter != nil && filter.MatchString(issue.String()) {
+			continue
+		}
 		fmt.Printf("%s\n", issue)
 	}
 	elapsed := time.Now().Sub(start)
