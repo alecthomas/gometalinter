@@ -226,6 +226,7 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 	if p, ok := predefinedPatterns[pattern]; ok {
 		pattern = p
 	}
+	regexp.Compile(pattern)
 	re, err := regexp.Compile(pattern)
 	kingpin.FatalIfError(err, "invalid pattern for '"+command+"'")
 
