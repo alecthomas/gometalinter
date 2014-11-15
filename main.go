@@ -187,7 +187,7 @@ Severity override map (default is "error"):
 	start := time.Now()
 	paths := *pathArg
 	concurrency := make(chan bool, *concurrencyFlag)
-	issues := make(chan *Issue, 1000)
+	issues := make(chan *Issue, 100000)
 	wg := &sync.WaitGroup{}
 	for name, description := range lintersFlag {
 		if _, ok := disable[name]; ok {
@@ -242,6 +242,7 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 		}
 		debug("warning: %s returned %s", command, err)
 	}
+
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
