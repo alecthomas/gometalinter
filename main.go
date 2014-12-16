@@ -62,7 +62,7 @@ var (
 	}
 	installMap = map[string]string{
 		"golint":      "go get github.com/golang/lint/golint",
-		"gotype":      "go get code.google.com/p/go.tools/cmd/gotype",
+		"gotype":      "go get golang.org/x/tools/cmd/gotype",
 		"errcheck":    "go get github.com/kisielk/errcheck",
 		"defercheck":  "go get github.com/opennota/check/cmd/defercheck",
 		"varcheck":    "go get github.com/opennota/check/cmd/varcheck",
