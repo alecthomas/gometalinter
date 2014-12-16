@@ -61,16 +61,17 @@ var (
 		"structcheck": "warning",
 	}
 	installMap = map[string]string{
-		"golint":      "go get github.com/golang/lint/golint",
-		"gotype":      "go get golang.org/x/tools/cmd/gotype",
-		"errcheck":    "go get github.com/kisielk/errcheck",
-		"defercheck":  "go get github.com/opennota/check/cmd/defercheck",
-		"varcheck":    "go get github.com/opennota/check/cmd/varcheck",
-		"structcheck": "go get github.com/opennota/check/cmd/structcheck",
+		"golint":      "github.com/golang/lint/golint",
+		"gotype":      "golang.org/x/tools/cmd/gotype",
+		"errcheck":    "github.com/kisielk/errcheck",
+		"defercheck":  "github.com/opennota/check/cmd/defercheck",
+		"varcheck":    "github.com/opennota/check/cmd/varcheck",
+		"structcheck": "github.com/opennota/check/cmd/structcheck",
 	}
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
-	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Bool()
+	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
+	updateFlag         = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
 	disableLintersFlag = kingpin.Flag("disable", "List of linters to disable.").PlaceHolder("LINTER").Short('D').Strings()
 	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
@@ -163,7 +164,15 @@ Severity override map (default is "error"):
 	}
 
 	if *installFlag {
-		for name, cmd := range installMap {
+		for name, target := range installMap {
+			cmd := "go get"
+			if *debugFlag {
+				cmd += " -v"
+			}
+			if *updateFlag {
+				cmd += " -u"
+			}
+			cmd += " " + target
 			fmt.Printf("Installing %s -> %s\n", name, cmd)
 			arg0, arg1 := exArgs()
 			c := exec.Command(arg0, arg1, cmd)

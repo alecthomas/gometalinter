@@ -58,13 +58,13 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
+  gotype -> gotype {path} -> :PATH:LINE:COL:MESSAGE
+  errcheck -> errcheck {path} -> :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
   varcheck -> varcheck {path} -> :PATH:LINE:MESSAGE
   structcheck -> structcheck {path} -> :PATH:LINE:MESSAGE
   defercheck -> defercheck {path} -> :PATH:LINE:MESSAGE
   golint -> golint {path} -> :PATH:LINE:COL:MESSAGE
   vet -> go tool vet {path} -> :PATH:LINE:MESSAGE
-  gotype -> gotype {path} -> :PATH:LINE:COL:MESSAGE
-  errcheck -> errcheck {path} -> :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
 
 Severity override map (default is "error"):
 
@@ -74,17 +74,23 @@ Severity override map (default is "error"):
   structcheck -> warning
 
 Flags:
-  --help       Show help.
-  --install    Attempt to install all known linters.
-  -D, --disable=LINTER  List of linters to disable.
-  -d, --debug  Display messages for failed linters, etc.
-  -j, --concurrency=16  Number of concurrent linters to run.
+  --help            Show help.
+  --fast            Only run fast linters.
+  -i, --install     Attempt to install all known linters.
+  -u, --update      Pass -u to go tool when installing.
+  -D, --disable=LINTER
+                    List of linters to disable.
+  -d, --debug       Display messages for failed linters, etc.
+  -j, --concurrency=16
+                    Number of concurrent linters to run.
+  --exclude=REGEXP  Exclude messages matching this regular expression.
   --linter=NAME:COMMAND:PATTERN
-               Specify a linter.
+                    Specify a linter.
   --message-overrides=LINTER:MESSAGE
-               Override message from linter. {message} will be expanded to the original message.
+                    Override message from linter. {message} will be expanded to
+                    the original message.
   --severity=LINTER:SEVERITY
-               Map of linter severities.
+                    Map of linter severities.
 
 Args:
   [<path>]  Directory to lint.
