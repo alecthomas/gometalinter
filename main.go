@@ -42,18 +42,20 @@ var (
 		// main.go:8:10: should omit type map[string]string from declaration of var linters; it will be inferred from the right-hand side
 		"golint": "golint {path}:PATH:LINE:COL:MESSAGE",
 		// test/stutter.go:19: missing argument for Printf("%d"): format reads arg 1, have only 0 args
-		"vet":         "go tool vet {path}:PATH:LINE:MESSAGE",
+		"vet":         "go vet {path}:PATH:LINE:MESSAGE",
 		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
 		"varcheck":    "varcheck {path}:PATH:LINE:MESSAGE",
 		"structcheck": "structcheck {path}:PATH:LINE:MESSAGE",
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
+		"gocyclo":     `gocyclo -over {mincyclo} {path}:(?P<cyclo>\d+)\s+\S+\s\S+\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
 	}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
 		"varcheck":    "unused global variable {message}",
 		"structcheck": "unused struct field {message}",
+		"gocyclo":     "cyclomatic complexity {cyclo} is high (> {mincyclo})",
 	}
 	linterSeverityFlag = map[string]string{
 		"errcheck":    "warning",
@@ -71,7 +73,10 @@ var (
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"vet":         "golang.org/x/tools/cmd/vet",
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
+		"gocyclo":     "github.com/fzipp/gocyclo",
 	}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
+
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
 	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
@@ -80,6 +85,7 @@ var (
 	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag        = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
+	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").String()
 )
 
 func init() {
@@ -146,6 +152,15 @@ func exArgs() (arg0 string, arg1 string) {
 	return
 }
 
+type Vars map[string]string
+
+func (v Vars) Replace(s string) string {
+	for k, v := range v {
+		s = strings.Replace(s, fmt.Sprintf("{%s}", k), v, -1)
+	}
+	return s
+}
+
 func main() {
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
@@ -164,7 +179,7 @@ Severity override map (default is "error"):
 	}
 
 	if *fastFlag {
-		*disableLintersFlag = append(*disableLintersFlag, "structcheck", "varcheck", "errcheck")
+		*disableLintersFlag = append(*disableLintersFlag, slowLinters...)
 	}
 
 	if *installFlag {
@@ -212,9 +227,12 @@ Severity override map (default is "error"):
 		pattern := parts[1]
 
 		wg.Add(1)
+		vars := Vars{
+			"mincyclo": *cycloFlag,
+		}
 		go func(name, command, pattern string) {
 			concurrency <- true
-			executeLinter(issues, name, command, pattern, paths)
+			executeLinter(issues, name, command, pattern, paths, vars)
 			<-concurrency
 			wg.Done()
 		}(name, command, pattern)
@@ -232,7 +250,7 @@ Severity override map (default is "error"):
 	debug("total elapsed time %s", elapsed)
 }
 
-func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
+func executeLinter(issues chan *Issue, name, command, pattern, paths string, vars Vars) {
 	debug("linting with %s: %s", name, command)
 
 	start := time.Now()
@@ -243,7 +261,8 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 	re, err := regexp.Compile(pattern)
 	kingpin.FatalIfError(err, "invalid pattern for '"+command+"'")
 
-	command = strings.Replace(command, "{path}", paths, -1)
+	vars["path"] = paths
+	command = vars.Replace(command)
 	debug("executing %s", command)
 	arg0, arg1 := exArgs()
 	cmd := exec.Command(arg0, arg1, command)
@@ -265,6 +284,9 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 		issue := &Issue{}
 		for i, name := range re.SubexpNames() {
 			part := string(groups[0][i])
+			if name != "" {
+				vars[name] = part
+			}
 			switch name {
 			case "path":
 				issue.path = part
@@ -283,13 +305,10 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 				issue.message = part
 
 			case "":
-
-			default:
-				kingpin.Fatalf("invalid subgroup %s", name)
 			}
 		}
 		if m, ok := linterMessageOverrideFlag[name]; ok {
-			issue.message = strings.Replace(m, "{message}", issue.message, -1)
+			issue.message = vars.Replace(m)
 		}
 		if sev, ok := linterSeverityFlag[name]; ok {
 			issue.severity = Severity(sev)
