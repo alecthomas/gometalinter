@@ -63,6 +63,7 @@ var (
 		"varcheck":    "warning",
 		"structcheck": "warning",
 		"deadcode":    "warning",
+		"gocyclo":     "warning",
 	}
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
