@@ -48,6 +48,7 @@ var (
 		"varcheck":    "varcheck {path}:PATH:LINE:MESSAGE",
 		"structcheck": "structcheck {path}:PATH:LINE:MESSAGE",
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
+		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
 	}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
@@ -59,6 +60,7 @@ var (
 		"golint":      "warning",
 		"varcheck":    "warning",
 		"structcheck": "warning",
+		"deadcode":    "warning",
 	}
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
@@ -68,6 +70,7 @@ var (
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"vet":         "golang.org/x/tools/cmd/vet",
+		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
 	}
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
@@ -256,7 +259,7 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
-			debug("%s: '%s'", name, line)
+			debug("%s (didn't match): '%s'", name, line)
 			continue
 		}
 		issue := &Issue{}
