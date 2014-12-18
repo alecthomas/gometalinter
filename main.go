@@ -67,6 +67,7 @@ var (
 		"defercheck":  "github.com/opennota/check/cmd/defercheck",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
+		"vet":         "golang.org/x/tools/cmd/vet",
 	}
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
@@ -255,6 +256,7 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string) {
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
+			debug("%s: '%s'", name, line)
 			continue
 		}
 		issue := &Issue{}
