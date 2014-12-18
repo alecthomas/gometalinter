@@ -26,11 +26,25 @@ const (
 type Linter string
 
 func (l Linter) Command() string {
-	return string(l[0:strings.Index(string(l), ":")])
+	s := lintersFlag[string(l)]
+	return s[0:strings.Index(s, ":")]
 }
 
 func (l Linter) Pattern() string {
-	return string(l[strings.Index(string(l), ":"):])
+	s := lintersFlag[string(l)]
+	return s[strings.Index(s, ":"):]
+}
+
+func (l Linter) InstallFrom() string {
+	return installMap[string(l)]
+}
+
+func (l Linter) Severity() string {
+	return linterSeverityFlag[string(l)]
+}
+
+func (l Linter) MessageOverride() string {
+	return linterMessageOverrideFlag[string(l)]
 }
 
 var (
@@ -111,14 +125,6 @@ func (m *Issue) String() string {
 	return fmt.Sprintf("%s:%d:%s:%s: %s", m.path, m.line, col, m.severity, m.message)
 }
 
-type Issues []*Issue
-
-func (m Issues) Len() int      { return len(m) }
-func (m Issues) Swap(i, j int) { m[i], m[j] = m[j], m[i] }
-func (m Issues) Less(i, j int) bool {
-	return m[i].path < m[j].path || m[i].line < m[j].line || m[i].col < m[j].col
-}
-
 func debug(format string, args ...interface{}) {
 	if *debugFlag {
 		fmt.Fprintf(os.Stderr, "DEBUG: "+format+"\n", args...)
@@ -127,9 +133,9 @@ func debug(format string, args ...interface{}) {
 
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
-	for command, description := range lintersFlag {
-		linter := Linter(description)
-		fmt.Fprintf(w, "    %s -> %s -> %s\n", command, linter.Command(), linter.Pattern())
+	for name := range lintersFlag {
+		linter := Linter(name)
+		fmt.Fprintf(w, "    %s (%s)\n        %s\n        %s\n", name, linter.InstallFrom(), linter.Command(), linter.Pattern())
 	}
 	return w.String()
 }

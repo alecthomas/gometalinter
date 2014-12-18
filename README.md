@@ -23,12 +23,15 @@ Install all known linters:
 
 ```
 $ gometalinter --install
-Installing golint -> go get github.com/golang/lint/golint
-Installing gotype -> go get code.google.com/p/go.tools/cmd/gotype
 Installing errcheck -> go get github.com/kisielk/errcheck
+Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
+Installing vet -> go get golang.org/x/tools/cmd/vet
+Installing deadcode -> go get github.com/remyoudompheng/go-misc/deadcode
+Installing golint -> go get github.com/golang/lint/golint
+Installing gotype -> go get golang.org/x/tools/cmd/gotype
 Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
 Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
-Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
+Installing gocyclo -> go get github.com/fzipp/gocyclo
 ```
 
 Run it:
@@ -52,45 +55,67 @@ stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, hav
 
 ```
 $ gometalinter --help
-usage: gometalinter [<flags>] [<path>]
+usage: main [<flags>] [<path>]
 
 Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  gotype -> gotype {path} -> :PATH:LINE:COL:MESSAGE
-  errcheck -> errcheck {path} -> :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
-  varcheck -> varcheck {path} -> :PATH:LINE:MESSAGE
-  structcheck -> structcheck {path} -> :PATH:LINE:MESSAGE
-  defercheck -> defercheck {path} -> :PATH:LINE:MESSAGE
-  golint -> golint {path} -> :PATH:LINE:COL:MESSAGE
-  vet -> go tool vet {path} -> :PATH:LINE:MESSAGE
+  errcheck (github.com/kisielk/errcheck)
+      errcheck {path}
+      (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
+  varcheck (github.com/opennota/check/cmd/varcheck)
+      varcheck {path}
+      PATH:LINE:MESSAGE
+  gocyclo (github.com/fzipp/gocyclo)
+      gocyclo -over {mincyclo} {path}
+      (?P<cyclo>\d+)\s+\S+\s\S+\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
+  golint (github.com/golang/lint/golint)
+      golint {path}
+      PATH:LINE:COL:MESSAGE
+  gotype (golang.org/x/tools/cmd/gotype)
+      gotype {path}
+      PATH:LINE:COL:MESSAGE
+  structcheck (github.com/opennota/check/cmd/structcheck)
+      structcheck {path}
+      PATH:LINE:MESSAGE
+  defercheck (github.com/opennota/check/cmd/defercheck)
+      defercheck {path}
+      PATH:LINE:MESSAGE
+  deadcode (github.com/remyoudompheng/go-misc/deadcode)
+      deadcode {path}
+      deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
+  vet (golang.org/x/tools/cmd/vet)
+      go vet {path}
+      PATH:LINE:MESSAGE
 
 Severity override map (default is "error"):
 
-  errcheck -> warning
   golint -> warning
   varcheck -> warning
   structcheck -> warning
+  deadcode -> warning
+  gocyclo -> warning
+  errcheck -> warning
 
 Flags:
-  --help            Show help.
-  --fast            Only run fast linters.
-  -i, --install     Attempt to install all known linters.
-  -u, --update      Pass -u to go tool when installing.
+  --help             Show help.
+  --fast             Only run fast linters.
+  -i, --install      Attempt to install all known linters.
+  -u, --update       Pass -u to go tool when installing.
   -D, --disable=LINTER
-                    List of linters to disable.
-  -d, --debug       Display messages for failed linters, etc.
+                     List of linters to disable.
+  -d, --debug        Display messages for failed linters, etc.
   -j, --concurrency=16
-                    Number of concurrent linters to run.
-  --exclude=REGEXP  Exclude messages matching this regular expression.
+                     Number of concurrent linters to run.
+  --exclude=REGEXP   Exclude messages matching this regular expression.
+  --cyclo-over="10"  Report functions with cyclomatic complexity over N (using gocyclo).
   --linter=NAME:COMMAND:PATTERN
-                    Specify a linter.
+                     Specify a linter.
   --message-overrides=LINTER:MESSAGE
-                    Override message from linter. {message} will be expanded to
-                    the original message.
+                     Override message from linter. {message} will be expanded to the original message.
   --severity=LINTER:SEVERITY
-                    Map of linter severities.
+                     Map of linter severities.
 
 Args:
   [<path>]  Directory to lint.
