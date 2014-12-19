@@ -55,7 +55,7 @@ stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, hav
 
 ```
 $ gometalinter --help
-usage: main [<flags>] [<path>]
+usage: gometalinter [<flags>] [<path>]
 
 Aggregate and normalise the output of a whole bunch of Go linters.
 

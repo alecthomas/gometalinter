@@ -63,13 +63,13 @@ var (
 		"structcheck": "structcheck {path}:PATH:LINE:MESSAGE",
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
-		"gocyclo":     `gocyclo -over {mincyclo} {path}:(?P<cyclo>\d+)\s+\S+\s\S+\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
+		"gocyclo":     `gocyclo -over {mincyclo} {path}:(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
 	}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
 		"varcheck":    "unused global variable {message}",
 		"structcheck": "unused struct field {message}",
-		"gocyclo":     "cyclomatic complexity {cyclo} is high (> {mincyclo})",
+		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
 	}
 	linterSeverityFlag = map[string]string{
 		"errcheck":    "warning",
