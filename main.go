@@ -88,7 +88,7 @@ var (
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"vet":         "golang.org/x/tools/cmd/vet",
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
-		"gocyclo":     "github.com/fzipp/gocyclo",
+		"gocyclo":     "github.com/alecthomas/gocyclo",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
 
