@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,6 +93,7 @@ var (
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
+	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
 
 	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
@@ -101,6 +104,7 @@ var (
 	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag        = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
 	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").String()
+	sortFlag           = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 )
 
 func init() {
@@ -222,7 +226,8 @@ Severity override map (default is "error"):
 	start := time.Now()
 	paths := *pathArg
 	concurrency := make(chan bool, *concurrencyFlag)
-	issues := make(chan *Issue, 100000)
+	incomingIssues := make(chan *Issue, 100000)
+	processedIssues := maybeSortIssues(incomingIssues)
 	wg := &sync.WaitGroup{}
 	for name, description := range lintersFlag {
 		if _, ok := disable[name]; ok {
@@ -239,15 +244,15 @@ Severity override map (default is "error"):
 		}
 		go func(name, command, pattern string) {
 			concurrency <- true
-			executeLinter(issues, name, command, pattern, paths, vars)
+			executeLinter(incomingIssues, name, command, pattern, paths, vars)
 			<-concurrency
 			wg.Done()
 		}(name, command, pattern)
 	}
 
 	wg.Wait()
-	close(issues)
-	for issue := range issues {
+	close(incomingIssues)
+	for issue := range processedIssues {
 		if filter != nil && filter.MatchString(issue.String()) {
 			continue
 		}
@@ -255,6 +260,64 @@ Severity override map (default is "error"):
 	}
 	elapsed := time.Now().Sub(start)
 	debug("total elapsed time %s", elapsed)
+}
+
+type sortedIssues struct {
+	issues []*Issue
+	order  []string
+}
+
+func (s *sortedIssues) Len() int      { return len(s.issues) }
+func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
+func (s *sortedIssues) Less(i, j int) bool {
+	l, r := s.issues[i], s.issues[j]
+	for _, key := range s.order {
+		switch key {
+		case "path":
+			if l.path < r.path {
+				return true
+			}
+		case "line":
+			if l.line < r.line {
+				return true
+			}
+		case "column":
+			if l.col < r.col {
+				return true
+			}
+		case "severity":
+			if l.severity < r.severity {
+				return true
+			}
+		case "message":
+			if l.message < r.message {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func maybeSortIssues(issues chan *Issue) chan *Issue {
+	if reflect.DeepEqual([]string{"none"}, *sortFlag) {
+		return issues
+	}
+	out := make(chan *Issue, 100000)
+	sorted := &sortedIssues{
+		issues: []*Issue{},
+		order:  *sortFlag,
+	}
+	go func() {
+		for issue := range issues {
+			sorted.issues = append(sorted.issues, issue)
+		}
+		sort.Sort(sorted)
+		for _, issue := range sorted.issues {
+			out <- issue
+		}
+		close(out)
+	}()
+	return out
 }
 
 func executeLinter(issues chan *Issue, name, command, pattern, paths string, vars Vars) {
