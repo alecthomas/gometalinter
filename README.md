@@ -7,8 +7,7 @@ This is a tool that concurrently runs a whole bunch of those linters and
 normalises their output to a standard format. It is intended for use with
 editor/IDE integration.
 
-Currently supported linters are: golint, go tool vet, gotype, errcheck,
-varcheck and defercheck. Additional linters can be added through the
+Currently supported linters are listed below. Additional linters can be added through the
 command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
 ## Quickstart
@@ -32,6 +31,7 @@ Installing gotype -> go get golang.org/x/tools/cmd/gotype
 Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
 Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
 Installing gocyclo -> go get github.com/fzipp/gocyclo
+Installing go-nyet -> go get github.com/barakmich/go-nyet
 ```
 
 Run it:
@@ -61,6 +61,9 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
+  go-nyet (github.com/barakmich/go-nyet)
+      go-nyet {path}
+      :PATH:LINE:COL:MESSAGE
   errcheck (github.com/kisielk/errcheck)
       errcheck {path}
       (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
@@ -92,6 +95,7 @@ Default linters:
 Severity override map (default is "error"):
 
   golint -> warning
+  go-nyet -> warning
   varcheck -> warning
   structcheck -> warning
   deadcode -> warning

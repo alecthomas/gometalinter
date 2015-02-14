@@ -66,6 +66,7 @@ var (
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
+		"go-nyet":     `go-nyet {path}:PATH:LINE:COL:MESSAGE`,
 	}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
@@ -80,6 +81,7 @@ var (
 		"structcheck": "warning",
 		"deadcode":    "warning",
 		"gocyclo":     "warning",
+		"go-nyet":     "warning",
 	}
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
@@ -91,6 +93,7 @@ var (
 		"vet":         "golang.org/x/tools/cmd/vet",
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
+		"go-nyet":     "github.com/barakmich/go-nyet",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
