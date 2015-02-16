@@ -348,6 +348,13 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string, var
 		debug("warning: %s returned %s", command, err)
 	}
 
+	processOutput(issues, name, vars, out, re)
+
+	elapsed := time.Now().Sub(start)
+	debug("%s linter took %s", name, elapsed)
+}
+
+func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *regexp.Regexp) {
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
@@ -390,7 +397,4 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string, var
 		}
 		issues <- issue
 	}
-
-	elapsed := time.Now().Sub(start)
-	debug("%s linter took %s", name, elapsed)
 }
