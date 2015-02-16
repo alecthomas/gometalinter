@@ -248,6 +248,7 @@ Severity override map (default is "error"):
 	paths := *pathArg
 	concurrency := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 100000)
+	status := make(chan int, len(lintersFlag))
 	processedIssues := maybeSortIssues(incomingIssues)
 	wg := &sync.WaitGroup{}
 	for name, description := range lintersFlag {
@@ -265,7 +266,7 @@ Severity override map (default is "error"):
 		}
 		go func(name, command, pattern string) {
 			concurrency <- true
-			executeLinter(incomingIssues, name, command, pattern, paths, vars)
+			executeLinter(status, incomingIssues, name, command, pattern, paths, vars)
 			<-concurrency
 			wg.Done()
 		}(name, command, pattern)
@@ -273,6 +274,7 @@ Severity override map (default is "error"):
 
 	wg.Wait()
 	close(incomingIssues)
+	close(status)
 	for issue := range processedIssues {
 		if filter != nil && filter.MatchString(issue.String()) {
 			continue
@@ -281,6 +283,13 @@ Severity override map (default is "error"):
 	}
 	elapsed := time.Now().Sub(start)
 	debug("total elapsed time %s", elapsed)
+
+	// Exit with first non-zero status (if any)
+	for s := range status {
+		if s != 0 {
+			os.Exit(s)
+		}
+	}
 }
 
 func doInstall() {
@@ -327,7 +336,7 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 	return out
 }
 
-func executeLinter(issues chan *Issue, name, command, pattern, paths string, vars Vars) {
+func executeLinter(status chan int, issues chan *Issue, name, command, pattern, paths string, vars Vars) {
 	debug("linting with %s: %s", name, command)
 
 	start := time.Now()
@@ -347,18 +356,22 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string, var
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
 			debug("warning: %s failed: %s", command, err)
+			status <- 1
 			return
 		}
 		debug("warning: %s returned %s", command, err)
 	}
 
-	processOutput(issues, name, vars, out, re)
+	if processOutput(issues, name, vars, out, re) > 0 {
+		status <- 1
+	}
 
 	elapsed := time.Now().Sub(start)
 	debug("%s linter took %s", name, elapsed)
 }
 
-func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *regexp.Regexp) {
+func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *regexp.Regexp) int {
+	count := 0
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
@@ -399,6 +412,8 @@ func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *r
 		} else {
 			issue.severity = "error"
 		}
+		count++
 		issues <- issue
 	}
+	return count
 }
