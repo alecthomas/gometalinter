@@ -49,6 +49,42 @@ func (l Linter) MessageOverride() string {
 	return linterMessageOverrideFlag[string(l)]
 }
 
+type sortedIssues struct {
+	issues []*Issue
+	order  []string
+}
+
+func (s *sortedIssues) Len() int      { return len(s.issues) }
+func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
+func (s *sortedIssues) Less(i, j int) bool {
+	l, r := s.issues[i], s.issues[j]
+	for _, key := range s.order {
+		switch key {
+		case "path":
+			if l.path >= r.path {
+				return false
+			}
+		case "line":
+			if l.line >= r.line {
+				return false
+			}
+		case "column":
+			if l.col >= r.col {
+				return false
+			}
+		case "severity":
+			if l.severity >= r.severity {
+				return false
+			}
+		case "message":
+			if l.message >= r.message {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 var (
 	predefinedPatterns = map[string]string{
 		"PATH:LINE:COL:MESSAGE": `(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
@@ -197,25 +233,7 @@ Severity override map (default is "error"):
 	}
 
 	if *installFlag {
-		for name, target := range installMap {
-			cmd := "go get"
-			if *debugFlag {
-				cmd += " -v"
-			}
-			if *updateFlag {
-				cmd += " -u"
-			}
-			cmd += " " + target
-			fmt.Printf("Installing %s -> %s\n", name, cmd)
-			arg0, arg1 := exArgs()
-			c := exec.Command(arg0, arg1, cmd)
-			c.Stdout = os.Stdout
-			c.Stderr = os.Stderr
-			err := c.Run()
-			if err != nil {
-				kingpin.CommandLine.Errorf(os.Stderr, "failed to install %s: %s", name, err)
-			}
-		}
+		doInstall()
 		return
 	}
 
@@ -265,40 +283,26 @@ Severity override map (default is "error"):
 	debug("total elapsed time %s", elapsed)
 }
 
-type sortedIssues struct {
-	issues []*Issue
-	order  []string
-}
-
-func (s *sortedIssues) Len() int      { return len(s.issues) }
-func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
-func (s *sortedIssues) Less(i, j int) bool {
-	l, r := s.issues[i], s.issues[j]
-	for _, key := range s.order {
-		switch key {
-		case "path":
-			if l.path >= r.path {
-				return false
-			}
-		case "line":
-			if l.line >= r.line {
-				return false
-			}
-		case "column":
-			if l.col >= r.col {
-				return false
-			}
-		case "severity":
-			if l.severity >= r.severity {
-				return false
-			}
-		case "message":
-			if l.message >= r.message {
-				return false
-			}
+func doInstall() {
+	for name, target := range installMap {
+		cmd := "go get"
+		if *debugFlag {
+			cmd += " -v"
+		}
+		if *updateFlag {
+			cmd += " -u"
+		}
+		cmd += " " + target
+		fmt.Printf("Installing %s -> %s\n", name, cmd)
+		arg0, arg1 := exArgs()
+		c := exec.Command(arg0, arg1, cmd)
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		err := c.Run()
+		if err != nil {
+			kingpin.CommandLine.Errorf(os.Stderr, "failed to install %s: %s", name, err)
 		}
 	}
-	return true
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
