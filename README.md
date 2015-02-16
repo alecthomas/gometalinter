@@ -61,46 +61,46 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
+  structcheck (github.com/opennota/check/cmd/structcheck)
+      structcheck {path}
+      :PATH:LINE:MESSAGE
+  defercheck (github.com/opennota/check/cmd/defercheck)
+      defercheck {path}
+      :PATH:LINE:MESSAGE
+  deadcode (github.com/remyoudompheng/go-misc/deadcode)
+      deadcode {path}
+      :deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
+  vet (golang.org/x/tools/cmd/vet)
+      go vet {path}
+      :PATH:LINE:MESSAGE
+  gotype (golang.org/x/tools/cmd/gotype)
+      gotype {path}
+      :PATH:LINE:COL:MESSAGE
+  varcheck (github.com/opennota/check/cmd/varcheck)
+      varcheck {path}
+      :PATH:LINE:MESSAGE
   go-nyet (github.com/barakmich/go-nyet)
       go-nyet {path}
       :PATH:LINE:COL:MESSAGE
-  errcheck (github.com/kisielk/errcheck)
-      errcheck {path}
-      (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
-  varcheck (github.com/opennota/check/cmd/varcheck)
-      varcheck {path}
-      PATH:LINE:MESSAGE
-  gocyclo (github.com/fzipp/gocyclo)
-      gocyclo -over {mincyclo} {path}
-      (?P<cyclo>\d+)\s+\S+\s\S+\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
   golint (github.com/golang/lint/golint)
       golint {path}
-      PATH:LINE:COL:MESSAGE
-  gotype (golang.org/x/tools/cmd/gotype)
-      gotype {path}
-      PATH:LINE:COL:MESSAGE
-  structcheck (github.com/opennota/check/cmd/structcheck)
-      structcheck {path}
-      PATH:LINE:MESSAGE
-  defercheck (github.com/opennota/check/cmd/defercheck)
-      defercheck {path}
-      PATH:LINE:MESSAGE
-  deadcode (github.com/remyoudompheng/go-misc/deadcode)
-      deadcode {path}
-      deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
-  vet (golang.org/x/tools/cmd/vet)
-      go vet {path}
-      PATH:LINE:MESSAGE
+      :PATH:LINE:COL:MESSAGE
+  errcheck (github.com/alecthomas/errcheck)
+      errcheck {path}
+      :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
+  gocyclo (github.com/alecthomas/gocyclo)
+      gocyclo -over {mincyclo} {path}
+      :(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
 
 Severity override map (default is "error"):
 
-  golint -> warning
-  go-nyet -> warning
-  varcheck -> warning
-  structcheck -> warning
   deadcode -> warning
   gocyclo -> warning
+  go-nyet -> warning
   errcheck -> warning
+  golint -> warning
+  varcheck -> warning
+  structcheck -> warning
 
 Flags:
   --help             Show help.
@@ -114,6 +114,7 @@ Flags:
                      Number of concurrent linters to run.
   --exclude=REGEXP   Exclude messages matching this regular expression.
   --cyclo-over="10"  Report functions with cyclomatic complexity over N (using gocyclo).
+  --sort=none        Sort output by any of none, path, line, column, severity, message.
   --linter=NAME:COMMAND:PATTERN
                      Specify a linter.
   --message-overrides=LINTER:MESSAGE
