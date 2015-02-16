@@ -10,6 +10,10 @@ editor/IDE integration.
 Currently supported linters are listed below. Additional linters can be added through the
 command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
+## Editor integration
+
+- [SublimeLinter plugin](https://github.com/alecthomas/SublimeLinter-contrib-gometalinter).
+
 ## Quickstart
 
 Install gometalinter:
