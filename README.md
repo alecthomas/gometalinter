@@ -43,16 +43,20 @@ Run it:
 ```
 $ cd $GOPATH/src/github.com/alecthomas/gometalinter/example
 $ gometalinter
-stutter.go:22::error: Repeating defer a.Close() inside function duplicateDefer
-stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported
-stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported
-stutter.go:21:15:warning: error return value not checked (defer a.Close())
-stutter.go:22:15:warning: error return value not checked (defer a.Close())
-stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck)
-stutter.go:9::warning: unused global variable unusedGlobal
-stutter.go:13::warning: unused struct field MyStruct.Unused
-stutter.go:29::error: unreachable code
-stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, have only 0 args
+stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
+stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
+stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
+stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (golint)
+stutter.go:22::error: Repeating defer a.Close() inside function duplicateDefer (defercheck)
+stutter.go:8:1:warning: unusedGlobal is unused (deadcode)
+stutter.go:12:1:warning: MyStruct is unused (deadcode)
+stutter.go:16:1:warning: PublicUndocumented is unused (deadcode)
+stutter.go:20:1:warning: duplicateDefer is unused (deadcode)
+stutter.go:21:15:warning: error return value not checked (defer a.Close()) (errcheck)
+stutter.go:22:15:warning: error return value not checked (defer a.Close()) (errcheck)
+stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck) (errcheck)
+stutter.go:29::error: unreachable code (vet)
+stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, have only 0 args (vet)
 ```
 
 ## Details
@@ -134,13 +138,13 @@ Additional linters can be configured via the command line:
 
 ```
 $ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf {paths}:PATH:LINE:MESSAGE' .
-stutter.go:22::error: Repeating defer a.Close() inside function duplicateDefer
-stutter.go:21:15:warning: error return value not checked (defer a.Close())
-stutter.go:22:15:warning: error return value not checked (defer a.Close())
-stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck)
-stutter.go:9::warning: unused global variable unusedGlobal
-stutter.go:13::warning: unused struct field MyStruct.Unused
-stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported
-stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported
+stutter.go:22::error: Repeating defer a.Close() inside function duplicateDefer (defercheck)
+stutter.go:21:15:warning: error return value not checked (defer a.Close()) (errcheck)
+stutter.go:22:15:warning: error return value not checked (defer a.Close()) (errcheck)
+stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck) (errcheck)
+stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
+stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
+stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
+stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (deadcode)
 ```
 
