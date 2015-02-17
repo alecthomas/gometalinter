@@ -117,6 +117,7 @@ func init() {
 }
 
 type Issue struct {
+	linter   Linter
 	severity Severity
 	path     string
 	line     int
@@ -129,7 +130,7 @@ func (m *Issue) String() string {
 	if m.col != 0 {
 		col = fmt.Sprintf("%d", m.col)
 	}
-	return fmt.Sprintf("%s:%d:%s:%s: %s", m.path, m.line, col, m.severity, m.message)
+	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", m.path, m.line, col, m.severity, m.message, m.linter)
 }
 
 func debug(format string, args ...interface{}) {
@@ -355,6 +356,7 @@ func executeLinter(issues chan *Issue, name, command, pattern, paths string, var
 			continue
 		}
 		issue := &Issue{}
+		issue.linter = Linter(name)
 		for i, name := range re.SubexpNames() {
 			part := string(groups[0][i])
 			if name != "" {
