@@ -270,6 +270,10 @@ Severity override map (default is "error"):
 		if *testFlag {
 			vars["tests"] = "-t"
 		}
+		vars["tests"] = ""
+		if *testFlag {
+			vars["tests"] = "-t"
+		}
 		go func(name, command, pattern string) {
 			concurrency <- true
 			executeLinter(status, incomingIssues, name, command, pattern, paths, vars)
