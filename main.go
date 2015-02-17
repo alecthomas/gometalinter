@@ -97,10 +97,10 @@ var (
 		"vet":         "go vet {path}:PATH:LINE:MESSAGE",
 		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
-		"varcheck":    "varcheck {path}:PATH:LINE:MESSAGE",
-		"structcheck": "structcheck {path}:PATH:LINE:MESSAGE",
-		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
-		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
+		"varcheck":    "varcheck {tests} {path}:PATH:LINE:MESSAGE",
+		"structcheck": "structcheck {tests} {path}:PATH:LINE:MESSAGE",
+		"defercheck":  "defercheck {tests} {path}:PATH:LINE:MESSAGE",
+		"deadcode":    `deadcode {tests} {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
 		"go-nyet":     `go-nyet {path}:PATH:LINE:COL:MESSAGE`,
 	}
@@ -144,6 +144,7 @@ var (
 	excludeFlag        = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
 	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").String()
 	sortFlag           = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
+	testFlag           = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
 )
 
 func init() {
@@ -264,6 +265,10 @@ Severity override map (default is "error"):
 		wg.Add(1)
 		vars := Vars{
 			"mincyclo": *cycloFlag,
+			"tests":    "",
+		}
+		if *testFlag {
+			vars["tests"] = "-t"
 		}
 		go func(name, command, pattern string) {
 			concurrency <- true
