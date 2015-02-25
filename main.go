@@ -97,10 +97,10 @@ var (
 		"vet":         "go vet {path}:PATH:LINE:MESSAGE",
 		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
-		"varcheck":    "varcheck {tests} {path}:PATH:LINE:MESSAGE",
+		"varcheck":    "varcheck {path}:PATH:LINE:MESSAGE",
 		"structcheck": "structcheck {tests} {path}:PATH:LINE:MESSAGE",
-		"defercheck":  "defercheck {tests} {path}:PATH:LINE:MESSAGE",
-		"deadcode":    `deadcode {tests} {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
+		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
+		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
 		"go-nyet":     `go-nyet {path}:PATH:LINE:COL:MESSAGE`,
 	}
