@@ -59,6 +59,10 @@ stutter.go:29::error: unreachable code (vet)
 stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, have only 0 args (vet)
 ```
 
+
+Gometalinter also supports the commonly seen `<path>/...` recursive path
+format. Note that this can be *very* slow.
+
 ## Details
 
 ```

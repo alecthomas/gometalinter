@@ -1,4 +1,4 @@
-package main
+package example
 
 import (
 	"fmt"
@@ -22,7 +22,8 @@ func duplicateDefer(a io.Closer) {
 	defer a.Close()
 }
 
-func main() {
+func stuff() {
+	var a int
 	fmt.Printf("%d") // test for "go vet"
 	doit()           // test for errcheck
 	return

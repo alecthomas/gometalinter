@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -14,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/kingpin"
+	"gopkg.in/alecthomas/kingpin.v2-unstable"
 )
 
 type Severity string
@@ -134,7 +135,7 @@ var (
 	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
 
-	pathArg            = kingpin.Arg("path", "Directory to lint.").Default(".").String()
+	pathsArg           = kingpin.Arg("path", "Directory to lint.").Strings()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
 	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
 	updateFlag         = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
@@ -142,7 +143,7 @@ var (
 	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag        = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
-	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").String()
+	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
 	sortFlag           = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag           = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
 )
@@ -162,12 +163,12 @@ type Issue struct {
 	message  string
 }
 
-func (m *Issue) String() string {
+func (i *Issue) String() string {
 	col := ""
-	if m.col != 0 {
-		col = fmt.Sprintf("%d", m.col)
+	if i.col != 0 {
+		col = fmt.Sprintf("%d", i.col)
 	}
-	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", m.path, m.line, col, m.severity, m.message, m.linter)
+	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", i.path, i.line, col, i.severity, i.message, i.linter)
 }
 
 func debug(format string, args ...interface{}) {
@@ -247,10 +248,10 @@ Severity override map (default is "error"):
 	}
 
 	start := time.Now()
-	paths := *pathArg
+	paths := expandPaths(*pathsArg)
 	concurrency := make(chan bool, *concurrencyFlag)
-	incomingIssues := make(chan *Issue, 100000)
-	status := make(chan int, len(lintersFlag))
+	incomingIssues := make(chan *Issue, 1000000)
+	status := make(chan int, len(lintersFlag)*len(paths))
 	processedIssues := maybeSortIssues(incomingIssues)
 	wg := &sync.WaitGroup{}
 	for name, description := range lintersFlag {
@@ -262,20 +263,23 @@ Severity override map (default is "error"):
 		command := parts[0]
 		pattern := parts[1]
 
-		wg.Add(1)
+		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"mincyclo": *cycloFlag,
+			"mincyclo": fmt.Sprintf("%d", *cycloFlag),
 			"tests":    "",
 		}
 		if *testFlag {
 			vars["tests"] = "-t"
 		}
-		go func(name, command, pattern string) {
-			concurrency <- true
-			executeLinter(status, incomingIssues, name, command, pattern, paths, vars)
-			<-concurrency
-			wg.Done()
-		}(name, command, pattern)
+		for _, path := range paths {
+			wg.Add(1)
+			go func(path, name, command, pattern string) {
+				concurrency <- true
+				executeLinter(status, incomingIssues, name, command, pattern, path, vars)
+				<-concurrency
+				wg.Done()
+			}(path, name, command, pattern)
+		}
 	}
 
 	wg.Wait()
@@ -296,6 +300,42 @@ Severity override map (default is "error"):
 			os.Exit(s)
 		}
 	}
+}
+
+func expandPaths(paths []string) []string {
+	if len(paths) == 0 {
+		paths = []string{"."}
+	}
+	out := []string{}
+	for _, path := range paths {
+		if strings.HasSuffix(path, "/...") {
+			root := filepath.Dir(path)
+			_ = filepath.Walk(root, func(p string, i os.FileInfo, err error) error {
+				if i.IsDir() {
+					base := filepath.Base(p)
+					if strings.HasPrefix(base, ".") && base != "." && base != ".." {
+						return filepath.SkipDir
+					}
+					out = append(out, filepath.Clean(p))
+				}
+				return nil
+			})
+		} else {
+			out = append(out, filepath.Clean(path))
+		}
+	}
+
+	// Deduplicate paths.
+	sort.Strings(out)
+	clean := []string{}
+	last := ""
+	for _, path := range out {
+		if path != last {
+			clean = append(clean, path)
+		}
+		last = path
+	}
+	return clean
 }
 
 func doInstall() {
@@ -324,7 +364,7 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 	if reflect.DeepEqual([]string{"none"}, *sortFlag) {
 		return issues
 	}
-	out := make(chan *Issue, 100000)
+	out := make(chan *Issue, 1000000)
 	sorted := &sortedIssues{
 		issues: []*Issue{},
 		order:  *sortFlag,
@@ -349,7 +389,6 @@ func executeLinter(status chan int, issues chan *Issue, name, command, pattern, 
 	if p, ok := predefinedPatterns[pattern]; ok {
 		pattern = p
 	}
-	regexp.Compile(pattern)
 	re, err := regexp.Compile(pattern)
 	kingpin.FatalIfError(err, "invalid pattern for '"+command+"'")
 
