@@ -311,6 +311,8 @@ func expandPaths(paths []string) []string {
 		if strings.HasSuffix(path, "/...") {
 			root := filepath.Dir(path)
 			_ = filepath.Walk(root, func(p string, i os.FileInfo, err error) error {
+				kingpin.FatalIfError(err, "invalid path '"+p+"'")
+
 				if i.IsDir() {
 					base := filepath.Base(p)
 					if strings.HasPrefix(base, ".") && base != "." && base != ".." {
