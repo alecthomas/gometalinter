@@ -275,7 +275,7 @@ Severity override map (default is "error"):
 			wg.Add(1)
 			go func(path, name, command, pattern string) {
 				concurrency <- true
-				executeLinter(status, incomingIssues, name, command, pattern, path, vars)
+				executeLinter(status, incomingIssues, name, command, pattern, path, vars, filter)
 				<-concurrency
 				wg.Done()
 			}(path, name, command, pattern)
@@ -286,9 +286,6 @@ Severity override map (default is "error"):
 	close(incomingIssues)
 	close(status)
 	for issue := range processedIssues {
-		if filter != nil && filter.MatchString(issue.String()) {
-			continue
-		}
 		fmt.Printf("%s\n", issue)
 	}
 	elapsed := time.Now().Sub(start)
@@ -384,7 +381,7 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 	return out
 }
 
-func executeLinter(status chan int, issues chan *Issue, name, command, pattern, paths string, vars Vars) {
+func executeLinter(status chan int, issues chan *Issue, name, command, pattern, paths string, vars Vars, filter *regexp.Regexp) {
 	debug("linting with %s: %s", name, command)
 
 	start := time.Now()
@@ -409,7 +406,7 @@ func executeLinter(status chan int, issues chan *Issue, name, command, pattern, 
 		debug("warning: %s returned %s", command, err)
 	}
 
-	if processOutput(issues, name, vars, out, re) > 0 {
+	if processOutput(issues, name, vars, out, re, filter) > 0 {
 		status <- 1
 	}
 
@@ -417,7 +414,7 @@ func executeLinter(status chan int, issues chan *Issue, name, command, pattern, 
 	debug("%s linter took %s", name, elapsed)
 }
 
-func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *regexp.Regexp) int {
+func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *regexp.Regexp, filter *regexp.Regexp) int {
 	count := 0
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
@@ -459,6 +456,9 @@ func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *r
 			issue.severity = Severity(sev)
 		} else {
 			issue.severity = "error"
+		}
+		if filter != nil && filter.MatchString(issue.String()) {
+			continue
 		}
 		count++
 		issues <- issue
