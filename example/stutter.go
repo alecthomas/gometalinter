@@ -29,3 +29,12 @@ func stuff() {
 	return
 	println("lalal")
 }
+
+func do() {
+	a := 10
+	if true {
+		a := 2
+		println(a)
+	}
+	println(a)
+}
