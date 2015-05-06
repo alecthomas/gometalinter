@@ -127,7 +127,6 @@ var (
 		"defercheck":  "github.com/opennota/check/cmd/defercheck",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
-		"vet":         "golang.org/x/tools/cmd/vet",
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 		"go-nyet":     "github.com/barakmich/go-nyet",
