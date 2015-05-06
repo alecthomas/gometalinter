@@ -99,7 +99,7 @@ var (
 		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
-		"structcheck": `structcheck {tests} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
+		"structcheck": `structcheck {tests} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)`,
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
