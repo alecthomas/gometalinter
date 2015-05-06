@@ -145,6 +145,7 @@ var (
 	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
 	sortFlag           = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag           = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
+	deadlineFlag       = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
 )
 
 func init() {
@@ -230,6 +231,7 @@ Severity override map (default is "error"):
 		filter = regexp.MustCompile(*excludeFlag)
 	}
 
+	println(*deadlineFlag)
 	if *fastFlag {
 		*disableLintersFlag = append(*disableLintersFlag, slowLinters...)
 	}
@@ -248,6 +250,7 @@ Severity override map (default is "error"):
 
 	start := time.Now()
 	paths := expandPaths(*pathsArg)
+
 	concurrency := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
 	status := make(chan int, len(lintersFlag)*len(paths))
@@ -274,7 +277,18 @@ Severity override map (default is "error"):
 			wg.Add(1)
 			go func(path, name, command, pattern string) {
 				concurrency <- true
-				executeLinter(status, incomingIssues, name, command, pattern, path, vars, filter)
+				state := &linterState{
+					status:   status,
+					issues:   incomingIssues,
+					name:     name,
+					command:  command,
+					pattern:  pattern,
+					path:     path,
+					vars:     vars,
+					filter:   filter,
+					deadline: time.After(*deadlineFlag),
+				}
+				executeLinter(state)
 				<-concurrency
 				wg.Done()
 			}(path, name, command, pattern)
@@ -380,53 +394,93 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 	return out
 }
 
-func executeLinter(status chan int, issues chan *Issue, name, command, pattern, paths string, vars Vars, filter *regexp.Regexp) {
-	debug("linting with %s: %s", name, command)
+type linterState struct {
+	status                       chan int
+	issues                       chan *Issue
+	name, command, pattern, path string
+	vars                         Vars
+	filter                       *regexp.Regexp
+	deadline                     <-chan time.Time
+}
+
+func (l *linterState) InterpolatedCommand() string {
+	l.vars["path"] = l.path
+	return l.vars.Replace(l.command)
+}
+
+func (l *linterState) Match() *regexp.Regexp {
+	re, err := regexp.Compile(l.pattern)
+	kingpin.FatalIfError(err, "invalid pattern for '"+l.command+"'")
+	return re
+}
+
+func executeLinter(state *linterState) {
+	debug("linting with %s: %s", state.name, state.command)
 
 	start := time.Now()
-	if p, ok := predefinedPatterns[pattern]; ok {
-		pattern = p
+	if p, ok := predefinedPatterns[state.pattern]; ok {
+		state.pattern = p
 	}
-	re, err := regexp.Compile(pattern)
-	kingpin.FatalIfError(err, "invalid pattern for '"+command+"'")
 
-	vars["path"] = paths
-	command = vars.Replace(command)
+	command := state.InterpolatedCommand()
 	debug("executing %s", command)
 	arg0, arg1 := exArgs()
+	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(arg0, arg1, command)
-	out, err := cmd.CombinedOutput()
+	cmd.Stdout = buf
+	cmd.Stderr = buf
+	err := cmd.Start()
+	if err == nil {
+		done := make(chan bool)
+		go func() {
+			err = cmd.Wait()
+			done <- true
+		}()
+
+		// Wait for process to complete or deadline to expire.
+		select {
+		case <-done:
+			println(state.name, "done")
+
+		case <-state.deadline:
+			debug("warning: deadline exceeded by linter %s", state.name)
+			_ = cmd.Process.Kill()
+			return
+		}
+	}
+
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
 			debug("warning: %s failed: %s", command, err)
-			status <- 1
+			state.status <- 1
 			return
 		}
 		debug("warning: %s returned %s", command, err)
 	}
 
-	if processOutput(issues, name, vars, out, re, filter) > 0 {
-		status <- 1
+	if processOutput(state, buf.Bytes()) > 0 {
+		state.status <- 1
 	}
 
 	elapsed := time.Now().Sub(start)
-	debug("%s linter took %s", name, elapsed)
+	debug("%s linter took %s", state.name, elapsed)
 }
 
-func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *regexp.Regexp, filter *regexp.Regexp) int {
+func processOutput(state *linterState, out []byte) int {
 	count := 0
+	re := state.Match()
 	for _, line := range bytes.Split(out, []byte("\n")) {
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
-			debug("%s (didn't match): '%s'", name, line)
+			debug("%s (didn't match): '%s'", state.name, line)
 			continue
 		}
 		issue := &Issue{}
-		issue.linter = Linter(name)
+		issue.linter = Linter(state.name)
 		for i, name := range re.SubexpNames() {
 			part := string(groups[0][i])
 			if name != "" {
-				vars[name] = part
+				state.vars[name] = part
 			}
 			switch name {
 			case "path":
@@ -448,19 +502,19 @@ func processOutput(issues chan *Issue, name string, vars Vars, out []byte, re *r
 			case "":
 			}
 		}
-		if m, ok := linterMessageOverrideFlag[name]; ok {
-			issue.message = vars.Replace(m)
+		if m, ok := linterMessageOverrideFlag[state.name]; ok {
+			issue.message = state.vars.Replace(m)
 		}
-		if sev, ok := linterSeverityFlag[name]; ok {
+		if sev, ok := linterSeverityFlag[state.name]; ok {
 			issue.severity = Severity(sev)
 		} else {
 			issue.severity = "error"
 		}
-		if filter != nil && filter.MatchString(issue.String()) {
+		if state.filter != nil && state.filter.MatchString(issue.String()) {
 			continue
 		}
 		count++
-		issues <- issue
+		state.issues <- issue
 	}
 	return count
 }

@@ -73,66 +73,68 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  structcheck (github.com/opennota/check/cmd/structcheck)
-      structcheck {path}
-      :PATH:LINE:MESSAGE
-  defercheck (github.com/opennota/check/cmd/defercheck)
-      defercheck {path}
-      :PATH:LINE:MESSAGE
+  varcheck (github.com/opennota/check/cmd/varcheck)
+      varcheck {path}
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
   deadcode (github.com/remyoudompheng/go-misc/deadcode)
       deadcode {path}
       :deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
-  vet (golang.org/x/tools/cmd/vet)
+  gocyclo (github.com/alecthomas/gocyclo)
+      gocyclo -over {mincyclo} {path}
+      :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
+  go-nyet (github.com/barakmich/go-nyet)
+      go-nyet {path}
+      :PATH:LINE:COL:MESSAGE
+  vet ()
       go vet {path}
       :PATH:LINE:MESSAGE
   gotype (golang.org/x/tools/cmd/gotype)
       gotype {path}
       :PATH:LINE:COL:MESSAGE
-  varcheck (github.com/opennota/check/cmd/varcheck)
-      varcheck {path}
+  structcheck (github.com/opennota/check/cmd/structcheck)
+      structcheck {tests} {path}
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)
+  defercheck (github.com/opennota/check/cmd/defercheck)
+      defercheck {path}
       :PATH:LINE:MESSAGE
-  go-nyet (github.com/barakmich/go-nyet)
-      go-nyet {path}
-      :PATH:LINE:COL:MESSAGE
   golint (github.com/golang/lint/golint)
       golint {path}
       :PATH:LINE:COL:MESSAGE
   errcheck (github.com/alecthomas/errcheck)
       errcheck {path}
-      :(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
-  gocyclo (github.com/alecthomas/gocyclo)
-      gocyclo -over {mincyclo} {path}
-      :(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
+      :^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
 
 Severity override map (default is "error"):
 
-  deadcode -> warning
-  gocyclo -> warning
-  go-nyet -> warning
   errcheck -> warning
   golint -> warning
   varcheck -> warning
   structcheck -> warning
+  deadcode -> warning
+  gocyclo -> warning
+  go-nyet -> warning
 
 Flags:
-  --help             Show help.
-  --fast             Only run fast linters.
-  -i, --install      Attempt to install all known linters.
-  -u, --update       Pass -u to go tool when installing.
+  --help            Show help.
+  --fast            Only run fast linters.
+  -i, --install     Attempt to install all known linters.
+  -u, --update      Pass -u to go tool when installing.
   -D, --disable=LINTER
-                     List of linters to disable.
-  -d, --debug        Display messages for failed linters, etc.
+                    List of linters to disable.
+  -d, --debug       Display messages for failed linters, etc.
   -j, --concurrency=16
-                     Number of concurrent linters to run.
-  --exclude=REGEXP   Exclude messages matching this regular expression.
-  --cyclo-over="10"  Report functions with cyclomatic complexity over N (using gocyclo).
-  --sort=none        Sort output by any of none, path, line, column, severity, message.
+                    Number of concurrent linters to run.
+  --exclude=REGEXP  Exclude messages matching this regular expression.
+  --cyclo-over=10   Report functions with cyclomatic complexity over N (using gocyclo).
+  --sort=none       Sort output by any of none, path, line, column, severity, message.
+  -t, --tests       Include test files for linters that support this option
+  --deadline=10s     Cancel linters if they have not completed within this duration.
   --linter=NAME:COMMAND:PATTERN
-                     Specify a linter.
+                    Specify a linter.
   --message-overrides=LINTER:MESSAGE
-                     Override message from linter. {message} will be expanded to the original message.
+                    Override message from linter. {message} will be expanded to the original message.
   --severity=LINTER:SEVERITY
-                     Map of linter severities.
+                    Map of linter severities.
 
 Args:
   [<path>]  Directory to lint.
