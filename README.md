@@ -28,7 +28,6 @@ Install all known linters:
 $ gometalinter --install
 Installing errcheck -> go get github.com/kisielk/errcheck
 Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
-Installing vet -> go get golang.org/x/tools/cmd/vet
 Installing deadcode -> go get github.com/remyoudompheng/go-misc/deadcode
 Installing golint -> go get github.com/golang/lint/golint
 Installing gotype -> go get golang.org/x/tools/cmd/gotype

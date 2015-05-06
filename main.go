@@ -96,10 +96,10 @@ var (
 		"golint": "golint {path}:PATH:LINE:COL:MESSAGE",
 		// test/stutter.go:19: missing argument for Printf("%d"): format reads arg 1, have only 0 args
 		"vet":         "go vet {path}:PATH:LINE:MESSAGE",
-		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
+		"gotype":      "gotype {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
-		"structcheck": `structcheck {tests} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)`,
+		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)`,
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)`,
@@ -209,6 +209,12 @@ type Vars map[string]string
 
 func (v Vars) Replace(s string) string {
 	for k, v := range v {
+		prefix := regexp.MustCompile(fmt.Sprintf("{%s=([^}]*)}", k))
+		if v != "" {
+			s = prefix.ReplaceAllString(s, "$1")
+		} else {
+			s = prefix.ReplaceAllString(s, "")
+		}
 		s = strings.Replace(s, fmt.Sprintf("{%s}", k), v, -1)
 	}
 	return s
