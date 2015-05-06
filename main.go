@@ -237,7 +237,6 @@ Severity override map (default is "error"):
 		filter = regexp.MustCompile(*excludeFlag)
 	}
 
-	println(*deadlineFlag)
 	if *fastFlag {
 		*disableLintersFlag = append(*disableLintersFlag, slowLinters...)
 	}
@@ -446,7 +445,6 @@ func executeLinter(state *linterState) {
 		// Wait for process to complete or deadline to expire.
 		select {
 		case <-done:
-			println(state.name, "done")
 
 		case <-state.deadline:
 			debug("warning: deadline exceeded by linter %s", state.name)
