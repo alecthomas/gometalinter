@@ -259,7 +259,6 @@ Severity override map (default is "error"):
 
 	concurrency := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
-	status := make(chan int, len(lintersFlag)*len(paths))
 	processedIssues := maybeSortIssues(incomingIssues)
 	wg := &sync.WaitGroup{}
 	for name, description := range lintersFlag {
@@ -284,7 +283,6 @@ Severity override map (default is "error"):
 			go func(path, name, command, pattern string) {
 				concurrency <- true
 				state := &linterState{
-					status:   status,
 					issues:   incomingIssues,
 					name:     name,
 					command:  command,
@@ -303,22 +301,17 @@ Severity override map (default is "error"):
 
 	wg.Wait()
 	close(incomingIssues)
-	close(status)
+	status := 0
 	for issue := range processedIssues {
 		if *errorsFlag && issue.severity != Error {
 			continue
 		}
 		fmt.Println(issue.String())
+		status = 1
 	}
 	elapsed := time.Now().Sub(start)
 	debug("total elapsed time %s", elapsed)
-
-	// Exit with first non-zero status (if any)
-	for s := range status {
-		if s != 0 {
-			os.Exit(s)
-		}
-	}
+	os.Exit(status)
 }
 
 func expandPaths(paths []string) []string {
@@ -404,7 +397,6 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 }
 
 type linterState struct {
-	status                       chan int
 	issues                       chan *Issue
 	name, command, pattern, path string
 	vars                         Vars
@@ -460,21 +452,17 @@ func executeLinter(state *linterState) {
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
 			debug("warning: %s failed: %s", command, err)
-			state.status <- 1
 			return
 		}
 		debug("warning: %s returned %s", command, err)
 	}
 
-	if processOutput(state, buf.Bytes()) > 0 {
-		state.status <- 1
-	}
-
+	processOutput(state, buf.Bytes())
 	elapsed := time.Now().Sub(start)
 	debug("%s linter took %s", state.name, elapsed)
 }
 
-func processOutput(state *linterState, out []byte) int {
+func processOutput(state *linterState, out []byte) {
 	count := 0
 	re := state.Match()
 	for _, line := range bytes.Split(out, []byte("\n")) {
@@ -524,5 +512,5 @@ func processOutput(state *linterState, out []byte) int {
 		count++
 		state.issues <- issue
 	}
-	return count
+	return
 }
