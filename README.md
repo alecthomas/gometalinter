@@ -72,46 +72,46 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  varcheck (github.com/opennota/check/cmd/varcheck)
-      varcheck {path}
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
-  deadcode (github.com/remyoudompheng/go-misc/deadcode)
-      deadcode {path}
-      :deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
   gocyclo (github.com/alecthomas/gocyclo)
       gocyclo -over {mincyclo} {path}
       :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
   go-nyet (github.com/barakmich/go-nyet)
       go-nyet {path}
       :PATH:LINE:COL:MESSAGE
-  vet ()
-      go vet {path}
-      :PATH:LINE:MESSAGE
-  gotype (golang.org/x/tools/cmd/gotype)
-      gotype {path}
-      :PATH:LINE:COL:MESSAGE
-  structcheck (github.com/opennota/check/cmd/structcheck)
-      structcheck {tests} {path}
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)
-  defercheck (github.com/opennota/check/cmd/defercheck)
-      defercheck {path}
-      :PATH:LINE:MESSAGE
-  golint (github.com/golang/lint/golint)
-      golint {path}
-      :PATH:LINE:COL:MESSAGE
   errcheck (github.com/alecthomas/errcheck)
       errcheck {path}
       :^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
+  structcheck (github.com/opennota/check/cmd/structcheck)
+      structcheck {tests=-t} {path}
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)
+  gotype (golang.org/x/tools/cmd/gotype)
+      gotype {tests=-a} {path}
+      :PATH:LINE:COL:MESSAGE
+  varcheck (github.com/opennota/check/cmd/varcheck)
+      varcheck {path}
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
+  defercheck (github.com/opennota/check/cmd/defercheck)
+      defercheck {path}
+      :PATH:LINE:MESSAGE
+  deadcode (github.com/remyoudompheng/go-misc/deadcode)
+      deadcode {path}
+      :deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
+  golint (github.com/golang/lint/golint)
+      golint {path}
+      :PATH:LINE:COL:MESSAGE
+  vet ()
+      go vet {path}
+      :PATH:LINE:MESSAGE
 
 Severity override map (default is "error"):
 
-  errcheck -> warning
-  golint -> warning
   varcheck -> warning
   structcheck -> warning
   deadcode -> warning
   gocyclo -> warning
   go-nyet -> warning
+  errcheck -> warning
+  golint -> warning
 
 Flags:
   --help            Show help.
@@ -124,14 +124,18 @@ Flags:
   -j, --concurrency=16
                     Number of concurrent linters to run.
   --exclude=REGEXP  Exclude messages matching this regular expression.
-  --cyclo-over=10   Report functions with cyclomatic complexity over N (using gocyclo).
-  --sort=none       Sort output by any of none, path, line, column, severity, message.
+  --cyclo-over=10   Report functions with cyclomatic complexity over N (using
+                    gocyclo).
+  --sort=none       Sort output by any of none, path, line, column, severity,
+                    message.
   -t, --tests       Include test files for linters that support this option
-  --deadline=10s     Cancel linters if they have not completed within this duration.
+  --deadline=5s     Cancel linters if they have not completed within this
+                    duration.
   --linter=NAME:COMMAND:PATTERN
                     Specify a linter.
   --message-overrides=LINTER:MESSAGE
-                    Override message from linter. {message} will be expanded to the original message.
+                    Override message from linter. {message} will be expanded to
+                    the original message.
   --severity=LINTER:SEVERITY
                     Map of linter severities.
 
