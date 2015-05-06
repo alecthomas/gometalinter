@@ -146,6 +146,7 @@ var (
 	sortFlag           = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag           = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
 	deadlineFlag       = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
+	errorsFlag         = kingpin.Flag("errors", "Only show errors.").Bool()
 )
 
 func init() {
@@ -304,7 +305,10 @@ Severity override map (default is "error"):
 	close(incomingIssues)
 	close(status)
 	for issue := range processedIssues {
-		fmt.Printf("%s\n", issue)
+		if *errorsFlag && issue.severity != Error {
+			continue
+		}
+		fmt.Println(issue.String())
 	}
 	elapsed := time.Now().Sub(start)
 	debug("total elapsed time %s", elapsed)

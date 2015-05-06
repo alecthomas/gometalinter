@@ -72,32 +72,32 @@ Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  gocyclo (github.com/alecthomas/gocyclo)
-      gocyclo -over {mincyclo} {path}
-      :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
-  go-nyet (github.com/barakmich/go-nyet)
-      go-nyet {path}
-      :PATH:LINE:COL:MESSAGE
-  errcheck (github.com/alecthomas/errcheck)
-      errcheck {path}
-      :^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)
-  structcheck (github.com/opennota/check/cmd/structcheck)
-      structcheck {tests=-t} {path}
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>.*)
   gotype (golang.org/x/tools/cmd/gotype)
       gotype {tests=-a} {path}
       :PATH:LINE:COL:MESSAGE
   varcheck (github.com/opennota/check/cmd/varcheck)
       varcheck {path}
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
-  defercheck (github.com/opennota/check/cmd/defercheck)
-      defercheck {path}
-      :PATH:LINE:MESSAGE
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$
   deadcode (github.com/remyoudompheng/go-misc/deadcode)
       deadcode {path}
       :deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
   golint (github.com/golang/lint/golint)
       golint {path}
+      :PATH:LINE:COL:MESSAGE
+  errcheck (github.com/alecthomas/errcheck)
+      errcheck {path}
+      :^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$
+  structcheck (github.com/opennota/check/cmd/structcheck)
+      structcheck {tests=-t} {path}
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$
+  defercheck (github.com/opennota/check/cmd/defercheck)
+      defercheck {path}
+      :PATH:LINE:MESSAGE
+  gocyclo (github.com/alecthomas/gocyclo)
+      gocyclo -over {mincyclo} {path}
+      :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
+  go-nyet (github.com/barakmich/go-nyet)
+      go-nyet {path}
       :PATH:LINE:COL:MESSAGE
   vet ()
       go vet {path}
@@ -105,13 +105,13 @@ Default linters:
 
 Severity override map (default is "error"):
 
+  golint -> warning
   varcheck -> warning
   structcheck -> warning
   deadcode -> warning
   gocyclo -> warning
   go-nyet -> warning
   errcheck -> warning
-  golint -> warning
 
 Flags:
   --help            Show help.
@@ -131,6 +131,7 @@ Flags:
   -t, --tests       Include test files for linters that support this option
   --deadline=5s     Cancel linters if they have not completed within this
                     duration.
+  --errors          Only show errors.
   --linter=NAME:COMMAND:PATTERN
                     Specify a linter.
   --message-overrides=LINTER:MESSAGE
