@@ -95,7 +95,7 @@ var (
 		// main.go:8:10: should omit type map[string]string from declaration of var linters; it will be inferred from the right-hand side
 		"golint": "golint {path}:PATH:LINE:COL:MESSAGE",
 		// test/stutter.go:19: missing argument for Printf("%d"): format reads arg 1, have only 0 args
-		"vet":         "go tool vet {path}:PATH:LINE:MESSAGE",
+		"vet":         "go vet {path}:PATH:LINE:MESSAGE",
 		"gotype":      "gotype {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)`,
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
