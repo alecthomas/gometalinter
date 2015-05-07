@@ -123,12 +123,12 @@ var (
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
 		"gotype":      "golang.org/x/tools/cmd/gotype",
-		"errcheck":    "github.com/alecthomas/errcheck",
+		"errcheck":    "github.com/kisielk/errcheck",
 		"defercheck":  "github.com/opennota/check/cmd/defercheck",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
-		"gocyclo":     "github.com/alecthomas/gocyclo",
+		"gocyclo":     "github.com/fzipp/gocyclo",
 		"go-nyet":     "github.com/barakmich/go-nyet",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
