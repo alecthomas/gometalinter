@@ -92,13 +92,11 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		// main.go:8:10: should omit type map[string]string from declaration of var linters; it will be inferred from the right-hand side
-		"golint": "golint {path}:PATH:LINE:COL:MESSAGE",
-		// test/stutter.go:19: missing argument for Printf("%d"): format reads arg 1, have only 0 args
-		"vet":         "go vet {path}:PATH:LINE:MESSAGE",
+		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
+		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
 		"gotype":      "gotype {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
-		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
+		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
 		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
@@ -466,6 +464,9 @@ func processOutput(state *linterState, out []byte) {
 	count := 0
 	re := state.Match()
 	for _, line := range bytes.Split(out, []byte("\n")) {
+		if len(line) == 0 {
+			continue
+		}
 		groups := re.FindAllSubmatch(line, -1)
 		if groups == nil {
 			debug("%s (didn't match): '%s'", state.name, line)

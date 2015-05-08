@@ -23,7 +23,7 @@ func duplicateDefer(a io.Closer) {
 }
 
 func stuff() {
-	var a int
+	//var a int
 	fmt.Printf("%d") // test for "go vet"
 	doit()           // test for errcheck
 	return
