@@ -88,8 +88,8 @@ func (s *sortedIssues) Less(i, j int) bool {
 
 var (
 	predefinedPatterns = map[string]string{
-		"PATH:LINE:COL:MESSAGE": `^(?P<path>[^:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"PATH:LINE:MESSAGE":     `^(?P<path>[^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
+		"PATH:LINE:COL:MESSAGE": `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
 		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
@@ -167,7 +167,7 @@ func (i *Issue) String() string {
 	if i.col != 0 {
 		col = fmt.Sprintf("%d", i.col)
 	}
-	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", i.path, i.line, col, i.severity, i.message, i.linter)
+	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.path), i.line, col, i.severity, strings.TrimSpace(i.message), i.linter)
 }
 
 func debug(format string, args ...interface{}) {
@@ -323,12 +323,13 @@ func expandPaths(paths []string) []string {
 			_ = filepath.Walk(root, func(p string, i os.FileInfo, err error) error {
 				kingpin.FatalIfError(err, "invalid path '"+p+"'")
 
+				base := filepath.Base(p)
+				skip := strings.ContainsAny(base[0:1], "_.") && base != "." && base != ".."
 				if i.IsDir() {
-					base := filepath.Base(p)
-					if strings.HasPrefix(base, ".") && base != "." && base != ".." {
+					if skip {
 						return filepath.SkipDir
 					}
-				} else if strings.HasSuffix(p, ".go") {
+				} else if !skip && strings.HasSuffix(p, ".go") {
 					dirs[filepath.Clean(filepath.Dir(p))] = true
 				}
 				return nil

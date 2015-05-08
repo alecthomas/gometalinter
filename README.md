@@ -41,7 +41,7 @@ Run it:
 
 ```
 $ cd $GOPATH/src/github.com/alecthomas/gometalinter/example
-$ gometalinter
+$ gometalinter ./...
 stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
 stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
 stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
