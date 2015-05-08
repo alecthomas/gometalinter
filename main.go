@@ -278,6 +278,7 @@ Severity override map (default is "error"):
 		}
 		for _, path := range paths {
 			wg.Add(1)
+			deadline := time.After(*deadlineFlag)
 			go func(path, name, command, pattern string) {
 				concurrency <- true
 				state := &linterState{
@@ -288,7 +289,7 @@ Severity override map (default is "error"):
 					path:     path,
 					vars:     vars,
 					filter:   filter,
-					deadline: time.After(*deadlineFlag),
+					deadline: deadline,
 				}
 				executeLinter(state)
 				<-concurrency
