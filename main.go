@@ -132,7 +132,7 @@ var (
 	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
 
-	pathsArg           = kingpin.Arg("path", "Directory to lint.").Strings()
+	pathsArg           = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
 	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
 	updateFlag         = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
@@ -316,7 +316,7 @@ func expandPaths(paths []string) []string {
 	if len(paths) == 0 {
 		paths = []string{"."}
 	}
-	out := []string{}
+	dirs := map[string]bool{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
 			root := filepath.Dir(path)
@@ -328,26 +328,20 @@ func expandPaths(paths []string) []string {
 					if strings.HasPrefix(base, ".") && base != "." && base != ".." {
 						return filepath.SkipDir
 					}
-					out = append(out, filepath.Clean(p))
+				} else if strings.HasSuffix(p, ".go") {
+					dirs[filepath.Clean(filepath.Dir(p))] = true
 				}
 				return nil
 			})
 		} else {
-			out = append(out, filepath.Clean(path))
+			dirs[filepath.Clean(path)] = true
 		}
 	}
-
-	// Deduplicate paths.
-	sort.Strings(out)
-	clean := []string{}
-	last := ""
-	for _, path := range out {
-		if path != last {
-			clean = append(clean, path)
-		}
-		last = path
+	out := make([]string, 0, len(dirs))
+	for d := range dirs {
+		out = append(out, d)
 	}
-	return clean
+	return out
 }
 
 func doInstall() {
