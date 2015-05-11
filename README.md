@@ -26,15 +26,15 @@ Install all known linters:
 
 ```
 $ gometalinter --install
-Installing errcheck -> go get github.com/kisielk/errcheck
-Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
 Installing deadcode -> go get github.com/remyoudompheng/go-misc/deadcode
+Installing gocyclo -> go get github.com/alecthomas/gocyclo
+Installing go-nyet -> go get github.com/barakmich/go-nyet
 Installing golint -> go get github.com/golang/lint/golint
-Installing gotype -> go get golang.org/x/tools/cmd/gotype
 Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
 Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
-Installing gocyclo -> go get github.com/fzipp/gocyclo
-Installing go-nyet -> go get github.com/barakmich/go-nyet
+Installing gotype -> go get golang.org/x/tools/cmd/gotype
+Installing errcheck -> go get github.com/alecthomas/errcheck
+Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
 ```
 
 Run it:
@@ -62,19 +62,35 @@ stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, hav
 Gometalinter also supports the commonly seen `<path>/...` recursive path
 format. Note that this can be *very* slow.
 
-## Troubleshooting
+## FAQ
+
+### Why does `gometalinter --install` install forks of gocyclo and errcheck?
+
+I forked `gocyclo` because the upstream behaviour is to recursively check all
+subdirectories even when just a single directory is specified. This made it
+unusably slow when vendoring. The recursive behaviour can be achieved with
+gometalinter by explicitly specifying `<path>/...`. There is a
+[pull request](https://github.com/fzipp/gocyclo/pull/1) open.
+
+`errcheck` was forked from [an old version](https://github.com/kisielk/errcheck/commit/0ba3e8228e4772238bee75d33c4cb0c3fb2a432c) that was fast.
+Upstream subsequently switched to `go/loader` and became [slow](https://github.com/kisielk/errcheck/issues/56)
+enough to not be usable in an interactive environment. There doesn't seem to be any
+functional difference, and in lieu of any interest from upstream in fixing the issue,
+the fork remains.
+
+### Gometalinter is not working
 
 Sometimes gometalinter will not report issues that you think it should. There
 are two things to try in that case:
 
-### 1. Update to the latest build of gometalinter and all linters
+#### 1. Update to the latest build of gometalinter and all linters
 
     go get -u github.com/alecthomas/gometalinter
     gometalinter --install --update
 
 If you're lucky, this will fix the problem.
 
-### 2. Analyse the debug output
+#### 2. Analyse the debug output
 
 If that doesn't help, the problem may be elsewhere (in no particular order):
 
