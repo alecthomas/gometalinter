@@ -80,8 +80,10 @@ the fork remains.
 
 ### Gometalinter is not working
 
+That's more of a statement than a question, but okay.
+
 Sometimes gometalinter will not report issues that you think it should. There
-are two things to try in that case:
+are three things to try in that case:
 
 #### 1. Update to the latest build of gometalinter and all linters
 
@@ -104,8 +106,12 @@ To find out what's going on run in debug mode:
     gometalinter --debug
 
 This will show all output from the linters and should indicate why it is
-failing. If the problem looks like a bug, please file an issue and paste the
-debug output.
+failing.
+
+#### 3. Report an issue.
+
+Failing all else, if the problem looks like a bug please file an issue and
+include the output of `gometalinter --debug`.
 
 ## Details
 
