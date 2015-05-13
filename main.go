@@ -99,10 +99,14 @@ var (
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
 		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
-		"deadcode":    `deadcode {path}:deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)`,
-		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)`,
+		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
 		"go-nyet":     `go-nyet {path}:PATH:LINE:COL:MESSAGE`,
+		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
+		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 	}
+	disabledLinters           = []string{"testify", "test"}
+	enabledLinters            = []string{}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
 		"varcheck":    "unused global variable {message}",
@@ -129,25 +133,26 @@ var (
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 		"go-nyet":     "github.com/barakmich/go-nyet",
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "testify", "test"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
 
-	pathsArg           = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
-	fastFlag           = kingpin.Flag("fast", "Only run fast linters.").Bool()
-	installFlag        = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
-	updateFlag         = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
-	disableLintersFlag = kingpin.Flag("disable", "List of linters to disable.").PlaceHolder("LINTER").Short('D').Strings()
-	debugFlag          = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
-	concurrencyFlag    = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
-	excludeFlag        = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
-	cycloFlag          = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
-	sortFlag           = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
-	testFlag           = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
-	deadlineFlag       = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
-	errorsFlag         = kingpin.Flag("errors", "Only show errors.").Bool()
+	pathsArg        = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
+	fastFlag        = kingpin.Flag("fast", "Only run fast linters.").Bool()
+	installFlag     = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
+	updateFlag      = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
+	debugFlag       = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
+	concurrencyFlag = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
+	excludeFlag     = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
+	cycloFlag       = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
+	sortFlag        = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
+	testFlag        = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
+	deadlineFlag    = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
+	errorsFlag      = kingpin.Flag("errors", "Only show errors.").Bool()
 )
 
 func init() {
+	kingpin.Flag("disable", fmt.Sprintf("List of linters to disable (%s).", strings.Join(disabledLinters, ","))).PlaceHolder("LINTER").Short('D').StringsVar(&disabledLinters)
+	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').StringsVar(&enabledLinters)
 	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&lintersFlag)
 	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
 	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
@@ -237,7 +242,7 @@ Severity override map (default is "error"):
 	}
 
 	if *fastFlag {
-		*disableLintersFlag = append(*disableLintersFlag, slowLinters...)
+		disabledLinters = append(disabledLinters, slowLinters...)
 	}
 
 	if *installFlag {
@@ -248,8 +253,11 @@ Severity override map (default is "error"):
 	runtime.GOMAXPROCS(*concurrencyFlag)
 
 	disable := map[string]bool{}
-	for _, linter := range *disableLintersFlag {
+	for _, linter := range disabledLinters {
 		disable[linter] = true
+	}
+	for _, linter := range enabledLinters {
+		delete(disable, linter)
 	}
 
 	start := time.Now()
@@ -404,7 +412,7 @@ func (l *linterState) InterpolatedCommand() string {
 }
 
 func (l *linterState) Match() *regexp.Regexp {
-	re, err := regexp.Compile(l.pattern)
+	re, err := regexp.Compile("(?m:" + l.pattern + ")")
 	kingpin.FatalIfError(err, "invalid pattern for '"+l.command+"'")
 	return re
 }
@@ -457,21 +465,20 @@ func executeLinter(state *linterState) {
 }
 
 func processOutput(state *linterState, out []byte) {
-	count := 0
 	re := state.Match()
-	for _, line := range bytes.Split(out, []byte("\n")) {
-		if len(line) == 0 {
-			continue
+	all := re.FindAllSubmatchIndex(out, -1)
+	debug("%s hits %d: %s", state.name, len(all), state.pattern)
+	for _, indices := range all {
+		group := [][]byte{}
+		for i := 0; i < len(indices); i += 2 {
+			fragment := out[indices[i]:indices[i+1]]
+			group = append(group, fragment)
 		}
-		groups := re.FindAllSubmatch(line, -1)
-		if groups == nil {
-			debug("%s (didn't match): '%s'", state.name, line)
-			continue
-		}
+
 		issue := &Issue{}
 		issue.linter = Linter(state.name)
 		for i, name := range re.SubexpNames() {
-			part := string(groups[0][i])
+			part := string(group[i])
 			if name != "" {
 				state.vars[name] = part
 			}
@@ -506,7 +513,6 @@ func processOutput(state *linterState, out []byte) {
 		if state.filter != nil && state.filter.MatchString(issue.String()) {
 			continue
 		}
-		count++
 		state.issues <- issue
 	}
 	return

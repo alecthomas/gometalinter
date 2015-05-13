@@ -4,15 +4,39 @@ The number of tools for statically checking Go source for errors and warnings
 is impressive.
 
 This is a tool that concurrently runs a whole bunch of those linters and
-normalises their output to a standard format. It is intended for use with
-editor/IDE integration.
+normalises their output to a standard format:
 
-Currently supported linters are listed below. Additional linters can be added through the
-command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
+    <file>:<line>:[<column>]: <message> (<linter>)
+
+eg.
+
+    stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
+    stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
+
+It is intended for use with editor/IDE integration.
 
 ## Editor integration
 
 - [SublimeLinter plugin](https://github.com/alecthomas/SublimeLinter-contrib-gometalinter).
+
+## Supported linters
+
+- [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
+- [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
+- [go-nyet](https://github.com/barakmich/go-nyet) - Similar to `go vet` but also detects aliased variables.
+- [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
+- [defercheck](https://github.com/opennota/check) - Checks for duplicate defer calls.
+- [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
+- [structcheck](https://github.com/opennota/check) - Find unused struct fields.
+- [gotype](https://godoc.org/golang.org/x/tools/cmd/gotype) - Show compilation errors.
+- [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
+
+Disabled by default (enable with `--enable=<linter>`):
+
+- [testify](https://github.com/stretchr/testify) - Show location of failed testify assertions (disabled by default).
+- [testing](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module (disabled by default).
+
+Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
 ## Quickstart
 
