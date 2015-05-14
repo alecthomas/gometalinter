@@ -94,7 +94,7 @@ var (
 	lintersFlag = map[string]string{
 		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
 		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"gotype":      "gotype {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
+		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
@@ -142,7 +142,7 @@ var (
 	updateFlag      = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
 	debugFlag       = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
-	excludeFlag     = kingpin.Flag("exclude", "Exclude messages matching this regular expression.").PlaceHolder("REGEXP").String()
+	excludeFlag     = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
 	cycloFlag       = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
 	sortFlag        = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag        = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
@@ -237,8 +237,8 @@ Severity override map (default is "error"):
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
 	var filter *regexp.Regexp
-	if *excludeFlag != "" {
-		filter = regexp.MustCompile(*excludeFlag)
+	if len(*excludeFlag) > 0 {
+		filter = regexp.MustCompile(strings.Join(*excludeFlag, "|"))
 	}
 
 	if *fastFlag {
