@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v2-unstable"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 type Severity string
@@ -370,9 +370,7 @@ func doInstall() {
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		err := c.Run()
-		if err != nil {
-			kingpin.CommandLine.Errorf(os.Stderr, "failed to install %s: %s", name, err)
-		}
+		kingpin.CommandLine.FatalIfError(err, "failed to install %s: %s", name, err)
 	}
 }
 
