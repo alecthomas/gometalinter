@@ -211,6 +211,14 @@ func exArgs() (arg0 string, arg1 string) {
 
 type Vars map[string]string
 
+func (v Vars) Copy() Vars {
+	out := Vars{}
+	for k, v := range v {
+		out[k] = v
+	}
+	return out
+}
+
 func (v Vars) Replace(s string) string {
 	for k, v := range v {
 		prefix := regexp.MustCompile(fmt.Sprintf("{%s=([^}]*)}", k))
@@ -287,22 +295,22 @@ Severity override map (default is "error"):
 		for _, path := range paths {
 			wg.Add(1)
 			deadline := time.After(*deadlineFlag)
-			go func(path, name, command, pattern string) {
+			state := &linterState{
+				issues:   incomingIssues,
+				name:     name,
+				command:  command,
+				pattern:  pattern,
+				path:     path,
+				vars:     vars.Copy(),
+				filter:   filter,
+				deadline: deadline,
+			}
+			go func() {
 				concurrency <- true
-				state := &linterState{
-					issues:   incomingIssues,
-					name:     name,
-					command:  command,
-					pattern:  pattern,
-					path:     path,
-					vars:     vars,
-					filter:   filter,
-					deadline: deadline,
-				}
 				executeLinter(state)
 				<-concurrency
 				wg.Done()
-			}(path, name, command, pattern)
+			}()
 		}
 	}
 
@@ -416,7 +424,7 @@ func (l *linterState) Match() *regexp.Regexp {
 }
 
 func executeLinter(state *linterState) {
-	debug("linting with %s: %s", state.name, state.command)
+	debug("linting with %s: %s (on %s)", state.name, state.command, state.path)
 
 	start := time.Now()
 	if p, ok := predefinedPatterns[state.pattern]; ok {
