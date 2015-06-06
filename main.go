@@ -102,6 +102,7 @@ var (
 		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
 		"go-nyet":     `go-nyet {path}:PATH:LINE:COL:MESSAGE`,
+		"ineffassign": `ineffassign -n {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\s+(?P<message>.*)$`,
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 	}
@@ -112,6 +113,7 @@ var (
 		"varcheck":    "unused global variable {message}",
 		"structcheck": "unused struct field {message}",
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
+		"ineffassign": `assignment to "{message}" is ineffective`,
 	}
 	linterSeverityFlag = map[string]string{
 		"errcheck":    "warning",
@@ -121,6 +123,7 @@ var (
 		"deadcode":    "warning",
 		"gocyclo":     "warning",
 		"go-nyet":     "warning",
+		"ineffassign": "warning",
 	}
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
@@ -132,6 +135,7 @@ var (
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 		"go-nyet":     "github.com/barakmich/go-nyet",
+		"ineffassign": "github.com/gordonklaus/ineffassign",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "testify", "test"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
