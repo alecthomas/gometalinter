@@ -21,6 +21,8 @@ It is intended for use with editor/IDE integration.
 
 ## Supported linters
 
+- [go vet](http://godoc.org/golang.org/x/tools/cmd/vet/) - Reports potential errors that otherwise compile.
+- [gotype](golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
 - [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [go-nyet](https://github.com/barakmich/go-nyet) - Similar to `go vet` but also detects aliased variables.
@@ -30,11 +32,12 @@ It is intended for use with editor/IDE integration.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [gotype](https://godoc.org/golang.org/x/tools/cmd/gotype) - Show compilation errors.
 - [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
+- [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 
 Disabled by default (enable with `--enable=<linter>`):
 
 - [testify](https://github.com/stretchr/testify) - Show location of failed testify assertions (disabled by default).
-- [testing](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module (disabled by default).
+- [test](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module (disabled by default).
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
@@ -49,16 +52,18 @@ $ go get github.com/alecthomas/gometalinter
 Install all known linters:
 
 ```
-$ gometalinter --install
-Installing deadcode -> go get github.com/remyoudompheng/go-misc/deadcode
-Installing gocyclo -> go get github.com/alecthomas/gocyclo
-Installing go-nyet -> go get github.com/barakmich/go-nyet
-Installing golint -> go get github.com/golang/lint/golint
-Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
-Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
-Installing gotype -> go get golang.org/x/tools/cmd/gotype
-Installing errcheck -> go get github.com/alecthomas/errcheck
-Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
+$ gometalinter --install --update
+Installing golint -> go get -u github.com/golang/lint/golint
+Installing gotype -> go get -u golang.org/x/tools/cmd/gotype
+Installing defercheck -> go get -u github.com/opennota/check/cmd/defercheck
+Installing deadcode -> go get -u github.com/remyoudompheng/go-misc/deadcode
+Installing gocyclo -> go get -u github.com/alecthomas/gocyclo
+Installing ineffassign -> go get -u github.com/gordonklaus/ineffassign
+Installing errcheck -> go get -u github.com/alecthomas/errcheck
+Installing varcheck -> go get -u github.com/opennota/check/cmd/varcheck
+Installing structcheck -> go get -u github.com/opennota/check/cmd/structcheck
+Installing go-nyet -> go get -u github.com/barakmich/go-nyet
+Installing dupl -> go get -u github.com/mibk/dupl
 ```
 
 Run it:
