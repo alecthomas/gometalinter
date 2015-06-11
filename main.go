@@ -105,6 +105,7 @@ var (
 		"ineffassign": `ineffassign -n {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\s+(?P<message>.*)$`,
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
+		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 	}
 	disabledLinters           = []string{"testify", "test"}
 	enabledLinters            = []string{}
@@ -124,6 +125,7 @@ var (
 		"gocyclo":     "warning",
 		"go-nyet":     "warning",
 		"ineffassign": "warning",
+		"dupl":        "warning",
 	}
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
@@ -136,22 +138,24 @@ var (
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 		"go-nyet":     "github.com/barakmich/go-nyet",
 		"ineffassign": "github.com/gordonklaus/ineffassign",
+		"dupl":        "github.com/mibk/dupl",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "testify", "test"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
 
-	pathsArg        = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
-	fastFlag        = kingpin.Flag("fast", "Only run fast linters.").Bool()
-	installFlag     = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
-	updateFlag      = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
-	debugFlag       = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
-	concurrencyFlag = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
-	excludeFlag     = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
-	cycloFlag       = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
-	sortFlag        = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
-	testFlag        = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
-	deadlineFlag    = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
-	errorsFlag      = kingpin.Flag("errors", "Only show errors.").Bool()
+	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
+	fastFlag          = kingpin.Flag("fast", "Only run fast linters.").Bool()
+	installFlag       = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
+	updateFlag        = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
+	debugFlag         = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
+	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
+	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
+	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
+	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
+	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
+	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
+	deadlineFlag      = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
+	errorsFlag        = kingpin.Flag("errors", "Only show errors.").Bool()
 )
 
 func init() {
@@ -290,8 +294,9 @@ Severity override map (default is "error"):
 
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"mincyclo": fmt.Sprintf("%d", *cycloFlag),
-			"tests":    "",
+			"duplthreshold": fmt.Sprintf("%d", *duplThresholdFlag),
+			"mincyclo":      fmt.Sprintf("%d", *cycloFlag),
+			"tests":         "",
 		}
 		if *testFlag {
 			vars["tests"] = "-t"
