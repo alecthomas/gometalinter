@@ -147,6 +147,7 @@ var (
 	fastFlag          = kingpin.Flag("fast", "Only run fast linters.").Bool()
 	installFlag       = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
 	updateFlag        = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
+	forceFlag         = kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').Bool()
 	debugFlag         = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
@@ -380,6 +381,10 @@ func doInstall() {
 		if *updateFlag {
 			cmd += " -u"
 		}
+		if *forceFlag {
+			cmd += " -f"
+		}
+
 		cmd += " " + target
 		fmt.Printf("Installing %s -> %s\n", name, cmd)
 		arg0, arg1 := exArgs()
