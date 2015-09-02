@@ -21,8 +21,8 @@ It is intended for use with editor/IDE integration.
 
 ## Supported linters
 
-- [go vet](http://godoc.org/golang.org/x/tools/cmd/vet/) - Reports potential errors that otherwise compile.
-- [gotype](golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
+- [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
+- [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
 - [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [go-nyet](https://github.com/barakmich/go-nyet) - Similar to `go vet` but also detects aliased variables.
@@ -30,7 +30,6 @@ It is intended for use with editor/IDE integration.
 - [defercheck](https://github.com/opennota/check) - Checks for duplicate defer calls.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
-- [gotype](https://godoc.org/golang.org/x/tools/cmd/gotype) - Show compilation errors.
 - [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 
