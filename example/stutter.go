@@ -38,3 +38,11 @@ func do() {
 	}
 	println(a)
 }
+
+func testVetShadow(mystructs []*MyStruct) *MyStruct {
+	var foo *MyStruct
+	for _, mystruct := range mystructs {
+		foo := mystruct
+	}
+	return foo
+}

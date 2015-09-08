@@ -92,20 +92,20 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
-		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
-		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
-		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
-		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
-		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
-		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
-		"go-nyet":     `go-nyet {path}:PATH:LINE:COL:MESSAGE`,
-		"ineffassign": `ineffassign -n {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\s+(?P<message>.*)$`,
-		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
-		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+		"golint":       "golint {path}:PATH:LINE:COL:MESSAGE",
+		"vet":          "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
+		"vet --shadow": "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
+		"gotype":       "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
+		"errcheck":     `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
+		"varcheck":     `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
+		"structcheck":  `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
+		"defercheck":   "defercheck {path}:PATH:LINE:MESSAGE",
+		"deadcode":     `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+		"gocyclo":      `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
+		"ineffassign":  `ineffassign -n {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\s+(?P<message>.*)$`,
+		"testify":      `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
+		"test":         `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
+		"dupl":         `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 	}
 	disabledLinters           = []string{"testify", "test"}
 	enabledLinters            = []string{}
@@ -123,7 +123,6 @@ var (
 		"structcheck": "warning",
 		"deadcode":    "warning",
 		"gocyclo":     "warning",
-		"go-nyet":     "warning",
 		"ineffassign": "warning",
 		"dupl":        "warning",
 	}
@@ -136,7 +135,6 @@ var (
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
-		"go-nyet":     "github.com/barakmich/go-nyet",
 		"ineffassign": "github.com/gordonklaus/ineffassign",
 		"dupl":        "github.com/mibk/dupl",
 	}
