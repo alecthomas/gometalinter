@@ -22,10 +22,10 @@ It is intended for use with editor/IDE integration.
 ## Supported linters
 
 - [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
+- [go vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
 - [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
 - [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
-- [go-nyet](https://github.com/barakmich/go-nyet) - Similar to `go vet` but also detects aliased variables.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
 - [defercheck](https://github.com/opennota/check) - Checks for duplicate defer calls.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
@@ -61,7 +61,6 @@ Installing ineffassign -> go get -u github.com/gordonklaus/ineffassign
 Installing errcheck -> go get -u github.com/alecthomas/errcheck
 Installing varcheck -> go get -u github.com/opennota/check/cmd/varcheck
 Installing structcheck -> go get -u github.com/opennota/check/cmd/structcheck
-Installing go-nyet -> go get -u github.com/barakmich/go-nyet
 Installing dupl -> go get -u github.com/mibk/dupl
 ```
 
@@ -175,11 +174,11 @@ Default linters:
   gocyclo (github.com/alecthomas/gocyclo)
       gocyclo -over {mincyclo} {path}
       :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
-  go-nyet (github.com/barakmich/go-nyet)
-      go-nyet {path}
-      :PATH:LINE:COL:MESSAGE
   vet ()
       go vet {path}
+      :PATH:LINE:MESSAGE
+  vet --shadow ()
+      go vet --shadow {path}
       :PATH:LINE:MESSAGE
 
 Severity override map (default is "error"):
@@ -189,7 +188,6 @@ Severity override map (default is "error"):
   structcheck -> warning
   deadcode -> warning
   gocyclo -> warning
-  go-nyet -> warning
   errcheck -> warning
 
 Flags:
