@@ -94,7 +94,7 @@ var (
 	lintersFlag = map[string]string{
 		"golint":       "golint {path}:PATH:LINE:COL:MESSAGE",
 		"vet":          "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"vet --shadow": "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
+		"vetshadow": "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
 		"gotype":       "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":     `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":     `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
