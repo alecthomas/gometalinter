@@ -91,6 +91,10 @@ format. Note that this can be *very* slow.
 
 ## FAQ
 
+### How do I make `gometalinter` work with Go 1.5 vendoring?
+
+`gometalinter` has no specific support for vendor paths, however if the underlying tools support it then it should Just Work™. Ensure that all of the linters are up to date and built with Go 1.5 (`gometalinter --install --update --force`) then run `GO_VENDOR=1 gometalinter .`. That should be it.
+
 ### Why does `gometalinter --install` install forks of gocyclo and errcheck?
 
 I forked `gocyclo` because the upstream behaviour is to recursively check all
