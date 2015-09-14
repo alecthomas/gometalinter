@@ -18,6 +18,7 @@ It is intended for use with editor/IDE integration.
 ## Editor integration
 
 - [SublimeLinter plugin](https://github.com/alecthomas/SublimeLinter-contrib-gometalinter).
+- There is a ticket open for [vim-go](https://github.com/fatih/vim-go/issues/320), opened Feb 2015.
 
 ## Supported linters
 
