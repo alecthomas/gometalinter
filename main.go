@@ -192,7 +192,11 @@ func formatLinters() string {
 	w := bytes.NewBuffer(nil)
 	for name := range lintersFlag {
 		linter := Linter(name)
-		fmt.Fprintf(w, "    %s (%s)\n        %s\n        %s\n", name, linter.InstallFrom(), linter.Command(), linter.Pattern())
+		install := "(" + linter.InstallFrom() + ")"
+		if install == "()" {
+			install = ""
+		}
+		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n", name, install, linter.Command(), linter.Pattern())
 	}
 	return w.String()
 }
@@ -200,7 +204,7 @@ func formatLinters() string {
 func formatSeverity() string {
 	w := bytes.NewBuffer(nil)
 	for name, severity := range linterSeverityFlag {
-		fmt.Fprintf(w, "    %s -> %s\n", name, severity)
+		fmt.Fprintf(w, "  %s -> %s\n", name, severity)
 	}
 	return w.String()
 }
