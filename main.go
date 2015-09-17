@@ -92,20 +92,20 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		"golint":       "golint {path}:PATH:LINE:COL:MESSAGE",
-		"vet":          "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"vetshadow": "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
-		"gotype":       "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
-		"errcheck":     `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
-		"varcheck":     `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
-		"structcheck":  `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
-		"defercheck":   "defercheck {path}:PATH:LINE:MESSAGE",
-		"deadcode":     `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"gocyclo":      `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
-		"ineffassign":  `ineffassign -n {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\s+(?P<message>.*)$`,
-		"testify":      `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-		"test":         `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
-		"dupl":         `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
+		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
+		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
+		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
+		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
+		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>\w+)$`,
+		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$`,
+		"defercheck":  "defercheck {path}:PATH:LINE:MESSAGE",
+		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
+		"ineffassign": `ineffassign -n {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\s+(?P<message>.*)$`,
+		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
+		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
+		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 	}
 	disabledLinters           = []string{"testify", "test"}
 	enabledLinters            = []string{}
@@ -240,6 +240,11 @@ func (v Vars) Replace(s string) string {
 }
 
 func main() {
+	// Linters are by their very nature, short lived, so use sbrk for
+	// allocations rather than GC.
+	//
+	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
+	_ = os.Setenv("GODEBUG", "sbrk=1")
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
