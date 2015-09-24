@@ -1,4 +1,4 @@
-# Go Meta Linter
+# Go Meta Linter [![Build Status](https://travis-ci.org/alecthomas/gometalinter.png)](https://travis-ci.org/alecthomas/gometalinter)
 
 The number of tools for statically checking Go source for errors and warnings
 is impressive.
