@@ -201,6 +201,10 @@ func debug(format string, args ...interface{}) {
 	}
 }
 
+func warning(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "WARNING: "+format+"\n", args...)
+}
+
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
 	for name := range lintersFlag {
@@ -520,7 +524,7 @@ func executeLinter(state *linterState) {
 		case <-done:
 
 		case <-state.deadline:
-			debug("warning: deadline exceeded by linter %s", state.name)
+			warning("warning: deadline exceeded by linter %s", state.name)
 			_ = cmd.Process.Kill()
 			return
 		}
