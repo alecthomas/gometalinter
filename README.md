@@ -31,6 +31,7 @@ It is intended for use with editor/IDE integration.
 - [defercheck](https://github.com/opennota/check) - Checks for duplicate defer calls.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
+- [aligncheck](https://github.com/opennota/check) - Warn about un-optimally aligned structures.
 - [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
@@ -54,16 +55,17 @@ Install all known linters:
 
 ```
 $ gometalinter --install --update
-Installing golint -> go get -u github.com/golang/lint/golint
-Installing gotype -> go get -u golang.org/x/tools/cmd/gotype
-Installing defercheck -> go get -u github.com/opennota/check/cmd/defercheck
-Installing deadcode -> go get -u github.com/remyoudompheng/go-misc/deadcode
-Installing gocyclo -> go get -u github.com/alecthomas/gocyclo
-Installing ineffassign -> go get -u github.com/gordonklaus/ineffassign
-Installing errcheck -> go get -u github.com/alecthomas/errcheck
-Installing varcheck -> go get -u github.com/opennota/check/cmd/varcheck
-Installing structcheck -> go get -u github.com/opennota/check/cmd/structcheck
-Installing dupl -> go get -u github.com/mibk/dupl
+Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
+Installing aligncheck -> go get github.com/opennota/check/cmd/aligncheck
+Installing deadcode -> go get github.com/remyoudompheng/go-misc/deadcode
+Installing gocyclo -> go get github.com/alecthomas/gocyclo
+Installing ineffassign -> go get github.com/gordonklaus/ineffassign
+Installing dupl -> go get github.com/mibk/dupl
+Installing golint -> go get github.com/golang/lint/golint
+Installing gotype -> go get golang.org/x/tools/cmd/gotype
+Installing errcheck -> go get github.com/alecthomas/errcheck
+Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
+Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
 ```
 
 Run it:
