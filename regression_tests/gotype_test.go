@@ -1,0 +1,16 @@
+package regression_tests
+
+import "testing"
+
+func TestGoType(t *testing.T) {
+	source := `package test
+
+func test() {
+	var foo string
+}
+`
+	expected := Issues{
+		{Linter: "gotype", Severity: "error", Path: "test.go", Line: 4, Col: 6, Message: "foo declared but not used"},
+	}
+	ExpectIssues(t, "gotype", source, expected)
+}
