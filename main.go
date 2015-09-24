@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -62,23 +63,23 @@ func (s *sortedIssues) Less(i, j int) bool {
 	for _, key := range s.order {
 		switch key {
 		case "path":
-			if l.path >= r.path {
+			if l.Path >= r.Path {
 				return false
 			}
 		case "line":
-			if l.line >= r.line {
+			if l.Line >= r.Line {
 				return false
 			}
 		case "column":
-			if l.col >= r.col {
+			if l.Col >= r.Col {
 				return false
 			}
 		case "severity":
-			if l.severity >= r.severity {
+			if l.Severity >= r.Severity {
 				return false
 			}
 		case "message":
-			if l.message >= r.message {
+			if l.Message >= r.Message {
 				return false
 			}
 		}
@@ -155,6 +156,7 @@ var (
 	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
 	deadlineFlag      = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
 	errorsFlag        = kingpin.Flag("errors", "Only show errors.").Bool()
+	jsonFlag          = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
 )
 
 func init() {
@@ -166,20 +168,20 @@ func init() {
 }
 
 type Issue struct {
-	linter   Linter
-	severity Severity
-	path     string
-	line     int
-	col      int
-	message  string
+	Linter   Linter   `json:"linter"`
+	Severity Severity `json:"severity"`
+	Path     string   `json:"path"`
+	Line     int      `json:"line"`
+	Col      int      `json:"col"`
+	Message  string   `json:"message"`
 }
 
 func (i *Issue) String() string {
 	col := ""
-	if i.col != 0 {
-		col = fmt.Sprintf("%d", i.col)
+	if i.Col != 0 {
+		col = fmt.Sprintf("%d", i.Col)
 	}
-	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.path), i.line, col, i.severity, strings.TrimSpace(i.message), i.linter)
+	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
 }
 
 func debug(format string, args ...interface{}) {
@@ -287,7 +289,51 @@ Severity override map (default is "error"):
 	start := time.Now()
 	paths := expandPaths(*pathsArg)
 
-	concurrency := make(chan bool, *concurrencyFlag)
+	issues := runLinters(lintersFlag, disable, paths, *concurrencyFlag, filter)
+	status := 0
+	if *jsonFlag {
+		status = outputToJSON(issues)
+	} else {
+		status = outputToConsole(issues)
+	}
+	elapsed := time.Now().Sub(start)
+	debug("total elapsed time %s", elapsed)
+	os.Exit(status)
+}
+
+func outputToConsole(issues chan *Issue) int {
+	status := 0
+	for issue := range issues {
+		if *errorsFlag && issue.Severity != Error {
+			continue
+		}
+		fmt.Println(issue.String())
+		status = 1
+	}
+	return status
+}
+
+func outputToJSON(issues chan *Issue) int {
+	fmt.Println("[")
+	status := 0
+	for issue := range issues {
+		if status != 0 {
+			fmt.Printf(",\n")
+		}
+		if *errorsFlag && issue.Severity != Error {
+			continue
+		}
+		d, err := json.Marshal(issue)
+		kingpin.FatalIfError(err, "")
+		fmt.Printf("  %s", d)
+		status = 1
+	}
+	fmt.Printf("\n]\n")
+	return status
+}
+
+func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, filter *regexp.Regexp) chan *Issue {
+	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := maybeSortIssues(incomingIssues)
 	wg := &sync.WaitGroup{}
@@ -323,9 +369,9 @@ Severity override map (default is "error"):
 				deadline: deadline,
 			}
 			go func() {
-				concurrency <- true
+				concurrencych <- true
 				executeLinter(state)
-				<-concurrency
+				<-concurrencych
 				wg.Done()
 			}()
 		}
@@ -333,17 +379,7 @@ Severity override map (default is "error"):
 
 	wg.Wait()
 	close(incomingIssues)
-	status := 0
-	for issue := range processedIssues {
-		if *errorsFlag && issue.severity != Error {
-			continue
-		}
-		fmt.Println(issue.String())
-		status = 1
-	}
-	elapsed := time.Now().Sub(start)
-	debug("total elapsed time %s", elapsed)
-	os.Exit(status)
+	return processedIssues
 }
 
 func expandPaths(paths []string) []string {
@@ -503,7 +539,7 @@ func processOutput(state *linterState, out []byte) {
 		}
 
 		issue := &Issue{}
-		issue.linter = Linter(state.name)
+		issue.Linter = Linter(state.name)
 		for i, name := range re.SubexpNames() {
 			part := string(group[i])
 			if name != "" {
@@ -511,31 +547,31 @@ func processOutput(state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				issue.path = part
+				issue.Path = part
 
 			case "line":
 				n, err := strconv.ParseInt(part, 10, 32)
 				kingpin.FatalIfError(err, "line matched invalid integer")
-				issue.line = int(n)
+				issue.Line = int(n)
 
 			case "col":
 				n, err := strconv.ParseInt(part, 10, 32)
 				kingpin.FatalIfError(err, "col matched invalid integer")
-				issue.col = int(n)
+				issue.Col = int(n)
 
 			case "message":
-				issue.message = part
+				issue.Message = part
 
 			case "":
 			}
 		}
 		if m, ok := linterMessageOverrideFlag[state.name]; ok {
-			issue.message = state.vars.Replace(m)
+			issue.Message = state.vars.Replace(m)
 		}
 		if sev, ok := linterSeverityFlag[state.name]; ok {
-			issue.severity = Severity(sev)
+			issue.Severity = Severity(sev)
 		} else {
-			issue.severity = "error"
+			issue.Severity = "error"
 		}
 		if state.filter != nil && state.filter.MatchString(issue.String()) {
 			continue
