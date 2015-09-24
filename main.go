@@ -94,8 +94,8 @@ var (
 	}
 	lintersFlag = map[string]string{
 		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
-		"vet":         "cd {path} && go tool vet .:PATH:LINE:MESSAGE",
-		"vetshadow":   "cd {path} && go tool vet --shadow .:PATH:LINE:MESSAGE",
+		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
+		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
 		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `cd {path} && varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
@@ -558,7 +558,12 @@ func processOutput(state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				issue.Path = part
+				normalised := filepath.Join(state.path, filepath.Base(part))
+				if _, err := os.Stat(normalised); err == nil {
+					issue.Path = normalised
+				} else {
+					issue.Path = part
+				}
 
 			case "line":
 				n, err := strconv.ParseInt(part, 10, 32)
