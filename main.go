@@ -94,11 +94,11 @@ var (
 	}
 	lintersFlag = map[string]string{
 		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
-		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
+		"vet":         "cd {path} && go tool vet .:PATH:LINE:MESSAGE",
+		"vetshadow":   "cd {path} && go tool vet --shadow .:PATH:LINE:MESSAGE",
 		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
-		"varcheck":    `varcheck {path}/*.go:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
+		"varcheck":    `cd {path} && varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `cd {path} && structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"defercheck":  `defercheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
@@ -106,7 +106,7 @@ var (
 		"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
-		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+		"dupl":        `cd {path} && dupl -plumbing -threshold {duplthreshold} .:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 	}
 	disabledLinters           = []string{"testify", "test"}
 	enabledLinters            = []string{}
