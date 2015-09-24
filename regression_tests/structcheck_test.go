@@ -10,7 +10,7 @@ type test struct {
 }
 `
 	expected := Issues{
-		{Linter: "structcheck", Severity: "warning", Path: "test.go", Line: 4, Col: 2, Message: "unused struct field .test.unused"},
+		{Linter: "structcheck", Severity: "warning", Path: "test.go", Line: 4, Col: 2, Message: "unused struct field test.test.unused"},
 	}
 	ExpectIssues(t, "structcheck", source, expected)
 }
