@@ -1,4 +1,6 @@
 sudo: false
 language: go
-install: go get -t -v ./...
+install:
+    - go get -t -v ./...
+    - go run main.go --install
 go: 1.5
