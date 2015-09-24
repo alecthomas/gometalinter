@@ -33,6 +33,7 @@ It is intended for use with editor/IDE integration.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
+- [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
 
 Disabled by default (enable with `--enable=<linter>`):
 
