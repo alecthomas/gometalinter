@@ -392,8 +392,10 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 		}
 	}
 
-	wg.Wait()
-	close(incomingIssues)
+	go func() {
+		wg.Wait()
+		close(incomingIssues)
+	}()
 	return processedIssues
 }
 
@@ -425,8 +427,11 @@ func expandPaths(paths []string) []string {
 	}
 	out := make([]string, 0, len(dirs))
 	for d := range dirs {
-		debug("linting path %s", d)
 		out = append(out, d)
+	}
+	sort.Strings(out)
+	for _, d := range out {
+		debug("linting path %s", d)
 	}
 	return out
 }
@@ -524,7 +529,7 @@ func executeLinter(state *linterState) {
 		case <-done:
 
 		case <-state.deadline:
-			warning("warning: deadline exceeded by linter %s (try increasing --deadline)", state.name)
+			warning("warning: deadline exceeded by linter %s on %s (try increasing --deadline)", state.name, state.path)
 			_ = cmd.Process.Kill()
 			return
 		}
@@ -566,9 +571,10 @@ func processOutput(state *linterState, out []byte) {
 				issue.Path = part
 				abspath, err := filepath.Abs(state.path)
 				if filepath.IsAbs(part) && (err == nil && strings.HasPrefix(part, abspath)) {
-					normalised := filepath.Join(state.path, filepath.Base(part))
+					normalised := filepath.Join(abspath, filepath.Base(part))
 					if _, err := os.Stat(normalised); err == nil {
-						issue.Path = normalised
+						path := filepath.Join(state.path, filepath.Base(part))
+						issue.Path = path
 					}
 				}
 
