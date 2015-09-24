@@ -97,11 +97,11 @@ var (
 		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
 		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
-		"errcheck":    `errcheck {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
+		"errcheck":    `cd {path} && errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `cd {path} && varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `cd {path} && structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"defercheck":  `defercheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"defercheck":  `cd {path} && defercheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"aligncheck":  `cd {path} && aligncheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
 		"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
@@ -421,6 +421,7 @@ func expandPaths(paths []string) []string {
 	}
 	out := make([]string, 0, len(dirs))
 	for d := range dirs {
+		debug("linting path %s", d)
 		out = append(out, d)
 	}
 	return out
@@ -558,11 +559,13 @@ func processOutput(state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				normalised := filepath.Join(state.path, filepath.Base(part))
-				if _, err := os.Stat(normalised); err == nil {
-					issue.Path = normalised
-				} else {
-					issue.Path = part
+				issue.Path = part
+				abspath, err := filepath.Abs(state.path)
+				if filepath.IsAbs(part) && (err == nil && strings.HasPrefix(part, abspath)) {
+					normalised := filepath.Join(state.path, filepath.Base(part))
+					if _, err := os.Stat(normalised); err == nil {
+						issue.Path = normalised
+					}
 				}
 
 			case "line":
