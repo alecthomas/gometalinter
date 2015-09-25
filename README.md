@@ -32,7 +32,7 @@ It is intended for use with editor/IDE integration.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [aligncheck](https://github.com/opennota/check) - Warn about un-optimally aligned structures.
-- [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
+- [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
 
@@ -63,7 +63,7 @@ Installing ineffassign -> go get github.com/gordonklaus/ineffassign
 Installing dupl -> go get github.com/mibk/dupl
 Installing golint -> go get github.com/golang/lint/golint
 Installing gotype -> go get golang.org/x/tools/cmd/gotype
-Installing errcheck -> go get github.com/alecthomas/errcheck
+Installing errcheck -> go get github.com/kisielk/errcheck
 Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
 Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
 ```
@@ -99,19 +99,13 @@ format. Note that this can be *very* slow.
 
 `gometalinter` has no specific support for vendor paths, however if the underlying tools support it then it should Just Work™. Ensure that all of the linters are up to date and built with Go 1.5 (`gometalinter --install --update --force`) then run `GO_VENDOR=1 gometalinter .`. That should be it.
 
-### Why does `gometalinter --install` install forks of gocyclo and errcheck?
+### Why does `gometalinter --install` install a fork of gocyclo?
 
 I forked `gocyclo` because the upstream behaviour is to recursively check all
 subdirectories even when just a single directory is specified. This made it
 unusably slow when vendoring. The recursive behaviour can be achieved with
 gometalinter by explicitly specifying `<path>/...`. There is a
 [pull request](https://github.com/fzipp/gocyclo/pull/1) open.
-
-`errcheck` was forked from [an old version](https://github.com/kisielk/errcheck/commit/0ba3e8228e4772238bee75d33c4cb0c3fb2a432c) that was fast.
-Upstream subsequently switched to `go/loader` and became [slow](https://github.com/kisielk/errcheck/issues/56)
-enough to not be usable in an interactive environment. There doesn't seem to be any
-functional difference, and in lieu of any interest from upstream in fixing the issue,
-the fork remains.
 
 ### Gometalinter is not working
 
