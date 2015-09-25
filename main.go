@@ -93,7 +93,7 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
+		"golint":      "golint -min_confidence {min_confidence} {path}:PATH:LINE:COL:MESSAGE",
 		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
 		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
@@ -153,6 +153,7 @@ var (
 	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
+	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint").Default(".80").Float()
 	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
 	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
@@ -363,9 +364,10 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"duplthreshold": fmt.Sprintf("%d", *duplThresholdFlag),
-			"mincyclo":      fmt.Sprintf("%d", *cycloFlag),
-			"tests":         "",
+			"duplthreshold":  fmt.Sprintf("%d", *duplThresholdFlag),
+			"mincyclo":       fmt.Sprintf("%d", *cycloFlag),
+			"min_confidence": fmt.Sprintf("%f", *minConfidence),
+			"tests":          "",
 		}
 		if *testFlag {
 			vars["tests"] = "-t"
