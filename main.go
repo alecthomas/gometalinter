@@ -141,7 +141,7 @@ var (
 		"ineffassign": "github.com/gordonklaus/ineffassign",
 		"dupl":        "github.com/mibk/dupl",
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "testify", "test"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
 
 	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
@@ -158,7 +158,6 @@ var (
 	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
 	deadlineFlag      = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
 	errorsFlag        = kingpin.Flag("errors", "Only show errors.").Bool()
-	disableAllFlag    = kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllLinters).Bool()
 	jsonFlag          = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
 )
 
@@ -176,6 +175,7 @@ func init() {
 	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&lintersFlag)
 	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
 	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
+	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllLinters).Bool()
 }
 
 type Issue struct {
