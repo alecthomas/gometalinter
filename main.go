@@ -37,7 +37,7 @@ type Linter struct {
 }
 
 func (l *Linter) MarshalJSON() ([]byte, error) {
-	return []byte(l.Name), nil
+	return json.Marshal(l.Name)
 }
 
 func (l *Linter) String() string {
