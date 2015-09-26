@@ -27,28 +27,33 @@ const (
 	Error   Severity = "error"
 )
 
-type Linter string
-
-func (l Linter) Command() string {
-	s := lintersFlag[string(l)]
-	return s[0:strings.Index(s, ":")]
+type Linter struct {
+	Name             string
+	Command          string
+	Pattern          string
+	InstallFrom      string
+	SeverityOverride Severity
+	MessageOverride  string
 }
 
-func (l Linter) Pattern() string {
-	s := lintersFlag[string(l)]
-	return s[strings.Index(s, ":"):]
+func (l *Linter) MarshalJSON() ([]byte, error) {
+	return []byte(l.Name), nil
 }
 
-func (l Linter) InstallFrom() string {
-	return installMap[string(l)]
+func (l *Linter) String() string {
+	return l.Name
 }
 
-func (l Linter) Severity() string {
-	return linterSeverityFlag[string(l)]
-}
-
-func (l Linter) MessageOverride() string {
-	return linterMessageOverrideFlag[string(l)]
+func LinterFromName(name string) *Linter {
+	s := lintersFlag[name]
+	return &Linter{
+		Name:             name,
+		Command:          s[0:strings.Index(s, ":")],
+		Pattern:          s[strings.Index(s, ":"):],
+		InstallFrom:      installMap[name],
+		SeverityOverride: Severity(linterSeverityFlag[name]),
+		MessageOverride:  linterMessageOverrideFlag[name],
+	}
 }
 
 type sortedIssues struct {
@@ -180,7 +185,7 @@ func init() {
 }
 
 type Issue struct {
-	Linter   Linter   `json:"linter"`
+	Linter   *Linter  `json:"linter"`
 	Severity Severity `json:"severity"`
 	Path     string   `json:"path"`
 	Line     int      `json:"line"`
@@ -209,12 +214,12 @@ func warning(format string, args ...interface{}) {
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
 	for name := range lintersFlag {
-		linter := Linter(name)
-		install := "(" + linter.InstallFrom() + ")"
+		linter := LinterFromName(name)
+		install := "(" + linter.InstallFrom + ")"
 		if install == "()" {
 			install = ""
 		}
-		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n", name, install, linter.Command(), linter.Pattern())
+		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n", name, install, linter.Command, linter.Pattern)
 	}
 	return w.String()
 }
@@ -562,7 +567,7 @@ func processOutput(state *linterState, out []byte) {
 		}
 
 		issue := &Issue{}
-		issue.Linter = Linter(state.name)
+		issue.Linter = LinterFromName(state.name)
 		for i, name := range re.SubexpNames() {
 			part := string(group[i])
 			if name != "" {
