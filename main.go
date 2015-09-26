@@ -103,10 +103,10 @@ var (
 	}
 	lintersFlag = map[string]string{
 		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
-		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
-		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
-		"goimports":   `goimports -d {path}:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+),`,
+		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
+		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
+		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
+		"goimports":   `goimports -d .:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`,
 		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
