@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestGocyclo(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func processOutput(state *linterState, out []byte) {

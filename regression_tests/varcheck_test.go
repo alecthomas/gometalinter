@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestVarcheck(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 var v int

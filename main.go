@@ -27,28 +27,33 @@ const (
 	Error   Severity = "error"
 )
 
-type Linter string
-
-func (l Linter) Command() string {
-	s := lintersFlag[string(l)]
-	return s[0:strings.Index(s, ":")]
+type Linter struct {
+	Name             string
+	Command          string
+	Pattern          string
+	InstallFrom      string
+	SeverityOverride Severity
+	MessageOverride  string
 }
 
-func (l Linter) Pattern() string {
-	s := lintersFlag[string(l)]
-	return s[strings.Index(s, ":"):]
+func (l *Linter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.Name)
 }
 
-func (l Linter) InstallFrom() string {
-	return installMap[string(l)]
+func (l *Linter) String() string {
+	return l.Name
 }
 
-func (l Linter) Severity() string {
-	return linterSeverityFlag[string(l)]
-}
-
-func (l Linter) MessageOverride() string {
-	return linterMessageOverrideFlag[string(l)]
+func LinterFromName(name string) *Linter {
+	s := lintersFlag[name]
+	return &Linter{
+		Name:             name,
+		Command:          s[0:strings.Index(s, ":")],
+		Pattern:          s[strings.Index(s, ":"):],
+		InstallFrom:      installMap[name],
+		SeverityOverride: Severity(linterSeverityFlag[name]),
+		MessageOverride:  linterMessageOverrideFlag[name],
+	}
 }
 
 type sortedIssues struct {
@@ -82,6 +87,10 @@ func (s *sortedIssues) Less(i, j int) bool {
 			if l.Message >= r.Message {
 				return false
 			}
+		case "linter":
+			if l.Linter.Name >= r.Linter.Name {
+				return false
+			}
 		}
 	}
 	return true
@@ -93,22 +102,22 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		"golint":      "golint {path}:PATH:LINE:COL:MESSAGE",
+		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
 		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
 		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
 		"goimports":   `goimports -d {path}:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+),`,
-		"errcheck":    `cd {path} && errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
-		"varcheck":    `cd {path} && varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
-		"structcheck": `cd {path} && structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"defercheck":  `cd {path} && defercheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"aligncheck":  `cd {path} && aligncheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
-		"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
+		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
+		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
+		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"defercheck":  `defercheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"aligncheck":  `aligncheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"deadcode":    `deadcode .:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+		"gocyclo":     `gocyclo -over {mincyclo} .:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
+		"ineffassign": `ineffassign -n .:PATH:LINE:COL:MESSAGE`,
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
-		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 	}
 	disabledLinters           = []string{"testify", "test"}
 	enabledLinters            = []string{}
@@ -145,7 +154,7 @@ var (
 		"dupl":        "github.com/mibk/dupl",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test"}
-	sortKeys    = []string{"none", "path", "line", "column", "severity", "message"}
+	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	fastFlag          = kingpin.Flag("fast", "Only run fast linters.").Bool()
@@ -156,6 +165,7 @@ var (
 	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
+	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint").Default(".80").Float()
 	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
 	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
@@ -182,7 +192,7 @@ func init() {
 }
 
 type Issue struct {
-	Linter   Linter   `json:"linter"`
+	Linter   *Linter  `json:"linter"`
 	Severity Severity `json:"severity"`
 	Path     string   `json:"path"`
 	Line     int      `json:"line"`
@@ -211,12 +221,12 @@ func warning(format string, args ...interface{}) {
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
 	for name := range lintersFlag {
-		linter := Linter(name)
-		install := "(" + linter.InstallFrom() + ")"
+		linter := LinterFromName(name)
+		install := "(" + linter.InstallFrom + ")"
 		if install == "()" {
 			install = ""
 		}
-		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n", name, install, linter.Command(), linter.Pattern())
+		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n", name, install, linter.Command, linter.Pattern)
 	}
 	return w.String()
 }
@@ -366,9 +376,10 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"duplthreshold": fmt.Sprintf("%d", *duplThresholdFlag),
-			"mincyclo":      fmt.Sprintf("%d", *cycloFlag),
-			"tests":         "",
+			"duplthreshold":  fmt.Sprintf("%d", *duplThresholdFlag),
+			"mincyclo":       fmt.Sprintf("%d", *cycloFlag),
+			"min_confidence": fmt.Sprintf("%f", *minConfidence),
+			"tests":          "",
 		}
 		if *testFlag {
 			vars["tests"] = "-t"
@@ -517,6 +528,7 @@ func executeLinter(state *linterState) {
 	arg0, arg1 := exArgs()
 	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(arg0, arg1, command)
+	cmd.Dir = state.path
 	cmd.Stdout = buf
 	cmd.Stderr = buf
 	err := cmd.Start()
@@ -551,6 +563,22 @@ func executeLinter(state *linterState) {
 	debug("%s linter took %s", state.name, elapsed)
 }
 
+func (l *linterState) fixPath(path string) string {
+	abspath, err := filepath.Abs(l.path)
+	if filepath.IsAbs(path) {
+		if err == nil && strings.HasPrefix(path, abspath) {
+			normalised := filepath.Join(abspath, filepath.Base(path))
+			if _, err := os.Stat(normalised); err == nil {
+				path := filepath.Join(l.path, filepath.Base(path))
+				return path
+			}
+		}
+	} else {
+		return filepath.Join(l.path, path)
+	}
+	return path
+}
+
 func processOutput(state *linterState, out []byte) {
 	re := state.Match()
 	all := re.FindAllSubmatchIndex(out, -1)
@@ -563,7 +591,7 @@ func processOutput(state *linterState, out []byte) {
 		}
 
 		issue := &Issue{}
-		issue.Linter = Linter(state.name)
+		issue.Linter = LinterFromName(state.name)
 		for i, name := range re.SubexpNames() {
 			part := string(group[i])
 			if name != "" {
@@ -571,15 +599,7 @@ func processOutput(state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				issue.Path = part
-				abspath, err := filepath.Abs(state.path)
-				if filepath.IsAbs(part) && (err == nil && strings.HasPrefix(part, abspath)) {
-					normalised := filepath.Join(abspath, filepath.Base(part))
-					if _, err := os.Stat(normalised); err == nil {
-						path := filepath.Join(state.path, filepath.Base(part))
-						issue.Path = path
-					}
-				}
+				issue.Path = state.fixPath(part)
 
 			case "line":
 				n, err := strconv.ParseInt(part, 10, 32)

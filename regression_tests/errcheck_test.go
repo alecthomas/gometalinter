@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestErrcheck(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func f() error { return nil}

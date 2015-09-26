@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestGoType(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func test() {

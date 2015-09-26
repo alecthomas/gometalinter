@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestDefercheck(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func test() {

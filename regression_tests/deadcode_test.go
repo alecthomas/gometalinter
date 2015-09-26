@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestDeadcode(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func test() {
