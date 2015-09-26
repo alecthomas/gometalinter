@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestDupl(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func a() {
@@ -26,8 +27,8 @@ func b() {
 }
 `
 	expected := Issues{
-		{Linter: "dupl", Severity: "warning", Path: "test.go", Line: 13, Col: 0, Message: "duplicate of test.go:3-11"},
-		{Linter: "dupl", Severity: "warning", Path: "test.go", Line: 3, Col: 0, Message: "duplicate of test.go:13-21"},
+		{Linter: "dupl", Severity: "warning", Path: "test.go", Line: 13, Col: 0, Message: "duplicate of ./test.go:3-11"},
+		{Linter: "dupl", Severity: "warning", Path: "test.go", Line: 3, Col: 0, Message: "duplicate of ./test.go:13-21"},
 	}
 	ExpectIssues(t, "dupl", source, expected, "--dupl-threshold", "10")
 }

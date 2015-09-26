@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestStructcheck(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 type test struct {

@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestVetShadow(t *testing.T) {
+	t.Parallel()
 	source := `package test
 
 func test(mystructs []*MyStruct) *MyStruct {
@@ -14,7 +15,7 @@ func test(mystructs []*MyStruct) *MyStruct {
 }
 `
 	expected := Issues{
-		{Linter: "vetshadow", Severity: "error", Path: "test.go", Line: 6, Col: 0, Message: "declaration of foo shadows declaration at test.go:4: "},
+		{Linter: "vetshadow", Severity: "error", Path: "test.go", Line: 6, Col: 0, Message: "declaration of foo shadows declaration at ./test.go:4: "},
 	}
 	ExpectIssues(t, "vetshadow", source, expected)
 }
