@@ -166,7 +166,7 @@ Default linters:
       :PATH:LINE:COL:MESSAGE
   goimports (golang.org/x/tools/cmd/goimports)
       goimports -d {path}
-      :^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)
+      :^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)[\S\s]+import
   varcheck (github.com/opennota/check/cmd/varcheck)
       varcheck {path}
       :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$
