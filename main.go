@@ -100,13 +100,15 @@ var (
 	predefinedPatterns = map[string]string{
 		"PATH:LINE:COL:MESSAGE": `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
+		"DIFF:PATH:LINE":        `^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`,
 	}
 	lintersFlag = map[string]string{
 		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
 		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
+		"gofmt":       `gofmt -s -d -e .:DIFF:PATH:LINE`,
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
-		"goimports":   `goimports -d .:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`,
+		"goimports":   `goimports -d .:DIFF:PATH:LINE`,
 		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
@@ -126,6 +128,7 @@ var (
 		"varcheck":    "unused global variable {message}",
 		"structcheck": "unused struct field {message}",
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
+		"gofmt":       "file is not gofmted",
 		"goimports":   "file is not goimported",
 	}
 	linterSeverityFlag = map[string]string{
