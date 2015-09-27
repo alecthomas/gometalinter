@@ -128,7 +128,7 @@ var (
 		"structcheck": "unused struct field {message}",
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
 		"gofmt":       "file is not gofmted",
-		"goimports":   "file is not goimported",
+		"goimports":   "missing or unreferenced package imports",
 	}
 	linterSeverityFlag = map[string]string{
 		"errcheck":    "warning",
