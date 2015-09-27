@@ -22,6 +22,7 @@ It is intended for use with editor/IDE integration.
 
 ## Supported linters
 
+- [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
 - [go vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
 - [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
@@ -188,6 +189,9 @@ Default linters:
   vet --shadow ()
       go vet --shadow {path}
       :PATH:LINE:MESSAGE
+  gofmt ()
+      gofmt -s -d -e {path}
+      :^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`
 
 Severity override map (default is "error"):
 

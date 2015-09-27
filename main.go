@@ -105,6 +105,7 @@ var (
 		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
 		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
+		"gofmt":       `gofmt -s -d -e .:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`,
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
@@ -125,6 +126,7 @@ var (
 		"varcheck":    "unused global variable {message}",
 		"structcheck": "unused struct field {message}",
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
+		"gofmt":       "file is not gofmted",
 	}
 	linterSeverityFlag = map[string]string{
 		"errcheck":    "warning",
