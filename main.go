@@ -107,7 +107,7 @@ var (
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
 		"gofmt":       `gofmt -s -d -e .:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`,
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
-		"goimports":   `goimports -d .:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)[\S\s]+import`,
+		"goimports":   `goimports -d ./*.go:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)[\S\s]+import`,
 		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
