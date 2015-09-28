@@ -105,7 +105,7 @@ var (
 		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
 		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
-		"gofmt":       `gofmt -s -d -e .:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`,
+		"gofmt":       `gofmt -l -s ./*.go:^(?P<path>[^\n]+)$`,
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
 		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
@@ -589,7 +589,7 @@ func processOutput(state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue := &Issue{}
+		issue := &Issue{Line: 1}
 		issue.Linter = LinterFromName(state.name)
 		for i, name := range re.SubexpNames() {
 			part := string(group[i])
