@@ -3,6 +3,7 @@ package regression_tests
 import "testing"
 
 func TestGofmt(t *testing.T) {
+	t.Parallel()
 	source := `
 package test
 func test() { if nil {} }
