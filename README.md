@@ -34,7 +34,7 @@ It is intended for use with editor/IDE integration.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [aligncheck](https://github.com/opennota/check) - Warn about un-optimally aligned structures.
-- [errcheck](https://github.com/alecthomas/errcheck) - Check that error return values are used.
+- [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
 
@@ -66,7 +66,7 @@ Installing dupl -> go get github.com/mibk/dupl
 Installing golint -> go get github.com/golang/lint/golint
 Installing gotype -> go get golang.org/x/tools/cmd/gotype
 Installing goimports -> go get golang.org/x/tools/cmd/goimports
-Installing errcheck -> go get github.com/alecthomas/errcheck
+Installing errcheck -> go get github.com/kisielk/errcheck
 Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
 Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
 ```
@@ -102,19 +102,13 @@ format. Note that this can be *very* slow.
 
 `gometalinter` has no specific support for vendor paths, however if the underlying tools support it then it should Just Work™. Ensure that all of the linters are up to date and built with Go 1.5 (`gometalinter --install --update --force`) then run `GO_VENDOR=1 gometalinter .`. That should be it.
 
-### Why does `gometalinter --install` install forks of gocyclo and errcheck?
+### Why does `gometalinter --install` install a fork of gocyclo?
 
 I forked `gocyclo` because the upstream behaviour is to recursively check all
 subdirectories even when just a single directory is specified. This made it
 unusably slow when vendoring. The recursive behaviour can be achieved with
 gometalinter by explicitly specifying `<path>/...`. There is a
 [pull request](https://github.com/fzipp/gocyclo/pull/1) open.
-
-`errcheck` was forked from [an old version](https://github.com/kisielk/errcheck/commit/0ba3e8228e4772238bee75d33c4cb0c3fb2a432c) that was fast.
-Upstream subsequently switched to `go/loader` and became [slow](https://github.com/kisielk/errcheck/issues/56)
-enough to not be usable in an interactive environment. There doesn't seem to be any
-functional difference, and in lieu of any interest from upstream in fixing the issue,
-the fork remains.
 
 ### Gometalinter is not working
 
@@ -155,17 +149,20 @@ include the output of `gometalinter --debug`.
 
 ```
 $ gometalinter --help
-usage: gometalinter [<flags>] [<path>]
+usage: gometalinter [<flags>] [<path>...]
 
 Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
 
-  gotype (golang.org/x/tools/cmd/gotype)
-      gotype {tests=-a} {path}
+gofmt
+      gofmt -l -s ./*.go
+      :^(?P<path>[^\n]+)$
+gotype  (golang.org/x/tools/cmd/gotype)
+      gotype -e {tests=-a} .
       :PATH:LINE:COL:MESSAGE
   goimports (golang.org/x/tools/cmd/goimports)
-      goimports -d {path}
+      goimports -d {path} ./*.go
       :^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)[\S\s]+import
   varcheck (github.com/opennota/check/cmd/varcheck)
       varcheck {path}
@@ -173,69 +170,97 @@ Default linters:
   deadcode (github.com/remyoudompheng/go-misc/deadcode)
       deadcode {path}
       :deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)
-  golint (github.com/golang/lint/golint)
-      golint {path}
+testify
+      go test
+      :Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)
+test
+      go test
+      :^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$
+dupl  (github.com/mibk/dupl)
+      dupl -plumbing -threshold {duplthreshold} ./*.go
+      :^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$
+golint  (github.com/golang/lint/golint)
+      golint -min_confidence {min_confidence} .
       :PATH:LINE:COL:MESSAGE
-  errcheck (github.com/alecthomas/errcheck)
-      errcheck {path}
+structcheck  (github.com/opennota/check/cmd/structcheck)
+      structcheck {tests=-t} .
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$
+aligncheck  (github.com/opennota/check/cmd/aligncheck)
+      aligncheck .
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$
+gocyclo  (github.com/alecthomas/gocyclo)
+      gocyclo -over {mincyclo} .
+      :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$
+vet
+      go tool vet ./*.go
+      :PATH:LINE:MESSAGE
+errcheck  (github.com/alecthomas/errcheck)
+      errcheck .
       :^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$
-  structcheck (github.com/opennota/check/cmd/structcheck)
-      structcheck {tests=-t} {path}
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):\s*(?P<message>[\w.]+)$
-  defercheck (github.com/opennota/check/cmd/defercheck)
-      defercheck {path}
+ineffassign  (github.com/gordonklaus/ineffassign)
+      ineffassign -n .
+      :PATH:LINE:COL:MESSAGE
+vetshadow
+      go tool vet --shadow ./*.go
       :PATH:LINE:MESSAGE
-  gocyclo (github.com/alecthomas/gocyclo)
-      gocyclo -over {mincyclo} {path}
-      :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)
-  vet ()
-      go vet {path}
-      :PATH:LINE:MESSAGE
-  vet --shadow ()
-      go vet --shadow {path}
-      :PATH:LINE:MESSAGE
-  gofmt ()
-      gofmt -s -d -e {path}
-      :^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)`
+varcheck  (github.com/opennota/check/cmd/varcheck)
+      varcheck .
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$
+defercheck  (github.com/opennota/check/cmd/defercheck)
+      defercheck .
+      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$
+deadcode  (github.com/remyoudompheng/go-misc/deadcode)
+      deadcode .
+      :^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
 
 Severity override map (default is "error"):
 
-  golint -> warning
-  varcheck -> warning
-  structcheck -> warning
-  deadcode -> warning
-  gocyclo -> warning
-  errcheck -> warning
+varcheck -> warning
+ineffassign -> warning
+deadcode -> warning
+gocyclo -> warning
+dupl -> warning
+errcheck -> warning
+golint -> warning
+structcheck -> warning
+aligncheck -> warning
 
 Flags:
-  --help            Show help.
-  --fast            Only run fast linters.
-  -i, --install     Attempt to install all known linters.
-  -u, --update      Pass -u to go tool when installing.
-  -D, --disable=LINTER
-                    List of linters to disable.
-  -d, --debug       Display messages for failed linters, etc.
-  -j, --concurrency=16
-                    Number of concurrent linters to run.
-  --exclude=REGEXP  Exclude messages matching this regular expression.
-  --cyclo-over=10   Report functions with cyclomatic complexity over N (using
-                    gocyclo).
-  --sort=none       Sort output by any of none, path, line, column, severity,
-                    message.
-  -t, --tests       Include test files for linters that support this option
-  --deadline=5s     Cancel linters if they have not completed within this
-                    duration.
-  --errors          Only show errors.
-  --linter=NAME:COMMAND:PATTERN
-                    Specify a linter.
-  --message-overrides=LINTER:MESSAGE
-                    Override message from linter. {message} will be expanded to
-                    the original message.
-  --severity=LINTER:SEVERITY
-                    Map of linter severities.
+      --help                Show context-sensitive help (also try --help-long
+                            and --help-man).
+      --fast                Only run fast linters.
+  -i, --install             Attempt to install all known linters.
+  -u, --update              Pass -u to go tool when installing.
+  -f, --force               Pass -f to go tool when installing.
+  -d, --debug               Display messages for failed linters, etc.
+  -j, --concurrency=16      Number of concurrent linters to run.
+  -e, --exclude=REGEXP      Exclude messages matching these regular expressions.
+      --cyclo-over=10       Report functions with cyclomatic complexity over N
+                            (using gocyclo).
+      --min-confidence=.80  Minimum confidence interval to pass to golint
+      --dupl-threshold=50   Minimum token sequence as a clone for dupl.
+      --sort=none           Sort output by any of none, path, line, column,
+                            severity, message, linter.
+  -t, --tests               Include test files for linters that support this
+                            option
+      --deadline=5s         Cancel linters if they have not completed within
+                            this duration.
+      --errors              Only show errors.
+      --json                Generate structured JSON rather than standard
+                            line-based output.
+  -D, --disable=LINTER      List of linters to disable (testify,test).
+  -E, --enable=LINTER       Enable previously disabled linters.
+      --linter=NAME:COMMAND:PATTERN
+                            Specify a linter.
+      --message-overrides=LINTER:MESSAGE
+                            Override message from linter. {message} will be
+                            expanded to the original message.
+      --severity=LINTER:SEVERITY
+                            Map of linter severities.
+      --disable-all         Disable all linters.
 
 Args:
-  [<path>]  Directory to lint.
+  [<path>]  Directory to lint. Defaults to ".". <path>/... will recurse.
 ```
 
 Additional linters can be configured via the command line:
