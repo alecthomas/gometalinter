@@ -26,6 +26,7 @@ It is intended for use with editor/IDE integration.
 - [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
 - [go vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
 - [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
+- [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 - [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
@@ -64,6 +65,7 @@ Installing ineffassign -> go get github.com/gordonklaus/ineffassign
 Installing dupl -> go get github.com/mibk/dupl
 Installing golint -> go get github.com/golang/lint/golint
 Installing gotype -> go get golang.org/x/tools/cmd/gotype
+Installing goimports -> go get golang.org/x/tools/cmd/goimports
 Installing errcheck -> go get github.com/kisielk/errcheck
 Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
 Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
@@ -159,6 +161,9 @@ gofmt
 gotype  (golang.org/x/tools/cmd/gotype)
       gotype -e {tests=-a} .
       :PATH:LINE:COL:MESSAGE
+goimports (golang.org/x/tools/cmd/goimports)
+      goimports -l ./*.go
+      :^(?P<path>[^\n]+)$
 testify
       go test
       :Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)
