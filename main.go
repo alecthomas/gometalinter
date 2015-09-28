@@ -107,6 +107,7 @@ var (
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
 		"gofmt":       `gofmt -l -s ./*.go:^(?P<path>[^\n]+)$`,
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
+		"goimports":   `goimports -d ./*.go:^diff\s(?P<path>\S+)\s.+\s.+\s.+\s@@\s-(?P<line>\d+)[\S\s]+import`,
 		"errcheck":    `errcheck .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
@@ -127,6 +128,7 @@ var (
 		"structcheck": "unused struct field {message}",
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
 		"gofmt":       "file is not gofmted",
+		"goimports":   "missing or unreferenced package imports",
 	}
 	linterSeverityFlag = map[string]string{
 		"errcheck":    "warning",
@@ -142,6 +144,7 @@ var (
 	installMap = map[string]string{
 		"golint":      "github.com/golang/lint/golint",
 		"gotype":      "golang.org/x/tools/cmd/gotype",
+		"goimports":   "golang.org/x/tools/cmd/goimports",
 		"errcheck":    "github.com/kisielk/errcheck",
 		"defercheck":  "github.com/opennota/check/cmd/defercheck",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
