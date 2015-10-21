@@ -470,10 +470,10 @@ func doInstall() {
 		names = append(names, name)
 		targets = append(targets, target)
 	}
-	namesStr := strings.Join(names, " ")
-	targetsStr := strings.Join(targets, " ")
+	namesStr := strings.Join(names, "\n  ")
+	targetsStr := strings.Join(targets, " \\\n    ")
 	cmd += " " + targetsStr
-	fmt.Printf("Installing %s -> %s\n", namesStr, cmd)
+	fmt.Printf("Installing:\n  %s\n->\n  %s\n", namesStr, cmd)
 
 	arg0, arg1 := exArgs()
 	c := exec.Command(arg0, arg1, cmd)
