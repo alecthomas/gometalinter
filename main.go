@@ -453,27 +453,34 @@ func expandPaths(paths []string) []string {
 }
 
 func doInstall() {
-	for name, target := range installMap {
-		cmd := "go get"
-		if *debugFlag {
-			cmd += " -v"
-		}
-		if *updateFlag {
-			cmd += " -u"
-		}
-		if *forceFlag {
-			cmd += " -f"
-		}
-
-		cmd += " " + target
-		fmt.Printf("Installing %s -> %s\n", name, cmd)
-		arg0, arg1 := exArgs()
-		c := exec.Command(arg0, arg1, cmd)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		err := c.Run()
-		kingpin.CommandLine.FatalIfError(err, "failed to install %s: %s", name, err)
+	cmd := "go get"
+	if *debugFlag {
+		cmd += " -v"
 	}
+	if *updateFlag {
+		cmd += " -u"
+	}
+	if *forceFlag {
+		cmd += " -f"
+	}
+
+	names := make([]string, 0, len(installMap))
+	targets := make([]string, 0, len(installMap))
+	for name, target := range installMap {
+		names = append(names, name)
+		targets = append(targets, target)
+	}
+	namesStr := strings.Join(names, " ")
+	targetsStr := strings.Join(targets, " ")
+	cmd += " " + targetsStr
+	fmt.Printf("Installing %s -> %s\n", namesStr, cmd)
+
+	arg0, arg1 := exArgs()
+	c := exec.Command(arg0, arg1, cmd)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	err := c.Run()
+	kingpin.CommandLine.FatalIfError(err, "failed to install %s: %s", namesStr, err)
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
