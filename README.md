@@ -57,18 +57,33 @@ Install all known linters:
 
 ```
 $ gometalinter --install --update
-Installing structcheck -> go get github.com/opennota/check/cmd/structcheck
-Installing aligncheck -> go get github.com/opennota/check/cmd/aligncheck
-Installing deadcode -> go get github.com/remyoudompheng/go-misc/deadcode
-Installing gocyclo -> go get github.com/alecthomas/gocyclo
-Installing ineffassign -> go get github.com/gordonklaus/ineffassign
-Installing dupl -> go get github.com/mibk/dupl
-Installing golint -> go get github.com/golang/lint/golint
-Installing gotype -> go get golang.org/x/tools/cmd/gotype
-Installing goimports -> go get golang.org/x/tools/cmd/goimports
-Installing errcheck -> go get github.com/kisielk/errcheck
-Installing defercheck -> go get github.com/opennota/check/cmd/defercheck
-Installing varcheck -> go get github.com/opennota/check/cmd/varcheck
+Installing:
+  gometalinter
+  structcheck
+  aligncheck
+  deadcode
+  gocyclo
+  ineffassign
+  dupl
+  golint
+  gotype
+  goimports
+  errcheck
+  defercheck
+  varcheck
+->
+  go get -u github.com/opennota/check/cmd/structcheck \
+    github.com/opennota/check/cmd/aligncheck \
+    github.com/remyoudompheng/go-misc/deadcode \
+    github.com/alecthomas/gocyclo \
+    github.com/gordonklaus/ineffassign \
+    github.com/mibk/dupl \
+    github.com/golang/lint/golint \
+    golang.org/x/tools/cmd/gotype \
+    golang.org/x/tools/cmd/goimports \
+    github.com/kisielk/errcheck \
+    github.com/opennota/check/cmd/defercheck \
+    github.com/opennota/check/cmd/varcheck
 ```
 
 Run it:
@@ -123,7 +138,6 @@ are three things to try in that case:
 
 #### 1. Update to the latest build of gometalinter and all linters
 
-    go get -u github.com/alecthomas/gometalinter
     gometalinter --install --update
 
 If you're lucky, this will fix the problem.

@@ -142,18 +142,19 @@ var (
 		"dupl":        "warning",
 	}
 	installMap = map[string]string{
-		"golint":      "github.com/golang/lint/golint",
-		"gotype":      "golang.org/x/tools/cmd/gotype",
-		"goimports":   "golang.org/x/tools/cmd/goimports",
-		"errcheck":    "github.com/kisielk/errcheck",
-		"defercheck":  "github.com/opennota/check/cmd/defercheck",
-		"varcheck":    "github.com/opennota/check/cmd/varcheck",
-		"structcheck": "github.com/opennota/check/cmd/structcheck",
-		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
-		"deadcode":    "github.com/remyoudompheng/go-misc/deadcode",
-		"gocyclo":     "github.com/alecthomas/gocyclo",
-		"ineffassign": "github.com/gordonklaus/ineffassign",
-		"dupl":        "github.com/mibk/dupl",
+		"gometalinter": "github.com/alecthomas/gometalinter",
+		"golint":       "github.com/golang/lint/golint",
+		"gotype":       "golang.org/x/tools/cmd/gotype",
+		"goimports":    "golang.org/x/tools/cmd/goimports",
+		"errcheck":     "github.com/kisielk/errcheck",
+		"defercheck":   "github.com/opennota/check/cmd/defercheck",
+		"varcheck":     "github.com/opennota/check/cmd/varcheck",
+		"structcheck":  "github.com/opennota/check/cmd/structcheck",
+		"aligncheck":   "github.com/opennota/check/cmd/aligncheck",
+		"deadcode":     "github.com/remyoudompheng/go-misc/deadcode",
+		"gocyclo":      "github.com/alecthomas/gocyclo",
+		"ineffassign":  "github.com/gordonklaus/ineffassign",
+		"dupl":         "github.com/mibk/dupl",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
