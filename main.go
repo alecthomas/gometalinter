@@ -166,6 +166,8 @@ var (
 	debugFlag         = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
+	skipFlag          = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
+	vendorFlag        = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
 	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint").Default(".80").Float()
 	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
@@ -277,9 +279,8 @@ func (v Vars) Replace(s string) string {
 
 func main() {
 	// Linters are by their very nature, short lived, so use sbrk for
-	// allocations rather than GC.
-	//
-	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
+	// allocations rather than GC. Reduced (user) linting time on kingpin from
+	// 0.97s to 0.64s.
 	_ = os.Setenv("GODEBUG", "sbrk=1")
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
@@ -292,6 +293,12 @@ Severity override map (default is "error"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
+	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
+	// TODO(alec): This will probably need to be enabled by default at a later time.
+	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || *vendorFlag {
+		os.Setenv("GO15VENDOREXPERIMENT", "1")
+		*skipFlag = append(*skipFlag, "vendor")
+	}
 	var filter *regexp.Regexp
 	if len(*excludeFlag) > 0 {
 		filter = regexp.MustCompile(strings.Join(*excludeFlag, "|"))
@@ -317,7 +324,7 @@ Severity override map (default is "error"):
 	}
 
 	start := time.Now()
-	paths := expandPaths(*pathsArg)
+	paths := expandPaths(*pathsArg, *skipFlag)
 
 	issues := runLinters(lintersFlag, disable, paths, *concurrencyFlag, filter)
 	status := 0
@@ -415,19 +422,26 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 	return processedIssues
 }
 
-func expandPaths(paths []string) []string {
+func expandPaths(paths, skip []string) []string {
 	if len(paths) == 0 {
 		paths = []string{"."}
+	}
+	skipMap := map[string]bool{}
+	for _, name := range skip {
+		skipMap[name] = true
 	}
 	dirs := map[string]bool{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
 			root := filepath.Dir(path)
 			_ = filepath.Walk(root, func(p string, i os.FileInfo, err error) error {
-				kingpin.FatalIfError(err, "invalid path '"+p+"'")
+				if err != nil {
+					warning("invalid path %q: %s", p, err)
+					return err
+				}
 
 				base := filepath.Base(p)
-				skip := strings.ContainsAny(base[0:1], "_.") && base != "." && base != ".."
+				skip := skipMap[base] || skipMap[p] || (strings.ContainsAny(base[0:1], "_.") && base != "." && base != "..")
 				if i.IsDir() {
 					if skip {
 						return filepath.SkipDir

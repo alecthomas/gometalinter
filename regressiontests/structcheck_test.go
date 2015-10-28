@@ -1,4 +1,4 @@
-package regression_tests
+package regressiontests
 
 import "testing"
 
@@ -11,7 +11,7 @@ type test struct {
 }
 `
 	expected := Issues{
-		{Linter: "structcheck", Severity: "warning", Path: "test.go", Line: 4, Col: 2, Message: "unused struct field github.com/alecthomas/gometalinter/regression_tests/.test.unused"},
+		{Linter: "structcheck", Severity: "warning", Path: "test.go", Line: 4, Col: 2, Message: "unused struct field github.com/alecthomas/gometalinter/regressiontests/.test.unused"},
 	}
 	ExpectIssues(t, "structcheck", source, expected)
 }
