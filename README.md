@@ -72,7 +72,8 @@ Installing:
   defercheck
   varcheck
 ->
-  go get -u github.com/opennota/check/cmd/structcheck \
+  go get -u github.com/alecthomas/gometalinter \
+    github.com/opennota/check/cmd/structcheck \
     github.com/opennota/check/cmd/aligncheck \
     github.com/remyoudompheng/go-misc/deadcode \
     github.com/alecthomas/gocyclo \
