@@ -140,6 +140,8 @@ var (
 		"gocyclo":     "warning",
 		"ineffassign": "warning",
 		"dupl":        "warning",
+		"gofmt":       "warning",
+		"goimports":   "warning",
 	}
 	installMap = map[string]string{
 		"gometalinter": "github.com/alecthomas/gometalinter",
