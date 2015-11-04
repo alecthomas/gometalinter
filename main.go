@@ -142,6 +142,7 @@ var (
 		"dupl":        "warning",
 		"gofmt":       "warning",
 		"goimports":   "warning",
+		"vetshadow":   "warning",
 	}
 	installMap = map[string]string{
 		"gometalinter": "github.com/alecthomas/gometalinter",
