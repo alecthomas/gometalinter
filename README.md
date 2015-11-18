@@ -30,7 +30,6 @@ It is intended for use with editor/IDE integration.
 - [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
-- [defercheck](https://github.com/opennota/check) - Checks for duplicate defer calls.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [aligncheck](https://github.com/opennota/check) - Warn about un-optimally aligned structures.
@@ -69,7 +68,6 @@ Installing:
   gotype
   goimports
   errcheck
-  defercheck
   varcheck
 ->
   go get -u github.com/alecthomas/gometalinter \
@@ -83,7 +81,6 @@ Installing:
     golang.org/x/tools/cmd/gotype \
     golang.org/x/tools/cmd/goimports \
     github.com/kisielk/errcheck \
-    github.com/opennota/check/cmd/defercheck \
     github.com/opennota/check/cmd/varcheck
 ```
 
@@ -96,7 +93,6 @@ stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
 stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
 stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
 stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (golint)
-stutter.go:22::error: Repeating defer a.Close() inside function duplicateDefer (defercheck)
 stutter.go:8:1:warning: unusedGlobal is unused (deadcode)
 stutter.go:12:1:warning: MyStruct is unused (deadcode)
 stutter.go:16:1:warning: PublicUndocumented is unused (deadcode)
@@ -219,9 +215,6 @@ vetshadow
 varcheck  (github.com/opennota/check/cmd/varcheck)
       varcheck .
       :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$
-defercheck  (github.com/opennota/check/cmd/defercheck)
-      defercheck .
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$
 deadcode  (github.com/remyoudompheng/go-misc/deadcode)
       deadcode .
       :^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
@@ -280,7 +273,6 @@ Additional linters can be configured via the command line:
 
 ```
 $ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf {paths}:PATH:LINE:MESSAGE' .
-stutter.go:22::error: Repeating defer a.Close() inside function duplicateDefer (defercheck)
 stutter.go:21:15:warning: error return value not checked (defer a.Close()) (errcheck)
 stutter.go:22:15:warning: error return value not checked (defer a.Close()) (errcheck)
 stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck) (errcheck)
@@ -289,4 +281,3 @@ stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
 stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
 stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (deadcode)
 ```
-
