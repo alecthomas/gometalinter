@@ -70,18 +70,7 @@ Installing:
   errcheck
   varcheck
 ->
-  go get -u github.com/alecthomas/gometalinter \
-    github.com/opennota/check/cmd/structcheck \
-    github.com/opennota/check/cmd/aligncheck \
-    github.com/remyoudompheng/go-misc/deadcode \
-    github.com/alecthomas/gocyclo \
-    github.com/gordonklaus/ineffassign \
-    github.com/mibk/dupl \
-    github.com/golang/lint/golint \
-    golang.org/x/tools/cmd/gotype \
-    golang.org/x/tools/cmd/goimports \
-    github.com/kisielk/errcheck \
-    github.com/opennota/check/cmd/varcheck
+  go get -u github.com/alecthomas/gometalinter github.com/opennota/check/cmd/structcheck github.com/opennota/check/cmd/aligncheck github.com/remyoudompheng/go-misc/deadcode github.com/alecthomas/gocyclo github.com/gordonklaus/ineffassign github.com/mibk/dupl github.com/golang/lint/golint golang.org/x/tools/cmd/gotype golang.org/x/tools/cmd/goimports github.com/kisielk/errcheck github.com/opennota/check/cmd/varcheck
 ```
 
 Run it:
