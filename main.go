@@ -119,7 +119,7 @@ var (
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 	}
-	disabledLinters           = []string{"testify", "test"}
+	disabledLinters           = []string{"testify", "test", "gofmt", "goimports"}
 	enabledLinters            = []string{}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
@@ -549,8 +549,8 @@ func executeLinter(state *linterState) {
 	}
 
 	command := state.InterpolatedCommand()
-	debug("executing %s", command)
 	arg0, arg1 := exArgs()
+	debug("executing %s %s %q", arg0, arg1, command)
 	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(arg0, arg1, command)
 	cmd.Dir = state.path
