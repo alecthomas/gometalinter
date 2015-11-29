@@ -168,6 +168,7 @@ var (
 	debugFlag         = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
+	includeFlag       = kingpin.Flag("include", "Include messages matching these regular expressions.").Short('i').PlaceHolder("REGEXP").Strings()
 	skipFlag          = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
 	vendorFlag        = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
@@ -301,9 +302,14 @@ Severity override map (default is "error"):
 		os.Setenv("GO15VENDOREXPERIMENT", "1")
 		*skipFlag = append(*skipFlag, "vendor")
 	}
-	var filter *regexp.Regexp
+	var exclude *regexp.Regexp
 	if len(*excludeFlag) > 0 {
-		filter = regexp.MustCompile(strings.Join(*excludeFlag, "|"))
+		exclude = regexp.MustCompile(strings.Join(*excludeFlag, "|"))
+	}
+
+	var include *regexp.Regexp
+	if len(*includeFlag) > 0 {
+		include = regexp.MustCompile(strings.Join(*includeFlag, "|"))
 	}
 
 	if *fastFlag {
@@ -328,7 +334,7 @@ Severity override map (default is "error"):
 	start := time.Now()
 	paths := expandPaths(*pathsArg, *skipFlag)
 
-	issues := runLinters(lintersFlag, disable, paths, *concurrencyFlag, filter)
+	issues := runLinters(lintersFlag, disable, paths, *concurrencyFlag, exclude, include)
 	status := 0
 	if *jsonFlag {
 		status = outputToJSON(issues)
@@ -371,7 +377,7 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, filter *regexp.Regexp) chan *Issue {
+func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) chan *Issue {
 	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := maybeSortIssues(incomingIssues)
@@ -405,7 +411,8 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 				pattern:  pattern,
 				path:     path,
 				vars:     vars.Copy(),
-				filter:   filter,
+				exclude:  exclude,
+				include:  include,
 				deadline: deadline,
 			}
 			go func() {
@@ -525,7 +532,8 @@ type linterState struct {
 	issues                       chan *Issue
 	name, command, pattern, path string
 	vars                         Vars
-	filter                       *regexp.Regexp
+	exclude                      *regexp.Regexp
+	include                      *regexp.Regexp
 	deadline                     <-chan time.Time
 }
 
@@ -650,7 +658,10 @@ func processOutput(state *linterState, out []byte) {
 		} else {
 			issue.Severity = "error"
 		}
-		if state.filter != nil && state.filter.MatchString(issue.String()) {
+		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
+			continue
+		}
+		if state.include != nil && !state.include.MatchString(issue.String()) {
 			continue
 		}
 		state.issues <- issue
