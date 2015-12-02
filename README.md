@@ -19,6 +19,7 @@ It is intended for use with editor/IDE integration.
 
 - [SublimeLinter plugin](https://github.com/alecthomas/SublimeLinter-contrib-gometalinter).
 - [vim-go](https://github.com/fatih/vim-go) with the `:GoMetaLinter` command.
+- [Atom linter plugin](https://atom.io/packages/gometalinter-linter).
 
 ## Supported linters
 
