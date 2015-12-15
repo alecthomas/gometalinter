@@ -503,7 +503,9 @@ func doInstall() {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	err := c.Run()
-	kingpin.CommandLine.FatalIfError(err, "failed to install %s: %s", namesStr, err)
+	if err != nil {
+		warning("Linter(s) not installed")
+	}
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
