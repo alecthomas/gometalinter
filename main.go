@@ -119,7 +119,7 @@ var (
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
-		"interfacer":  `interfacer ./:PATH:LINE:MESSAGE`,
+		"interfacer":  `interfacer ./:PATH:LINE:COL:MESSAGE`,
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports"}
 	enabledLinters            = []string{}
