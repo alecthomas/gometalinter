@@ -103,23 +103,23 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
-		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
-		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
-		"gofmt":       `gofmt -l -s ./*.go:^(?P<path>[^\n]+)$`,
-		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
-		"goimports":   `goimports -l ./*.go:^(?P<path>[^\n]+)$`,
-		"errcheck":    `errcheck -abspath .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
-		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
-		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"aligncheck":  `aligncheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"deadcode":    `deadcode .:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"gocyclo":     `gocyclo -over {mincyclo} .:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
-		"ineffassign": `ineffassign -n .:PATH:LINE:COL:MESSAGE`,
-		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+		"errcheck":    `errcheck -abspath .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
+		"gocyclo":     `gocyclo -over {mincyclo} .:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
+		"gofmt":       `gofmt -l -s ./*.go:^(?P<path>[^\n]+)$`,
+		"goimports":   `goimports -l ./*.go:^(?P<path>[^\n]+)$`,
+		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
+		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
+		"ineffassign": `ineffassign -n .:PATH:LINE:COL:MESSAGE`,
 		"interfacer":  `interfacer ./:PATH:LINE:COL:MESSAGE`,
+		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
+		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
+		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
+		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
+		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports"}
 	enabledLinters            = []string{}
@@ -132,19 +132,10 @@ var (
 		"goimports":   "file is not goimported",
 	}
 	linterSeverityFlag = map[string]string{
-		"errcheck":    "warning",
-		"golint":      "warning",
-		"varcheck":    "warning",
-		"structcheck": "warning",
-		"aligncheck":  "warning",
-		"deadcode":    "warning",
-		"gocyclo":     "warning",
-		"ineffassign": "warning",
-		"dupl":        "warning",
-		"gofmt":       "warning",
-		"goimports":   "warning",
-		"vetshadow":   "warning",
-		"interfacer":  "warning",
+		"gotype":  "error",
+		"test":    "error",
+		"testify": "error",
+		"vet":     "error",
 	}
 	installMap = map[string]string{
 		"gometalinter": "github.com/alecthomas/gometalinter",
@@ -697,7 +688,7 @@ func processOutput(state *linterState, out []byte) {
 		if sev, ok := linterSeverityFlag[state.name]; ok {
 			issue.Severity = Severity(sev)
 		} else {
-			issue.Severity = "error"
+			issue.Severity = "warning"
 		}
 		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
 			continue

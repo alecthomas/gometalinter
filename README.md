@@ -38,6 +38,7 @@ It is intended for use with editor/IDE integration.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
+- [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces from the stdlib that can be used.
 
 Disabled by default (enable with `--enable=<linter>`):
 
@@ -71,6 +72,7 @@ Installing:
   goimports
   errcheck
   varcheck
+  interfacer
 ->
   go get -u github.com/alecthomas/gometalinter \
     github.com/opennota/check/cmd/structcheck \
@@ -83,13 +85,14 @@ Installing:
     golang.org/x/tools/cmd/gotype \
     golang.org/x/tools/cmd/goimports \
     github.com/kisielk/errcheck \
-    github.com/opennota/check/cmd/varcheck
+    github.com/opennota/check/cmd/varcheck \
+    github.com/mvdan/interfacer/cmd/interfacer
 ```
 
 Run it:
 
 ```
-$ cd $GOPATH/src/github.com/alecthomas/gometalinter/example
+$ cd example
 $ gometalinter ./...
 stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
 stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
@@ -231,18 +234,16 @@ varcheck  (github.com/opennota/check/cmd/varcheck)
 deadcode  (github.com/remyoudompheng/go-misc/deadcode)
       deadcode .
       :^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
+interfacer  (github.com/mvdan/interfacer/cmd/interfacer)
+      interfacer ./
+      :PATH:LINE:MESSAGE
 
 Severity override map (default is "error"):
 
-varcheck -> warning
-ineffassign -> warning
-deadcode -> warning
-gocyclo -> warning
-dupl -> warning
-errcheck -> warning
-golint -> warning
-structcheck -> warning
-aligncheck -> warning
+gotype -> error
+test -> error
+testify -> error
+vet -> error
 
 Flags:
       --help                Show context-sensitive help (also try --help-long
