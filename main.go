@@ -372,7 +372,7 @@ func outputToJSON(issues chan *Issue) int {
 }
 
 func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
-	errch := make(chan error, *concurrencyFlag)
+	errch := make(chan error, len(linters)*len(paths))
 	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := maybeSortIssues(incomingIssues)
