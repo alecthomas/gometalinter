@@ -577,8 +577,11 @@ func executeLinter(state *linterState) {
 		case <-done:
 
 		case <-state.deadline:
-			warning("warning: deadline exceeded by linter %s on %s (try increasing --deadline)", state.name, state.path)
-			_ = cmd.Process.Kill()
+			warning("deadline exceeded by linter %s on %s (try increasing --deadline)", state.name, state.path)
+			err = cmd.Process.Kill()
+			if err != nil {
+				warning("failed to kill %s: %s", state.name, err)
+			}
 			return
 		}
 	}
