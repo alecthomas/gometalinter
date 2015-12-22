@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/shlex"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -246,17 +247,6 @@ func formatSeverity() string {
 	return w.String()
 }
 
-func exArgs() (arg0 string, arg1 string) {
-	if runtime.GOOS == "windows" {
-		arg0 = "cmd"
-		arg1 = "/C"
-	} else {
-		arg0 = "/bin/sh"
-		arg1 = "-c"
-	}
-	return
-}
-
 type Vars map[string]string
 
 func (v Vars) Copy() Vars {
@@ -334,12 +324,16 @@ Severity override map (default is "error"):
 	start := time.Now()
 	paths := expandPaths(*pathsArg, *skipFlag)
 
-	issues := runLinters(lintersFlag, disable, paths, *concurrencyFlag, exclude, include)
 	status := 0
+	issues, errch := runLinters(lintersFlag, disable, paths, *concurrencyFlag, exclude, include)
 	if *jsonFlag {
-		status = outputToJSON(issues)
+		status |= outputToJSON(issues)
 	} else {
-		status = outputToConsole(issues)
+		status |= outputToConsole(issues)
+	}
+	for err := range errch {
+		warning("%s", err)
+		status |= 2
 	}
 	elapsed := time.Now().Sub(start)
 	debug("total elapsed time %s", elapsed)
@@ -377,7 +371,8 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) chan *Issue {
+func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
+	errch := make(chan error, *concurrencyFlag)
 	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := maybeSortIssues(incomingIssues)
@@ -417,7 +412,10 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 			}
 			go func() {
 				concurrencych <- true
-				executeLinter(state)
+				err := executeLinter(state)
+				if err != nil {
+					errch <- err
+				}
 				<-concurrencych
 				wg.Done()
 			}()
@@ -427,8 +425,9 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 	go func() {
 		wg.Wait()
 		close(incomingIssues)
+		close(errch)
 	}()
-	return processedIssues
+	return processedIssues, errch
 }
 
 func expandPaths(paths, skip []string) []string {
@@ -498,12 +497,13 @@ func doInstall() {
 	cmd += " " + targetsStr
 	fmt.Printf("Installing:\n  %s\n->\n  %s\n", namesStr, cmd)
 
-	arg0, arg1 := exArgs()
-	c := exec.Command(arg0, arg1, cmd)
+	exe, args, err := parseCommand(".", cmd)
+	kingpin.FatalIfError(err, "failed to parse command line: %s", err)
+	c := exec.Command(exe, args...)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
-	err := c.Run()
-	kingpin.CommandLine.FatalIfError(err, "failed to install %s: %s", namesStr, err)
+	err = c.Run()
+	kingpin.FatalIfError(err, "failed to install %s: %s", namesStr, err)
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
@@ -548,7 +548,40 @@ func (l *linterState) Match() *regexp.Regexp {
 	return re
 }
 
-func executeLinter(state *linterState) {
+func parseCommand(dir, command string) (string, []string, error) {
+	args, err := shlex.Split(command)
+	if err != nil {
+		return "", nil, err
+	}
+	if len(args) == 0 {
+		return "", nil, fmt.Errorf("invalid command %q", command)
+	}
+	exe, err := exec.LookPath(args[0])
+	if err != nil {
+		return "", nil, err
+	}
+	out := []string{}
+	for _, arg := range args[1:] {
+		if strings.Contains(arg, "*") {
+			pattern := filepath.Join(dir, arg)
+			globbed, err := filepath.Glob(pattern)
+			if err != nil {
+				return "", nil, err
+			}
+			for i, g := range globbed {
+				if strings.HasPrefix(g, dir+"/") {
+					globbed[i] = g[len(dir)+1:]
+				}
+			}
+			out = append(out, globbed...)
+		} else {
+			out = append(out, arg)
+		}
+	}
+	return exe, out, nil
+}
+
+func executeLinter(state *linterState) error {
 	debug("linting with %s: %s (on %s)", state.name, state.command, state.path)
 
 	start := time.Now()
@@ -557,46 +590,48 @@ func executeLinter(state *linterState) {
 	}
 
 	command := state.InterpolatedCommand()
-	arg0, arg1 := exArgs()
-	debug("executing %s %s %q", arg0, arg1, command)
+	exe, args, err := parseCommand(state.path, command)
+	if err != nil {
+		return err
+	}
+	debug("executing %s %q", exe, args)
 	buf := bytes.NewBuffer(nil)
-	cmd := exec.Command(arg0, arg1, command)
+	cmd := exec.Command(exe, args...)
 	cmd.Dir = state.path
 	cmd.Stdout = buf
 	cmd.Stderr = buf
-	err := cmd.Start()
-	if err == nil {
-		done := make(chan bool)
-		go func() {
-			err = cmd.Wait()
-			done <- true
-		}()
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to execute linter %s: %s", command, err)
+	}
 
-		// Wait for process to complete or deadline to expire.
-		select {
-		case <-done:
+	done := make(chan bool)
+	go func() {
+		err = cmd.Wait()
+		done <- true
+	}()
 
-		case <-state.deadline:
-			warning("deadline exceeded by linter %s on %s (try increasing --deadline)", state.name, state.path)
-			err = cmd.Process.Kill()
-			if err != nil {
-				warning("failed to kill %s: %s", state.name, err)
-			}
-			return
+	// Wait for process to complete or deadline to expire.
+	select {
+	case <-done:
+
+	case <-state.deadline:
+		err := fmt.Errorf("deadline exceeded by linter %s on %s (try increasing --deadline)", state.name, state.path)
+		kerr := cmd.Process.Kill()
+		if kerr != nil {
+			warning("failed to kill %s: %s", state.name, kerr)
 		}
+		return err
 	}
 
 	if err != nil {
-		if _, ok := err.(*exec.ExitError); !ok {
-			debug("warning: %s failed: %s", command, err)
-			return
-		}
 		debug("warning: %s returned %s", command, err)
 	}
 
 	processOutput(state, buf.Bytes())
 	elapsed := time.Now().Sub(start)
 	debug("%s linter took %s", state.name, elapsed)
+	return nil
 }
 
 func (l *linterState) fixPath(path string) string {

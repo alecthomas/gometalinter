@@ -112,6 +112,17 @@ format. Note that this can be *very* slow.
 
 ## FAQ
 
+### Exit status
+
+gometalinter sets two bits of the exit status to indicate different issues:
+
+| Bit | Meaning
+|-----|----------
+| 0   | A linter generated an issue.
+| 1   | An underlying error occurred; eg. a linter failed to execute. In this situation a warning will also be displayed.
+
+eg. linter only = 1, underlying only = 2, linter + underlying = 3
+
 ### How do I make `gometalinter` work with Go 1.5 vendoring?
 
 `gometalinter` has no specific support for vendor paths, however if the
