@@ -119,6 +119,7 @@ var (
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+		"interfacer":  `interfacer ./:PATH:LINE:MESSAGE`,
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports"}
 	enabledLinters            = []string{}
@@ -143,6 +144,7 @@ var (
 		"gofmt":       "warning",
 		"goimports":   "warning",
 		"vetshadow":   "warning",
+		"interfacer":  "warning",
 	}
 	installMap = map[string]string{
 		"gometalinter": "github.com/alecthomas/gometalinter",
@@ -157,8 +159,9 @@ var (
 		"gocyclo":      "github.com/alecthomas/gocyclo",
 		"ineffassign":  "github.com/gordonklaus/ineffassign",
 		"dupl":         "github.com/mibk/dupl",
+		"interfacer":   "github.com/mvdan/interfacer/cmd/interfacer",
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
