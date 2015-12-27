@@ -497,7 +497,7 @@ func doInstall() {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	err = c.Run()
-	kingpin.FatalIfError(err, "failed to install %s: %s", namesStr, err)
+	kingpin.FatalIfError(err, "failed to install one or more of %s: %s", strings.Join(names, ", "), err)
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
