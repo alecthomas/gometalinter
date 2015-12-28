@@ -275,7 +275,7 @@ Default linters:
 
 %s
 
-Severity override map (default is "error"):
+Severity override map (default is "warning"):
 
 %s
 `, formatLinters(), formatSeverity())
