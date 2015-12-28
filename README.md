@@ -238,7 +238,7 @@ interfacer  (github.com/mvdan/interfacer/cmd/interfacer)
       interfacer ./
       :PATH:LINE:MESSAGE
 
-Severity override map (default is "error"):
+Severity override map (default is "warning"):
 
 gotype -> error
 test -> error
