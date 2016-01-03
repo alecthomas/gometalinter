@@ -77,7 +77,7 @@ Installing:
   go get -u github.com/alecthomas/gometalinter \
     github.com/opennota/check/cmd/structcheck \
     github.com/opennota/check/cmd/aligncheck \
-    github.com/remyoudompheng/go-misc/deadcode \
+    github.com/tsenart/deadcode \
     github.com/alecthomas/gocyclo \
     github.com/gordonklaus/ineffassign \
     github.com/mibk/dupl \
@@ -231,7 +231,7 @@ vetshadow
 varcheck  (github.com/opennota/check/cmd/varcheck)
       varcheck .
       :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$
-deadcode  (github.com/remyoudompheng/go-misc/deadcode)
+deadcode  (github.com/tsenart/deadcode)
       deadcode .
       :^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
 interfacer  (github.com/mvdan/interfacer/cmd/interfacer)
