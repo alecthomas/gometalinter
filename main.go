@@ -146,7 +146,7 @@ var (
 		"varcheck":     "github.com/opennota/check/cmd/varcheck",
 		"structcheck":  "github.com/opennota/check/cmd/structcheck",
 		"aligncheck":   "github.com/opennota/check/cmd/aligncheck",
-		"deadcode":     "github.com/remyoudompheng/go-misc/deadcode",
+		"deadcode":     "github.com/tsenart/deadcode",
 		"gocyclo":      "github.com/alecthomas/gocyclo",
 		"ineffassign":  "github.com/gordonklaus/ineffassign",
 		"dupl":         "github.com/mibk/dupl",
