@@ -24,11 +24,9 @@ It is intended for use with editor/IDE integration.
 
 ## Supported linters
 
-- [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
 - [go vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
 - [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
-- [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 - [deadcode](https://github.com/remyoudompheng/go-misc/tree/master/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
@@ -44,6 +42,8 @@ Disabled by default (enable with `--enable=<linter>`):
 
 - [testify](https://github.com/stretchr/testify) - Show location of failed testify assertions (disabled by default).
 - [test](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module (disabled by default).
+- [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
+- [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
