@@ -138,19 +138,18 @@ var (
 		"vet":     "error",
 	}
 	installMap = map[string]string{
-		"gometalinter": "github.com/alecthomas/gometalinter",
-		"golint":       "github.com/golang/lint/golint",
-		"gotype":       "golang.org/x/tools/cmd/gotype",
-		"goimports":    "golang.org/x/tools/cmd/goimports",
-		"errcheck":     "github.com/kisielk/errcheck",
-		"varcheck":     "github.com/opennota/check/cmd/varcheck",
-		"structcheck":  "github.com/opennota/check/cmd/structcheck",
-		"aligncheck":   "github.com/opennota/check/cmd/aligncheck",
-		"deadcode":     "github.com/tsenart/deadcode",
-		"gocyclo":      "github.com/alecthomas/gocyclo",
-		"ineffassign":  "github.com/gordonklaus/ineffassign",
-		"dupl":         "github.com/mibk/dupl",
-		"interfacer":   "github.com/mvdan/interfacer/cmd/interfacer",
+		"golint":      "github.com/golang/lint/golint",
+		"gotype":      "golang.org/x/tools/cmd/gotype",
+		"goimports":   "golang.org/x/tools/cmd/goimports",
+		"errcheck":    "github.com/kisielk/errcheck",
+		"varcheck":    "github.com/opennota/check/cmd/varcheck",
+		"structcheck": "github.com/opennota/check/cmd/structcheck",
+		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
+		"deadcode":    "github.com/tsenart/deadcode",
+		"gocyclo":     "github.com/alecthomas/gocyclo",
+		"ineffassign": "github.com/gordonklaus/ineffassign",
+		"dupl":        "github.com/mibk/dupl",
+		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
@@ -301,7 +300,7 @@ Severity override map (default is "warning"):
 	}
 
 	if *installFlag {
-		doInstall()
+		installLinters()
 		return
 	}
 
@@ -468,18 +467,49 @@ func expandPaths(paths, skip []string) []string {
 	return out
 }
 
-func doInstall() {
-	cmd := "go get"
+func makeInstallCommand(linters ...string) []string {
+	cmd := []string{"get"}
 	if *debugFlag {
-		cmd += " -v"
+		cmd = append(cmd, "-v")
 	}
 	if *updateFlag {
-		cmd += " -u"
+		cmd = append(cmd, "-u")
 	}
 	if *forceFlag {
-		cmd += " -f"
+		cmd = append(cmd, "-f")
 	}
+	cmd = append(cmd, linters...)
+	return cmd
+}
 
+func installLintersWithOneCommand(targets []string) error {
+	cmd := makeInstallCommand(targets...)
+	debug("go %s", strings.Join(cmd, " "))
+	c := exec.Command("go", cmd...)
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+	return c.Run()
+}
+
+func installLintersIndividually(targets []string) {
+	failed := []string{}
+	for _, target := range targets {
+		cmd := makeInstallCommand(target)
+		debug("go %s", strings.Join(cmd, " "))
+		c := exec.Command("go", cmd...)
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		if err := c.Run(); err != nil {
+			warning("failed to install %s: %s", target, err)
+			failed = append(failed, target)
+		}
+	}
+	if len(failed) > 0 {
+		warning("failed to install the following linters: %s", strings.Join(failed, ", "))
+	}
+}
+
+func installLinters() {
 	names := make([]string, 0, len(installMap))
 	targets := make([]string, 0, len(installMap))
 	for name, target := range installMap {
@@ -487,17 +517,13 @@ func doInstall() {
 		targets = append(targets, target)
 	}
 	namesStr := strings.Join(names, "\n  ")
-	targetsStr := strings.Join(targets, " ")
-	cmd += " " + targetsStr
-	fmt.Printf("Installing:\n  %s\n->\n  %s\n", namesStr, cmd)
-
-	exe, args, err := parseCommand(".", cmd)
-	kingpin.FatalIfError(err, "failed to parse command line: %s", err)
-	c := exec.Command(exe, args...)
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	err = c.Run()
-	kingpin.FatalIfError(err, "failed to install one or more of %s: %s", strings.Join(names, ", "), err)
+	fmt.Printf("Installing:\n  %s\n", namesStr)
+	err := installLintersWithOneCommand(targets)
+	if err == nil {
+		return
+	}
+	warning("failed to install one or more of %s. Falling back to individual installs.", strings.Join(names, ", "), err)
+	installLintersIndividually(targets)
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
