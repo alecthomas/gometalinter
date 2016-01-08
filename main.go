@@ -505,7 +505,7 @@ func installLintersIndividually(targets []string) {
 		}
 	}
 	if len(failed) > 0 {
-		warning("failed to install the following linters: %s", strings.Join(failed, ", "))
+		kingpin.Fatalf("failed to install the following linters: %s", strings.Join(failed, ", "))
 	}
 }
 
@@ -522,7 +522,7 @@ func installLinters() {
 	if err == nil {
 		return
 	}
-	warning("failed to install one or more of %s. Falling back to individual installs.", strings.Join(names, ", "), err)
+	warning("failed to install one or more linters. Falling back to individual installs.", err)
 	installLintersIndividually(targets)
 }
 
