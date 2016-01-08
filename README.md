@@ -60,7 +60,6 @@ Install all known linters:
 ```
 $ gometalinter --install --update
 Installing:
-  gometalinter
   structcheck
   aligncheck
   deadcode
@@ -73,20 +72,6 @@ Installing:
   errcheck
   varcheck
   interfacer
-->
-  go get -u github.com/alecthomas/gometalinter \
-    github.com/opennota/check/cmd/structcheck \
-    github.com/opennota/check/cmd/aligncheck \
-    github.com/tsenart/deadcode \
-    github.com/alecthomas/gocyclo \
-    github.com/gordonklaus/ineffassign \
-    github.com/mibk/dupl \
-    github.com/golang/lint/golint \
-    golang.org/x/tools/cmd/gotype \
-    golang.org/x/tools/cmd/goimports \
-    github.com/kisielk/errcheck \
-    github.com/opennota/check/cmd/varcheck \
-    github.com/mvdan/interfacer/cmd/interfacer
 ```
 
 Run it:
@@ -151,6 +136,7 @@ are three things to try in that case:
 
 #### 1. Update to the latest build of gometalinter and all linters
 
+    go get -u github.com/alecthomas/gometalinter
     gometalinter --install --update
 
 If you're lucky, this will fix the problem.
