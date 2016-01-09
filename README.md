@@ -96,7 +96,7 @@ stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, hav
 
 
 Gometalinter also supports the commonly seen `<path>/...` recursive path
-format. Note that this can be *very* slow.
+format. Note that this can be *very* slow, and you may need to increase the linter `--deadline` to allow linters to complete.
 
 ## FAQ
 
