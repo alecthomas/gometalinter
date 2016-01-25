@@ -36,7 +36,7 @@ It is intended for use with editor/IDE integration.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
-- [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces from the stdlib that can be used.
+- [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 
 Disabled by default (enable with `--enable=<linter>`):
 
