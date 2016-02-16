@@ -142,6 +142,14 @@ are three things to try in that case:
 
 If you're lucky, this will fix the problem.
 
+If any of the installs fail with the following:
+
+    imports go/types: unrecognized import path "go/types"
+
+Ensure you are running go 1.5 (or higher):
+
+    go version
+
 #### 2. Analyse the debug output
 
 If that doesn't help, the problem may be elsewhere (in no particular order):
