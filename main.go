@@ -120,6 +120,7 @@ var (
 		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$`,
 		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
+		"unconvert":   "unconvert .:PATH:LINE:COL:MESSAGE",
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports"}
 	enabledLinters            = []string{}
@@ -130,6 +131,7 @@ var (
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
 		"gofmt":       "file is not gofmted",
 		"goimports":   "file is not goimported",
+		"unconvert":   "redundant type conversion",
 	}
 	linterSeverityFlag = map[string]string{
 		"gotype":  "error",
@@ -150,8 +152,9 @@ var (
 		"ineffassign": "github.com/gordonklaus/ineffassign",
 		"dupl":        "github.com/mibk/dupl",
 		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
+		"unconvert":   "github.com/mdempsky/unconvert",
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()

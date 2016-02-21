@@ -38,6 +38,7 @@ It is intended for use with editor/IDE integration.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
+- [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 
 Disabled by default (enable with `--enable=<linter>`):
 
