@@ -39,6 +39,7 @@ It is intended for use with editor/IDE integration.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
+- [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
 
 Disabled by default (enable with `--enable=<linter>`):
 
@@ -75,6 +76,7 @@ Installing:
   errcheck
   varcheck
   interfacer
+  goconst
 ```
 
 Run it:
@@ -226,6 +228,9 @@ deadcode  (github.com/tsenart/deadcode)
 interfacer  (github.com/mvdan/interfacer/cmd/interfacer)
       interfacer ./
       :PATH:LINE:MESSAGE
+goconst  (github.com/jgautheron/goconst/cmd/goconst)
+      goconst ./
+      :PATH:LINE:COL:MESSAGE
 
 Severity override map (default is "warning"):
 
@@ -247,7 +252,8 @@ Flags:
       --cyclo-over=10       Report functions with cyclomatic complexity over N
                             (using gocyclo).
       --line-length=80      Report lines longer than N (using lll).
-      --min-confidence=.80  Minimum confidence interval to pass to golint
+      --min-confidence=.80  Minimum confidence interval to pass to golint.
+      --min-occurrences=3   Minimum occurrences to pass to goconst.
       --dupl-threshold=50   Minimum token sequence as a clone for dupl.
       --sort=none           Sort output by any of none, path, line, column,
                             severity, message, linter.
