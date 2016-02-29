@@ -123,7 +123,7 @@ var (
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
 		"unconvert":   "unconvert .:PATH:LINE:COL:MESSAGE",
 	}
-	disabledLinters           = []string{"testify", "test", "gofmt", "goimports"}
+	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll"}
 	enabledLinters            = []string{}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
