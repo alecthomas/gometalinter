@@ -42,10 +42,11 @@ It is intended for use with editor/IDE integration.
 
 Disabled by default (enable with `--enable=<linter>`):
 
-- [testify](https://github.com/stretchr/testify) - Show location of failed testify assertions (disabled by default).
-- [test](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module (disabled by default).
+- [testify](https://github.com/stretchr/testify) - Show location of failed testify assertions.
+- [test](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module.
 - [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
+- [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
