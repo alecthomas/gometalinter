@@ -114,6 +114,7 @@ var (
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
 		"ineffassign": `ineffassign -n .:PATH:LINE:COL:MESSAGE`,
 		"interfacer":  `interfacer ./:PATH:LINE:COL:MESSAGE`,
+		"lll":         `lll -g -l {maxlinelength} ./*.go:PATH:LINE:MESSAGE`,
 		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
@@ -152,6 +153,7 @@ var (
 		"ineffassign": "github.com/gordonklaus/ineffassign",
 		"dupl":        "github.com/mibk/dupl",
 		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
+		"lll":         "github.com/walle/lll/cmd/lll",
 		"unconvert":   "github.com/mdempsky/unconvert",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
@@ -169,6 +171,7 @@ var (
 	skipFlag          = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
 	vendorFlag        = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
+	lineLengthFlag    = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
 	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint").Default(".80").Float()
 	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
 	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
@@ -386,6 +389,7 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 		vars := Vars{
 			"duplthreshold":  fmt.Sprintf("%d", *duplThresholdFlag),
 			"mincyclo":       fmt.Sprintf("%d", *cycloFlag),
+			"maxlinelength":  fmt.Sprintf("%d", *lineLengthFlag),
 			"min_confidence": fmt.Sprintf("%f", *minConfidence),
 			"tests":          "",
 		}
