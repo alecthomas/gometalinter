@@ -245,6 +245,7 @@ Flags:
   -e, --exclude=REGEXP      Exclude messages matching these regular expressions.
       --cyclo-over=10       Report functions with cyclomatic complexity over N
                             (using gocyclo).
+      --line-length=80      Report lines longer than N (using lll).
       --min-confidence=.80  Minimum confidence interval to pass to golint
       --dupl-threshold=50   Minimum token sequence as a clone for dupl.
       --sort=none           Sort output by any of none, path, line, column,
