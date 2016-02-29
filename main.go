@@ -107,6 +107,7 @@ var (
 		"deadcode":    `deadcode .:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 		"errcheck":    `errcheck -abspath .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$`,
+		"goconst":     `goconst -min-occurrences {min_occurrences} .:PATH:LINE:COL:MESSAGE`,
 		"gocyclo":     `gocyclo -over {mincyclo} .:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
 		"gofmt":       `gofmt -l -s ./*.go:^(?P<path>[^\n]+)$`,
 		"goimports":   `goimports -l ./*.go:^(?P<path>[^\n]+)$`,
@@ -155,6 +156,7 @@ var (
 		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
 		"lll":         "github.com/walle/lll/cmd/lll",
 		"unconvert":   "github.com/mdempsky/unconvert",
+		"goconst":     "github.com/jgautheron/goconst/cmd/goconst",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
@@ -172,7 +174,8 @@ var (
 	vendorFlag        = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
 	lineLengthFlag    = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
-	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint").Default(".80").Float()
+	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").Default(".80").Float()
+	minOccurrences    = kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").Default("3").Int()
 	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
 	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
@@ -387,11 +390,12 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"duplthreshold":  fmt.Sprintf("%d", *duplThresholdFlag),
-			"mincyclo":       fmt.Sprintf("%d", *cycloFlag),
-			"maxlinelength":  fmt.Sprintf("%d", *lineLengthFlag),
-			"min_confidence": fmt.Sprintf("%f", *minConfidence),
-			"tests":          "",
+			"duplthreshold":   fmt.Sprintf("%d", *duplThresholdFlag),
+			"mincyclo":        fmt.Sprintf("%d", *cycloFlag),
+			"maxlinelength":   fmt.Sprintf("%d", *lineLengthFlag),
+			"min_confidence":  fmt.Sprintf("%f", *minConfidence),
+			"min_occurrences": fmt.Sprintf("%d", *minOccurrences),
+			"tests":           "",
 		}
 		if *testFlag {
 			vars["tests"] = "-t"
