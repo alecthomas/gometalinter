@@ -29,12 +29,15 @@ const (
 )
 
 type Linter struct {
-	Name             string
-	Command          string
-	Pattern          string
-	InstallFrom      string
-	SeverityOverride Severity
-	MessageOverride  string
+	Name             string   `json:"name"`
+	Command          string   `json:"command"`
+	CompositeCommand string   `json:"composite_command,omitempty"`
+	Pattern          string   `json:"pattern"`
+	InstallFrom      string   `json:"install_from"`
+	SeverityOverride Severity `json:"severity,omitempty"`
+	MessageOverride  string   `json:"message_override,omitempty"`
+
+	regex *regexp.Regexp
 }
 
 func (l *Linter) MarshalJSON() ([]byte, error) {
@@ -47,13 +50,21 @@ func (l *Linter) String() string {
 
 func LinterFromName(name string) *Linter {
 	s := lintersFlag[name]
+	parts := strings.SplitN(s, ":", 2)
+	pattern := parts[1]
+	if p, ok := predefinedPatterns[pattern]; ok {
+		pattern = p
+	}
+	re, err := regexp.Compile("(?m:" + pattern + ")")
+	kingpin.FatalIfError(err, "invalid regex for %q", name)
 	return &Linter{
 		Name:             name,
 		Command:          s[0:strings.Index(s, ":")],
-		Pattern:          s[strings.Index(s, ":"):],
+		Pattern:          pattern,
 		InstallFrom:      installMap[name],
 		SeverityOverride: Severity(linterSeverityFlag[name]),
 		MessageOverride:  linterMessageOverrideFlag[name],
+		regex:            re,
 	}
 }
 
@@ -304,10 +315,6 @@ Severity override map (default is "warning"):
 		include = regexp.MustCompile(strings.Join(*includeFlag, "|"))
 	}
 
-	if *fastFlag {
-		disabledLinters = append(disabledLinters, slowLinters...)
-	}
-
 	if *installFlag {
 		installLinters()
 		return
@@ -315,19 +322,12 @@ Severity override map (default is "warning"):
 
 	runtime.GOMAXPROCS(*concurrencyFlag)
 
-	disable := map[string]bool{}
-	for _, linter := range disabledLinters {
-		disable[linter] = true
-	}
-	for _, linter := range enabledLinters {
-		delete(disable, linter)
-	}
-
 	start := time.Now()
 	paths := expandPaths(*pathsArg, *skipFlag)
 
+	linters := lintersFromFlags()
 	status := 0
-	issues, errch := runLinters(lintersFlag, disable, paths, *concurrencyFlag, exclude, include)
+	issues, errch := runLinters(linters, paths, *concurrencyFlag, exclude, include)
 	if *jsonFlag {
 		status |= outputToJSON(issues)
 	} else {
@@ -373,21 +373,13 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func runLinters(linters map[string]string, disable map[string]bool, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
+func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters)*len(paths))
 	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := maybeSortIssues(incomingIssues)
 	wg := &sync.WaitGroup{}
-	for name, description := range lintersFlag {
-		if _, ok := disable[name]; ok {
-			debug("linter %s disabled", name)
-			continue
-		}
-		parts := strings.SplitN(description, ":", 2)
-		command := parts[0]
-		pattern := parts[1]
-
+	for _, linter := range linters {
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
 			"duplthreshold":   fmt.Sprintf("%d", *duplThresholdFlag),
@@ -404,10 +396,8 @@ func runLinters(linters map[string]string, disable map[string]bool, paths []stri
 			wg.Add(1)
 			deadline := time.After(*deadlineFlag)
 			state := &linterState{
+				Linter:   linter,
 				issues:   incomingIssues,
-				name:     name,
-				command:  command,
-				pattern:  pattern,
 				path:     path,
 				vars:     vars.Copy(),
 				exclude:  exclude,
@@ -560,23 +550,18 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 }
 
 type linterState struct {
-	issues                       chan *Issue
-	name, command, pattern, path string
-	vars                         Vars
-	exclude                      *regexp.Regexp
-	include                      *regexp.Regexp
-	deadline                     <-chan time.Time
+	*Linter
+	path     string
+	issues   chan *Issue
+	vars     Vars
+	exclude  *regexp.Regexp
+	include  *regexp.Regexp
+	deadline <-chan time.Time
 }
 
 func (l *linterState) InterpolatedCommand() string {
 	l.vars["path"] = l.path
-	return l.vars.Replace(l.command)
-}
-
-func (l *linterState) Match() *regexp.Regexp {
-	re, err := regexp.Compile("(?m:" + l.pattern + ")")
-	kingpin.FatalIfError(err, "invalid pattern for '"+l.command+"'")
-	return re
+	return l.vars.Replace(l.Command)
 }
 
 func parseCommand(dir, command string) (string, []string, error) {
@@ -613,13 +598,9 @@ func parseCommand(dir, command string) (string, []string, error) {
 }
 
 func executeLinter(state *linterState) error {
-	debug("linting with %s: %s (on %s)", state.name, state.command, state.path)
+	debug("linting with %s: %s (on %s)", state.Name, state.Command, state.path)
 
 	start := time.Now()
-	if p, ok := predefinedPatterns[state.pattern]; ok {
-		state.pattern = p
-	}
-
 	command := state.InterpolatedCommand()
 	exe, args, err := parseCommand(state.path, command)
 	if err != nil {
@@ -647,10 +628,10 @@ func executeLinter(state *linterState) error {
 	case <-done:
 
 	case <-state.deadline:
-		err := fmt.Errorf("deadline exceeded by linter %s on %s (try increasing --deadline)", state.name, state.path)
+		err := fmt.Errorf("deadline exceeded by linter %s on %s (try increasing --deadline)", state.Name, state.path)
 		kerr := cmd.Process.Kill()
 		if kerr != nil {
-			warning("failed to kill %s: %s", state.name, kerr)
+			warning("failed to kill %s: %s", state.Name, kerr)
 		}
 		return err
 	}
@@ -661,7 +642,7 @@ func executeLinter(state *linterState) error {
 
 	processOutput(state, buf.Bytes())
 	elapsed := time.Now().Sub(start)
-	debug("%s linter took %s", state.name, elapsed)
+	debug("%s linter took %s", state.Name, elapsed)
 	return nil
 }
 
@@ -681,10 +662,39 @@ func (l *linterState) fixPath(path string) string {
 	return path
 }
 
+func lintersFromFlags() map[string]*Linter {
+	out := map[string]*Linter{}
+	for name := range lintersFlag {
+		out[name] = LinterFromName(name)
+	}
+	enabled := make([]string, len(enabledLinters))
+	copy(enabled, enabledLinters)
+	disabled := make([]string, len(disabledLinters))
+	copy(disabled, disabledLinters)
+
+	// Disable slow linters.
+	if *fastFlag {
+		disabled = append(disabled, slowLinters...)
+	}
+
+	disable := map[string]bool{}
+	for _, linter := range disabled {
+		disable[linter] = true
+	}
+	for _, linter := range enabled {
+		delete(disable, linter)
+	}
+
+	for linter := range disable {
+		delete(out, linter)
+	}
+	return out
+}
+
 func processOutput(state *linterState, out []byte) {
-	re := state.Match()
+	re := state.regex
 	all := re.FindAllSubmatchIndex(out, -1)
-	debug("%s hits %d: %s", state.name, len(all), state.pattern)
+	debug("%s hits %d: %s", state.Name, len(all), state.Pattern)
 	for _, indices := range all {
 		group := [][]byte{}
 		for i := 0; i < len(indices); i += 2 {
@@ -693,7 +703,7 @@ func processOutput(state *linterState, out []byte) {
 		}
 
 		issue := &Issue{Line: 1}
-		issue.Linter = LinterFromName(state.name)
+		issue.Linter = LinterFromName(state.Name)
 		for i, name := range re.SubexpNames() {
 			part := string(group[i])
 			if name != "" {
@@ -719,10 +729,10 @@ func processOutput(state *linterState, out []byte) {
 			case "":
 			}
 		}
-		if m, ok := linterMessageOverrideFlag[state.name]; ok {
+		if m, ok := linterMessageOverrideFlag[state.Name]; ok {
 			issue.Message = state.vars.Replace(m)
 		}
-		if sev, ok := linterSeverityFlag[state.name]; ok {
+		if sev, ok := linterSeverityFlag[state.Name]; ok {
 			issue.Severity = Severity(sev)
 		} else {
 			issue.Severity = "warning"
