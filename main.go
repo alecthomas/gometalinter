@@ -358,11 +358,11 @@ func outputToJSON(issues chan *Issue) int {
 	fmt.Println("[")
 	status := 0
 	for issue := range issues {
-		if status != 0 {
-			fmt.Printf(",\n")
-		}
 		if *errorsFlag && issue.Severity != Error {
 			continue
+		}
+		if status != 0 {
+			fmt.Printf(",\n")
 		}
 		d, err := json.Marshal(issue)
 		kingpin.FatalIfError(err, "")
