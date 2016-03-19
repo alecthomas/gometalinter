@@ -284,10 +284,9 @@ func (v Vars) Replace(s string) string {
 }
 
 func main() {
-	// Linters are by their very nature, short lived, so use sbrk for
-	// allocations rather than GC. Reduced (user) linting time on kingpin from
-	// 0.97s to 0.64s.
-	_ = os.Setenv("GODEBUG", "sbrk=1")
+	// Linters are by their very nature, short lived, so disable GC.
+	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
+	_ = os.Setenv("GOGC", "off")
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
@@ -299,6 +298,7 @@ Severity override map (default is "warning"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
+	fixupPath()
 	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
 	// TODO(alec): This will probably need to be enabled by default at a later time.
 	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || *vendorFlag {
@@ -746,4 +746,17 @@ func processOutput(state *linterState, out []byte) {
 		state.issues <- issue
 	}
 	return
+}
+
+// Add all "bin" directories from GOPATH to PATH.
+func fixupPath() {
+	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
+	gopaths := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
+	for i, p := range gopaths {
+		gopaths[i] = filepath.Join(p, "bin")
+	}
+	paths = append(gopaths, paths...)
+	path := strings.Join(paths, string(os.PathListSeparator))
+	os.Setenv("PATH", path)
+	debug("PATH=%s", os.Getenv("PATH"))
 }
