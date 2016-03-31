@@ -40,6 +40,7 @@ It is intended for use with editor/IDE integration.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
+- [gosimple](https://github.com/dominikh/go-simple) - Report simplifications in code.
 
 Disabled by default (enable with `--enable=<linter>`):
 
@@ -77,6 +78,7 @@ Installing:
   varcheck
   interfacer
   goconst
+  gosimple
 ```
 
 Run it:
@@ -231,6 +233,9 @@ interfacer  (github.com/mvdan/interfacer/cmd/interfacer)
 goconst  (github.com/jgautheron/goconst/cmd/goconst)
       goconst ./
       :PATH:LINE:COL:MESSAGE
+gosimple  (honnef.co/go/simple/cmd/gosimple)
+      gosimple .
+      ^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
 
 Severity override map (default is "warning"):
 
