@@ -33,7 +33,13 @@ To find out what's going on run in debug mode:
 This will show all output from the linters and should indicate why it is
 failing.
 
-#### 3. Report an issue.
+#### 3. Run linters manually
+
+The output of `gometalinter --debug` should show the exact commands gometalinter
+is running. Run these commands from the command line to determine if the linter
+or gometaliner is at fault.
+
+#### 4. Report an issue.
 
 Failing all else, if the problem looks like a bug please file an issue and
 include the output of `gometalinter --debug`
