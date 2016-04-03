@@ -57,7 +57,7 @@ Additional linters can be added through the command line with `--linter=NAME:COM
 Install gometalinter:
 
 ```
-$ go get github.com/alecthomas/gometalinter
+$ go get -u github.com/alecthomas/gometalinter
 ```
 
 Install all known linters:
