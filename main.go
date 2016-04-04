@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -182,7 +184,9 @@ var (
 	debugFlag         = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
 	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
 	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
+	excludeFrom       = kingpin.Flag("exclude-from", "File containing regular expressions to exclude matching messages.").PlaceHolder("FILE").Strings()
 	includeFlag       = kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").Strings()
+	includeFrom       = kingpin.Flag("include-from", "File containing regular expressions to include matching messages.").PlaceHolder("FILE").Strings()
 	skipFlag          = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
 	vendorFlag        = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
 	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
@@ -285,6 +289,25 @@ func (v Vars) Replace(s string) string {
 	return s
 }
 
+func mergeRegexFiles(fileNames []string) ([]string, error) {
+	files := make([]io.Reader, len(fileNames))
+	for i, f := range fileNames {
+		file, err := os.Open(f)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		files[i] = file
+	}
+
+	regexes := []string{}
+	scanner := bufio.NewScanner(io.MultiReader(files...))
+	for scanner.Scan() {
+		regexes = append(regexes, scanner.Text())
+	}
+	return regexes, scanner.Err()
+}
+
 func main() {
 	// Linters are by their very nature, short lived, so disable GC.
 	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
@@ -307,14 +330,39 @@ Severity override map (default is "warning"):
 		os.Setenv("GO15VENDOREXPERIMENT", "1")
 		*skipFlag = append(*skipFlag, "vendor")
 	}
-	var exclude *regexp.Regexp
+
+	var regexes []string
 	if len(*excludeFlag) > 0 {
-		exclude = regexp.MustCompile(strings.Join(*excludeFlag, "|"))
+		regexes = *excludeFlag
+	}
+	if len(*excludeFrom) > 0 {
+		r, err := mergeRegexFiles(*excludeFrom)
+		if err != nil {
+			warning(err.Error())
+			os.Exit(2)
+		}
+		regexes = append(regexes, r...)
+	}
+	var exclude *regexp.Regexp
+	if len(regexes) != 0 {
+		exclude = regexp.MustCompile(strings.Join(regexes, "|"))
 	}
 
-	var include *regexp.Regexp
+	regexes = nil
 	if len(*includeFlag) > 0 {
-		include = regexp.MustCompile(strings.Join(*includeFlag, "|"))
+		regexes = *includeFlag
+	}
+	if len(*includeFrom) > 0 {
+		r, err := mergeRegexFiles(*includeFrom)
+		if err != nil {
+			warning(err.Error())
+			os.Exit(2)
+		}
+		regexes = append(regexes, r...)
+	}
+	var include *regexp.Regexp
+	if len(regexes) != 0 {
+		include = regexp.MustCompile(strings.Join(regexes, "|"))
 	}
 
 	if *installFlag {
