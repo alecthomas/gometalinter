@@ -118,13 +118,22 @@ gometalinter sets two bits of the exit status to indicate different issues:
 
 eg. linter only = 1, underlying only = 2, linter + underlying = 3
 
+### What's the best way to use `gometalinter` in CI?
+
+There are two main problems running in a CI:
+
+1. Linters break, causing `gometalinter --install --update` to error.
+2. `gometalinter` adds a new linter.
+
+There is no great solution to 1, but for 2, the best option is to disable all linters, then explicitly enable the ones you want:
+
+    gometalinter --disable-all --enable=errcheck ...
+
 ### How do I make `gometalinter` work with Go 1.5 vendoring?
 
-`gometalinter` has no specific support for vendor paths, however if the
-underlying tools support it then it should Just Work™. Ensure that all
-of the linters are up to date and built with Go 1.5
-(`gometalinter --install --update --force`) then run
-`GO15VENDOREXPERIMENT=1 gometalinter .`. That should be it.
+`gometalinter` has a `--vendor` flag that just sets `GO15VENDOREXPERIMENT=1`, however the
+underlying tools must support it. Ensure that all of the linters are up to date and built with Go 1.5
+(`gometalinter --install --update --force`) then run `gometalinter --vendor .`. That should be it.
 
 ### Why does `gometalinter --install` install a fork of gocyclo?
 
