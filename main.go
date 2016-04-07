@@ -135,6 +135,7 @@ var (
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
 		"unconvert":   "unconvert .:PATH:LINE:COL:MESSAGE",
 		"gosimple":    "gosimple .:PATH:LINE:COL:MESSAGE",
+		"staticcheck": "staticcheck .:PATH:LINE:COL:MESSAGE",
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll"}
 	enabledLinters            = []string{}
@@ -170,6 +171,7 @@ var (
 		"unconvert":   "github.com/mdempsky/unconvert",
 		"goconst":     "github.com/jgautheron/goconst/cmd/goconst",
 		"gosimple":    "honnef.co/go/simple/cmd/gosimple",
+		"staticcheck": "honnef.co/go/staticcheck/cmd/staticcheck",
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
