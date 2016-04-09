@@ -146,7 +146,6 @@ var (
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
 		"gofmt":       "file is not gofmted",
 		"goimports":   "file is not goimported",
-		"unconvert":   "redundant type conversion",
 	}
 	linterSeverityFlag = map[string]string{
 		"gotype":  "error",
