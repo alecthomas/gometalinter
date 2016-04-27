@@ -248,7 +248,7 @@ gosimple  (honnef.co/go/simple/cmd/gosimple)
       gosimple .
       ^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
 staticcheck  (honnef.co/go/staticcheck/cmd/staticcheck)
-      gosimple .
+      staticcheck .
       ^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
 
 Severity override map (default is "warning"):
