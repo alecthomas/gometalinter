@@ -526,7 +526,7 @@ func installLinters() {
 	if err == nil {
 		return
 	}
-	warning("failed to install one or more linters. Falling back to individual installs.", err)
+	warning("failed to install one or more linters: %s (installing individually)", err)
 	installLintersIndividually(targets)
 }
 
