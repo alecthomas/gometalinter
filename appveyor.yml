@@ -1,0 +1,22 @@
+version: "{build}"
+
+clone_folder: c:\gopath\src\github.com\alecthomas\gometalinter
+
+environment:
+  GOPATH: c:\gopath
+
+install:
+  - echo %PATH%
+  - echo %GOPATH%
+  - go version
+  - go env
+  - go get -v -t ./...
+
+build_script:
+  - go build
+
+before_test:
+  - go run main.go --install
+
+test_script:
+  - go test -v ./...
