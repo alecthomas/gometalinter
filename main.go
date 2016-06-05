@@ -588,7 +588,7 @@ func parseCommand(dir, command string) (string, []string, error) {
 				return "", nil, err
 			}
 			for i, g := range globbed {
-				if strings.HasPrefix(g, dir+"/") {
+				if strings.HasPrefix(g, dir+string(filepath.Separator)) {
 					globbed[i] = g[len(dir)+1:]
 				}
 			}
