@@ -50,6 +50,7 @@ Disabled by default (enable with `--enable=<linter>`):
 - [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
+- [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 

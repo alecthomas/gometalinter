@@ -136,8 +136,9 @@ var (
 		"unconvert":   "unconvert .:PATH:LINE:COL:MESSAGE",
 		"gosimple":    "gosimple .:PATH:LINE:COL:MESSAGE",
 		"staticcheck": "staticcheck .:PATH:LINE:COL:MESSAGE",
+		"misspell":    "misspell ./*.go:PATH:LINE:COL:MESSAGE",
 	}
-	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll"}
+	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell"}
 	enabledLinters            = []string{}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
@@ -163,6 +164,7 @@ var (
 		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
 		"deadcode":    "github.com/tsenart/deadcode",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
+		"misspell":    "github.com/client9/misspell/cmd/misspell",
 		"ineffassign": "github.com/gordonklaus/ineffassign",
 		"dupl":        "github.com/mibk/dupl",
 		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
