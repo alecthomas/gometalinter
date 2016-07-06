@@ -114,10 +114,10 @@ var (
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
 	lintersFlag = map[string]string{
-		"aligncheck":  `aligncheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"deadcode":    `deadcode .:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} ./*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
-		"errcheck":    `errcheck -abspath .:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)[\s\t]+(?P<message>.*)$`,
+		"errcheck":    `errcheck -abspath {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)[\s\t]+(?P<message>.*)$`,
 		"goconst":     `goconst -min-occurrences {min_occurrences} .:PATH:LINE:COL:MESSAGE`,
 		"gocyclo":     `gocyclo -over {mincyclo} .:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
 		"gofmt":       `gofmt -l -s ./*.go:^(?P<path>[^\n]+)$`,
@@ -125,17 +125,17 @@ var (
 		"golint":      "golint -min_confidence {min_confidence} .:PATH:LINE:COL:MESSAGE",
 		"gotype":      "gotype -e {tests=-a} .:PATH:LINE:COL:MESSAGE",
 		"ineffassign": `ineffassign -n .:PATH:LINE:COL:MESSAGE`,
-		"interfacer":  `interfacer ./:PATH:LINE:COL:MESSAGE`,
+		"interfacer":  `interfacer {path}:PATH:LINE:COL:MESSAGE`,
 		"lll":         `lll -g -l {maxlinelength} ./*.go:PATH:LINE:MESSAGE`,
-		"structcheck": `structcheck {tests=-t} .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"test":        `go test:^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$`,
 		"testify":     `go test:Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-		"varcheck":    `varcheck .:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):[\s\t]+(?P<message>.*)$`,
+		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):[\s\t]+(?P<message>.*)$`,
 		"vet":         "go tool vet ./*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow ./*.go:PATH:LINE:MESSAGE",
 		"unconvert":   "unconvert .:PATH:LINE:COL:MESSAGE",
 		"gosimple":    "gosimple .:PATH:LINE:COL:MESSAGE",
-		"staticcheck": "staticcheck .:PATH:LINE:COL:MESSAGE",
+		"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
 		"misspell":    "misspell ./*.go:PATH:LINE:COL:MESSAGE",
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell"}
@@ -173,6 +173,15 @@ var (
 		"goconst":     "github.com/jgautheron/goconst/cmd/goconst",
 		"gosimple":    "honnef.co/go/simple/cmd/gosimple",
 		"staticcheck": "honnef.co/go/staticcheck/cmd/staticcheck",
+	}
+	acceptsEllipsis = map[string]bool{
+		"errcheck":    true,
+		"varcheck":    true,
+		"aligncheck":  true,
+		"structcheck": true,
+		"staticcheck": true,
+		"test":        true,
+		"interfacer":  true,
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
@@ -332,7 +341,7 @@ Severity override map (default is "warning"):
 
 	linters := lintersFromFlags()
 	status := 0
-	issues, errch := runLinters(linters, paths, *concurrencyFlag, exclude, include)
+	issues, errch := runLinters(linters, paths, *pathsArg, *concurrencyFlag, exclude, include)
 	if *jsonFlag {
 		status |= outputToJSON(issues)
 	} else {
@@ -342,7 +351,7 @@ Severity override map (default is "warning"):
 		warning("%s", err)
 		status |= 2
 	}
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	debug("total elapsed time %s", elapsed)
 	os.Exit(status)
 }
@@ -378,7 +387,7 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
+func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters)*len(paths))
 	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
@@ -397,7 +406,11 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 		if *testFlag {
 			vars["tests"] = "-t"
 		}
-		for _, path := range paths {
+		linterPaths := paths
+		if acceptsEllipsis[linter.Name] {
+			linterPaths = ellipsisPaths
+		}
+		for _, path := range linterPaths {
 			wg.Add(1)
 			deadline := time.After(*deadlineFlag)
 			state := &linterState{
@@ -565,8 +578,17 @@ type linterState struct {
 }
 
 func (l *linterState) InterpolatedCommand() string {
-	l.vars["path"] = l.path
-	return l.vars.Replace(l.Command)
+	vars := l.vars.Copy()
+	if l.ShouldChdir() {
+		vars["path"] = "."
+	} else {
+		vars["path"] = l.path
+	}
+	return vars.Replace(l.Command)
+}
+
+func (l *linterState) ShouldChdir() bool {
+	return !strings.HasSuffix(l.path, "/...") || !strings.Contains(l.Command, "{path}")
 }
 
 func parseCommand(dir, command string) (string, []string, error) {
@@ -614,7 +636,9 @@ func executeLinter(state *linterState) error {
 	debug("executing %s %q", exe, args)
 	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(exe, args...)
+	if state.ShouldChdir() {
 	cmd.Dir = state.path
+	}
 	cmd.Stdout = buf
 	cmd.Stderr = buf
 	err = cmd.Start()
