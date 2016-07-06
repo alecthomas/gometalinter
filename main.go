@@ -659,7 +659,8 @@ func executeLinter(state *linterState) error {
 	case <-done:
 
 	case <-state.deadline:
-		err := fmt.Errorf("deadline exceeded by linter %s on %s (try increasing --deadline)", state.Name, state.path)
+		err = fmt.Errorf("deadline exceeded by linter %s on %s (try increasing --deadline)",
+			state.Name, state.path)
 		kerr := cmd.Process.Kill()
 		if kerr != nil {
 			warning("failed to kill %s: %s", state.Name, kerr)
@@ -678,17 +679,13 @@ func executeLinter(state *linterState) error {
 }
 
 func (l *linterState) fixPath(path string) string {
-	abspath, err := filepath.Abs(l.path)
-	if filepath.IsAbs(path) {
-		if err == nil && strings.HasPrefix(path, abspath) {
-			normalised := filepath.Join(abspath, filepath.Base(path))
-			if _, err := os.Stat(normalised); err == nil {
-				path := filepath.Join(l.path, filepath.Base(path))
-				return path
-			}
-		}
-	} else {
-		return filepath.Join(l.path, path)
+	lpath := strings.TrimSuffix(l.path, "...")
+	labspath, _ := filepath.Abs(lpath)
+	if !filepath.IsAbs(path) {
+		path, _ = filepath.Abs(filepath.Join(labspath, path))
+	}
+	if strings.HasPrefix(path, labspath) {
+		return filepath.Join(lpath, strings.TrimPrefix(path, labspath))
 	}
 	return path
 }
