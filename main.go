@@ -182,6 +182,8 @@ var (
 		"staticcheck": true,
 		"test":        true,
 		"interfacer":  true,
+		"golint":      true,
+		"gosimple":    true,
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
@@ -637,7 +639,7 @@ func executeLinter(state *linterState) error {
 	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(exe, args...)
 	if state.ShouldChdir() {
-	cmd.Dir = state.path
+		cmd.Dir = state.path
 	}
 	cmd.Stdout = buf
 	cmd.Stderr = buf
