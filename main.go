@@ -136,7 +136,7 @@ var (
 		"unconvert":   "unconvert {path}:PATH:LINE:COL:MESSAGE",
 		"gosimple":    "gosimple {path}:PATH:LINE:COL:MESSAGE",
 		"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
-		"misspell":    "misspell {path}/*.go:PATH:LINE:COL:MESSAGE",
+		"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell"}
 	enabledLinters            = []string{}
