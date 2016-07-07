@@ -320,6 +320,7 @@ Severity override map (default is "warning"):
 	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || *vendorFlag {
 		os.Setenv("GO15VENDOREXPERIMENT", "1")
 		*skipFlag = append(*skipFlag, "vendor")
+		*vendorFlag = true
 	}
 	var exclude *regexp.Regexp
 	if len(*excludeFlag) > 0 {
@@ -409,7 +410,8 @@ func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concu
 			vars["tests"] = "-t"
 		}
 		linterPaths := paths
-		if acceptsEllipsis[linter.Name] {
+		// Most linters don't exclude vendor paths when recursing, so we don't use ... paths.
+		if acceptsEllipsis[linter.Name] && !*vendorFlag {
 			linterPaths = ellipsisPaths
 		}
 		for _, path := range linterPaths {
@@ -590,7 +592,7 @@ func (l *linterState) InterpolatedCommand() string {
 }
 
 func (l *linterState) ShouldChdir() bool {
-	return !strings.HasSuffix(l.path, "/...") || !strings.Contains(l.Command, "{path}")
+	return *vendorFlag || !strings.HasSuffix(l.path, "/...") || !strings.Contains(l.Command, "{path}")
 }
 
 func parseCommand(dir, command string) (string, []string, error) {
