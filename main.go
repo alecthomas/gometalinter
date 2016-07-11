@@ -145,7 +145,7 @@ var (
 		"varcheck":    "unused global variable {message}",
 		"structcheck": "unused struct field {message}",
 		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
-		"gofmt":       "file is not gofmted",
+		"gofmt":       "file is not gofmted with -s",
 		"goimports":   "file is not goimported",
 	}
 	linterSeverityFlag = map[string]string{
