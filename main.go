@@ -118,7 +118,7 @@ var (
 		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 		"errcheck":    `errcheck -abspath {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)[\s\t]+(?P<message>.*)$`,
-		"goconst":     `goconst -min-occurrences {min_occurrences} {path}:PATH:LINE:COL:MESSAGE`,
+		"goconst":     `goconst -min-occurrences {min_occurrences} -min-length {min_const_length} {path}:PATH:LINE:COL:MESSAGE`,
 		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$`,
 		"gofmt":       `gofmt -l -s {path}/*.go:^(?P<path>[^\n]+)$`,
 		"goimports":   `goimports -l {path}/*.go:^(?P<path>[^\n]+)$`,
@@ -203,6 +203,7 @@ var (
 	lineLengthFlag    = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
 	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").Default(".80").Float()
 	minOccurrences    = kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").Default("3").Int()
+	minConstLength    = kingpin.Flag("min-const-length", "Minimumum constant length.").Default("3").Int()
 	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
 	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
 	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
@@ -399,12 +400,13 @@ func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concu
 	for _, linter := range linters {
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"duplthreshold":   fmt.Sprintf("%d", *duplThresholdFlag),
-			"mincyclo":        fmt.Sprintf("%d", *cycloFlag),
-			"maxlinelength":   fmt.Sprintf("%d", *lineLengthFlag),
-			"min_confidence":  fmt.Sprintf("%f", *minConfidence),
-			"min_occurrences": fmt.Sprintf("%d", *minOccurrences),
-			"tests":           "",
+			"duplthreshold":    fmt.Sprintf("%d", *duplThresholdFlag),
+			"mincyclo":         fmt.Sprintf("%d", *cycloFlag),
+			"maxlinelength":    fmt.Sprintf("%d", *lineLengthFlag),
+			"min_confidence":   fmt.Sprintf("%f", *minConfidence),
+			"min_occurrences":  fmt.Sprintf("%d", *minOccurrences),
+			"min_const_length": fmt.Sprintf("%d", *minConstLength),
+			"tests":            "",
 		}
 		if *testFlag {
 			vars["tests"] = "-t"
