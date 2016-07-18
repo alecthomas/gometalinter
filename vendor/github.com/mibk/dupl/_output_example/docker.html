@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<meta charset="utf-8"/>
+<title>Duplicates</title>
+<style>
+	pre {
+		background-color: #FFD;
+		border: 1px solid #E2E2E2;
+		padding: 1ex;
+	}
+</style>
+<h1>#1 found 2 clones</h1>
+<h2>vendor/src/code.google.com/p/go.net/ipv6/multicast_test.go:131</h2>
+<pre>for i, toggle := range []bool{true, false, true} {
+	wb, err := (&icmpMessage{
+		Type: ipv6.ICMPTypeEchoRequest, Code: 0,
+		Body: &icmpEcho{
+			ID: os.Getpid() & 0xffff, Seq: i + 1,
+			Data: []byte("HELLO-R-U-THERE"),
+		},
+	}).Marshal()
+	if err != nil {
+		t.Fatalf("icmpMessage.Marshal failed: %v", err)
+	}
+	if err := p.SetControlMessage(cf, toggle); err != nil {
+		t.Fatalf("ipv6.PacketConn.SetControlMessage failed: %v", err)
+	}
+	cm.HopLimit = i + 1
+	if _, err := p.WriteTo(wb, &cm, dst); err != nil {
+		t.Fatalf("ipv6.PacketConn.WriteTo failed: %v", err)
+	}
+	b := make([]byte, 128)
+	if n, cm, _, err := p.ReadFrom(b); err != nil {
+		t.Fatalf("ipv6.PacketConn.ReadFrom failed: %v", err)
+	} else {
+		t.Logf("rcvd cmsg: %v", cm)
+		if m, err := parseICMPMessage(b[:n]); err != nil {
+			t.Fatalf("parseICMPMessage failed: %v", err)
+		} else if m.Type != ipv6.ICMPTypeEchoReply || m.Code != 0 {
+			t.Fatalf("got type=%v, code=%v; expected type=%v, code=%v", m.Type, m.Code, ipv6.ICMPTypeEchoReply, 0)
+		}
+	}
+}</pre>
+<h2>vendor/src/code.google.com/p/go.net/ipv6/unicast_test.go:173</h2>
+<pre>for i, toggle := range []bool{true, false, true} {
+	wb, err := (&icmpMessage{
+		Type: ipv6.ICMPTypeEchoRequest, Code: 0,
+		Body: &icmpEcho{
+			ID: os.Getpid() & 0xffff, Seq: i + 1,
+			Data: []byte("HELLO-R-U-THERE"),
+		},
+	}).Marshal()
+	if err != nil {
+		t.Fatalf("icmpMessage.Marshal failed: %v", err)
+	}
+	if err := p.SetControlMessage(cf, toggle); err != nil {
+		t.Fatalf("ipv6.PacketConn.SetControlMessage failed: %v", err)
+	}
+	cm.HopLimit = i + 1
+	if _, err := p.WriteTo(wb, &cm, dst); err != nil {
+		t.Fatalf("ipv6.PacketConn.WriteTo failed: %v", err)
+	}
+	b := make([]byte, 128)
+	if n, cm, _, err := p.ReadFrom(b); err != nil {
+		t.Fatalf("ipv6.PacketConn.ReadFrom failed: %v", err)
+	} else {
+		t.Logf("rcvd cmsg: %v", cm)
+		if m, err := parseICMPMessage(b[:n]); err != nil {
+			t.Fatalf("parseICMPMessage failed: %v", err)
+		} else if m.Type != ipv6.ICMPTypeEchoReply || m.Code != 0 {
+			t.Fatalf("got type=%v, code=%v; expected type=%v, code=%v", m.Type, m.Code, ipv6.ICMPTypeEchoReply, 0)
+		}
+	}
+}</pre>
+<h1>#2 found 2 clones</h1>
+<h2>vendor/src/code.google.com/p/go.net/websocket/hybi_test.go:33</h2>
+<pre>func TestHybiClientHandshake(t *testing.T) {
+	b := bytes.NewBuffer([]byte{})
+	bw := bufio.NewWriter(b)
+	br := bufio.NewReader(strings.NewReader(`HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+Sec-WebSocket-Protocol: chat
+
+`))
+	var err error
+	config := new(Config)
+	config.Location, err = url.ParseRequestURI("ws://server.example.com/chat")
+	if err != nil {
+		t.Fatal("location url", err)
+	}
+	config.Origin, err = url.ParseRequestURI("http://example.com")
+	if err != nil {
+		t.Fatal("origin url", err)
+	}
+	config.Protocol = append(config.Protocol, "chat")
+	config.Protocol = append(config.Protocol, "superchat")
+	config.Version = ProtocolVersionHybi13
+
+	config.handshakeData = map[string]string{
+		"key": "dGhlIHNhbXBsZSBub25jZQ==",
+	}
+	err = hybiClientHandshake(config, br, bw)
+	if err != nil {
+		t.Errorf("handshake failed: %v", err)
+	}
+	req, err := http.ReadRequest(bufio.NewReader(b))
+	if err != nil {
+		t.Fatalf("read request: %v", err)
+	}
+	if req.Method != "GET" {
+		t.Errorf("request method expected GET, but got %q", req.Method)
+	}
+	if req.URL.Path != "/chat" {
+		t.Errorf("request path expected /chat, but got %q", req.URL.Path)
+	}
+	if req.Proto != "HTTP/1.1" {
+		t.Errorf("request proto expected HTTP/1.1, but got %q", req.Proto)
+	}
+	if req.Host != "server.example.com" {
+		t.Errorf("request Host expected server.example.com, but got %v", req.Host)
+	}
+	var expectedHeader = map[string]string{
+		"Connection":             "Upgrade",
+		"Upgrade":                "websocket",
+		"Sec-Websocket-Key":      config.handshakeData["key"],
+		"Origin":                 config.Origin.String(),
+		"Sec-Websocket-Protocol": "chat, superchat",
+		"Sec-Websocket-Version":  fmt.Sprintf("%d", ProtocolVersionHybi13),
+	}
+	for k, v := range expectedHeader {
+		if req.Header.Get(k) != v {
+			t.Errorf(fmt.Sprintf("%s expected %q but got %q", k, v, req.Header.Get(k)))
+		}
+	}
+}</pre>
+<h2>vendor/src/code.google.com/p/go.net/websocket/hybi_test.go:160</h2>
+<pre>func TestHybiClientHandshakeHybi08(t *testing.T) {
+	b := bytes.NewBuffer([]byte{})
+	bw := bufio.NewWriter(b)
+	br := bufio.NewReader(strings.NewReader(`HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+Sec-WebSocket-Protocol: chat
+
+`))
+	var err error
+	config := new(Config)
+	config.Location, err = url.ParseRequestURI("ws://server.example.com/chat")
+	if err != nil {
+		t.Fatal("location url", err)
+	}
+	config.Origin, err = url.ParseRequestURI("http://example.com")
+	if err != nil {
+		t.Fatal("origin url", err)
+	}
+	config.Protocol = append(config.Protocol, "chat")
+	config.Protocol = append(config.Protocol, "superchat")
+	config.Version = ProtocolVersionHybi08
+
+	config.handshakeData = map[string]string{
+		"key": "dGhlIHNhbXBsZSBub25jZQ==",
+	}
+	err = hybiClientHandshake(config, br, bw)
+	if err != nil {
+		t.Errorf("handshake failed: %v", err)
+	}
+	req, err := http.ReadRequest(bufio.NewReader(b))
+	if err != nil {
+		t.Fatalf("read request: %v", err)
+	}
+	if req.Method != "GET" {
+		t.Errorf("request method expected GET, but got %q", req.Method)
+	}
+	if req.URL.Path != "/chat" {
+		t.Errorf("request path expected /demo, but got %q", req.URL.Path)
+	}
+	if req.Proto != "HTTP/1.1" {
+		t.Errorf("request proto expected HTTP/1.1, but got %q", req.Proto)
+	}
+	if req.Host != "server.example.com" {
+		t.Errorf("request Host expected example.com, but got %v", req.Host)
+	}
+	var expectedHeader = map[string]string{
+		"Connection":             "Upgrade",
+		"Upgrade":                "websocket",
+		"Sec-Websocket-Key":      config.handshakeData["key"],
+		"Sec-Websocket-Origin":   config.Origin.String(),
+		"Sec-Websocket-Protocol": "chat, superchat",
+		"Sec-Websocket-Version":  fmt.Sprintf("%d", ProtocolVersionHybi08),
+	}
+	for k, v := range expectedHeader {
+		if req.Header.Get(k) != v {
+			t.Errorf(fmt.Sprintf("%s expected %q but got %q", k, v, req.Header.Get(k)))
+		}
+	}
+}</pre>
+<h1>#3 found 2 clones</h1>
+<h2>vendor/src/code.google.com/p/go.net/ipv4/gen.go:122</h2>
+<pre>func (icp *icmpv4Parameters) escape() []canonICMPv4ParamRecord {
+	id := -1
+	for i, r := range icp.Registries {
+		if strings.Contains(r.Title, "Type") || strings.Contains(r.Title, "type") {
+			id = i
+			break
+		}
+	}
+	if id < 0 {
+		return nil
+	}
+	prs := make([]canonICMPv4ParamRecord, len(icp.Registries[id].Records))
+	sr := strings.NewReplacer(
+		"Messages", "",
+		"Message", "",
+		"ICMP", "",
+		"+", "P",
+		"-", "",
+		"/", "",
+		".", "",
+		" ", "",
+	)
+	for i, pr := range icp.Registries[id].Records {
+		if strings.Contains(pr.Descr, "Reserved") ||
+			strings.Contains(pr.Descr, "Unassigned") ||
+			strings.Contains(pr.Descr, "Deprecated") ||
+			strings.Contains(pr.Descr, "Experiment") ||
+			strings.Contains(pr.Descr, "experiment") {
+			continue
+		}
+		ss := strings.Split(pr.Descr, "\n")
+		if len(ss) > 1 {
+			prs[i].Descr = strings.Join(ss, " ")
+		} else {
+			prs[i].Descr = ss[0]
+		}
+		s := strings.TrimSpace(prs[i].Descr)
+		prs[i].OrigDescr = s
+		prs[i].Descr = sr.Replace(s)
+		prs[i].Value, _ = strconv.Atoi(pr.Value)
+	}
+	return prs
+}</pre>
+<h2>vendor/src/code.google.com/p/go.net/ipv6/gen.go:122</h2>
+<pre>func (icp *icmpv6Parameters) escape() []canonICMPv6ParamRecord {
+	id := -1
+	for i, r := range icp.Registries {
+		if strings.Contains(r.Title, "Type") || strings.Contains(r.Title, "type") {
+			id = i
+			break
+		}
+	}
+	if id < 0 {
+		return nil
+	}
+	prs := make([]canonICMPv6ParamRecord, len(icp.Registries[id].Records))
+	sr := strings.NewReplacer(
+		"Messages", "",
+		"Message", "",
+		"ICMP", "",
+		"+", "P",
+		"-", "",
+		"/", "",
+		".", "",
+		" ", "",
+	)
+	for i, pr := range icp.Registries[id].Records {
+		if strings.Contains(pr.Name, "Reserved") ||
+			strings.Contains(pr.Name, "Unassigned") ||
+			strings.Contains(pr.Name, "Deprecated") ||
+			strings.Contains(pr.Name, "Experiment") ||
+			strings.Contains(pr.Name, "experiment") {
+			continue
+		}
+		ss := strings.Split(pr.Name, "\n")
+		if len(ss) > 1 {
+			prs[i].Name = strings.Join(ss, " ")
+		} else {
+			prs[i].Name = ss[0]
+		}
+		s := strings.TrimSpace(prs[i].Name)
+		prs[i].OrigName = s
+		prs[i].Name = sr.Replace(s)
+		prs[i].Value, _ = strconv.Atoi(pr.Value)
+	}
+	return prs
+}</pre>
+<h1>#4 found 2 clones</h1>
+<h2>pkg/term/termios_darwin.go:1</h2>
+<pre>package term
+
+import (
+	"syscall"
+	"unsafe"
+)
+
+const (
+	getTermios = syscall.TIOCGETA
+	setTermios = syscall.TIOCSETA
+
+	IGNBRK = syscall.IGNBRK
+	PARMRK = syscall.PARMRK
+	INLCR  = syscall.INLCR
+	IGNCR  = syscall.IGNCR
+	ECHONL = syscall.ECHONL
+	CSIZE  = syscall.CSIZE
+	ICRNL  = syscall.ICRNL
+	ISTRIP = syscall.ISTRIP
+	PARENB = syscall.PARENB
+	ECHO   = syscall.ECHO
+	ICANON = syscall.ICANON
+	ISIG   = syscall.ISIG
+	IXON   = syscall.IXON
+	BRKINT = syscall.BRKINT
+	INPCK  = syscall.INPCK
+	OPOST  = syscall.OPOST
+	CS8    = syscall.CS8
+	IEXTEN = syscall.IEXTEN
+)
+
+type Termios struct {
+	Iflag  uint64
+	Oflag  uint64
+	Cflag  uint64
+	Lflag  uint64
+	Cc     [20]byte
+	Ispeed uint64
+	Ospeed uint64
+}
+
+// MakeRaw put the terminal connected to the given file descriptor into raw
+// mode and returns the previous state of the terminal so that it can be
+// restored.
+func MakeRaw(fd uintptr) (*State, error) {
+	var oldState State
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(getTermios), uintptr(unsafe.Pointer(&oldState.termios))); err != 0 {
+		return nil, err
+	}
+
+	newState := oldState.termios
+	newState.Iflag &^= (IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON)
+	newState.Oflag &^= OPOST
+	newState.Lflag &^= (ECHO | ECHONL | ICANON | ISIG | IEXTEN)
+	newState.Cflag &^= (CSIZE | PARENB)
+	newState.Cflag |= CS8
+	newState.Cc[syscall.VMIN] = 1
+	newState.Cc[syscall.VTIME] = 0
+
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(setTermios), uintptr(unsafe.Pointer(&newState))); err != 0 {
+		return nil, err
+	}
+
+	return &oldState, nil
+}</pre>
+<h2>pkg/term/termios_freebsd.go:1</h2>
+<pre>package term
+
+import (
+	"syscall"
+	"unsafe"
+)
+
+const (
+	getTermios = syscall.TIOCGETA
+	setTermios = syscall.TIOCSETA
+
+	IGNBRK = syscall.IGNBRK
+	PARMRK = syscall.PARMRK
+	INLCR  = syscall.INLCR
+	IGNCR  = syscall.IGNCR
+	ECHONL = syscall.ECHONL
+	CSIZE  = syscall.CSIZE
+	ICRNL  = syscall.ICRNL
+	ISTRIP = syscall.ISTRIP
+	PARENB = syscall.PARENB
+	ECHO   = syscall.ECHO
+	ICANON = syscall.ICANON
+	ISIG   = syscall.ISIG
+	IXON   = syscall.IXON
+	BRKINT = syscall.BRKINT
+	INPCK  = syscall.INPCK
+	OPOST  = syscall.OPOST
+	CS8    = syscall.CS8
+	IEXTEN = syscall.IEXTEN
+)
+
+type Termios struct {
+	Iflag  uint32
+	Oflag  uint32
+	Cflag  uint32
+	Lflag  uint32
+	Cc     [20]byte
+	Ispeed uint32
+	Ospeed uint32
+}
+
+// MakeRaw put the terminal connected to the given file descriptor into raw
+// mode and returns the previous state of the terminal so that it can be
+// restored.
+func MakeRaw(fd uintptr) (*State, error) {
+	var oldState State
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(getTermios), uintptr(unsafe.Pointer(&oldState.termios))); err != 0 {
+		return nil, err
+	}
+
+	newState := oldState.termios
+	newState.Iflag &^= (IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON)
+	newState.Oflag &^= OPOST
+	newState.Lflag &^= (ECHO | ECHONL | ICANON | ISIG | IEXTEN)
+	newState.Cflag &^= (CSIZE | PARENB)
+	newState.Cflag |= CS8
+	newState.Cc[syscall.VMIN] = 1
+	newState.Cc[syscall.VTIME] = 0
+
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, uintptr(setTermios), uintptr(unsafe.Pointer(&newState))); err != 0 {
+		return nil, err
+	}
+
+	return &oldState, nil
+}</pre>
+<h1>#5 found 2 clones</h1>
+<h2>vendor/src/code.google.com/p/go.net/ipv4/gentest.go:12</h2>
+<pre>package main
+
+import (
+	"bytes"
+	"encoding/xml"
+	"fmt"
+	"go/format"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+)
+
+var registries = []struct {
+	url   string
+	parse func(io.Writer, io.Reader) error
+}{
+	{
+		"http://www.iana.org/assignments/dscp-registry/dscp-registry.xml",
+		parseDSCPRegistry,
+	},
+	{
+		"http://www.iana.org/assignments/ipv4-tos-byte/ipv4-tos-byte.xml",
+		parseTOSTCByte,
+	},
+}
+
+func main() {
+	var bb bytes.Buffer
+	fmt.Fprintf(&bb, "// go run gentv.go\n")
+	fmt.Fprintf(&bb, "// GENERATED BY THE COMMAND ABOVE; DO NOT EDIT\n\n")
+	fmt.Fprintf(&bb, "package ipv4_test\n\n")
+	for _, r := range registries {
+		resp, err := http.Get(r.url)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			fmt.Fprintf(os.Stderr, "got HTTP status code %v for %v\n", resp.StatusCode, r.url)
+			os.Exit(1)
+		}
+		if err := r.parse(&bb, resp.Body); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(&bb, "\n")
+	}
+	b, err := format.Source(bb.Bytes())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Stdout.Write(b)
+}
+
+func parseDSCPRegistry(w io.Writer, r io.Reader) error {
+	dec := xml.NewDecoder(r)
+	var dr dscpRegistry
+	if err := dec.Decode(&dr); err != nil {
+		return err
+	}
+	drs := dr.escape()
+	fmt.Fprintf(w, "// %s, Updated: %s\n", dr.Title, dr.Updated)
+	fmt.Fprintf(w, "const (\n")
+	for _, dr := range drs {
+		fmt.Fprintf(w, "DiffServ%s = %#x", dr.Name, dr.Value)
+		fmt.Fprintf(w, "// %s\n", dr.OrigName)
+	}
+	fmt.Fprintf(w, ")\n")
+	return nil
+}
+
+type dscpRegistry struct {
+	XMLName     xml.Name     `xml:"registry"`
+	Title       string       `xml:"title"`
+	Updated     string       `xml:"updated"`
+	Note        string       `xml:"note"`
+	RegTitle    string       `xml:"registry>title"`
+	PoolRecords []dscpRecord `xml:"registry>record"`
+	Records     []dscpRecord `xml:"registry>registry>record"`
+}
+
+type dscpRecord struct {
+	Name  string `xml:"name"`
+	Space string `xml:"space"`
+}
+
+type canonDSCPRecord struct {
+	OrigName string
+	Name     string
+	Value    int
+}
+
+func (drr *dscpRegistry) escape() []canonDSCPRecord {
+	drs := make([]canonDSCPRecord, len(drr.Records))
+	sr := strings.NewReplacer(
+		"+", "",
+		"-", "",
+		"/", "",
+		".", "",
+		" ", "",
+	)
+	for i, dr := range drr.Records {
+		s := strings.TrimSpace(dr.Name)
+		drs[i].OrigName = s
+		drs[i].Name = sr.Replace(s)
+		n, err := strconv.ParseUint(dr.Space, 2, 8)
+		if err != nil {
+			continue
+		}
+		drs[i].Value = int(n) << 2
+	}
+	return drs
+}
+
+func parseTOSTCByte(w io.Writer, r io.Reader) error {
+	dec := xml.NewDecoder(r)
+	var ttb tosTCByte
+	if err := dec.Decode(&ttb); err != nil {
+		return err
+	}
+	trs := ttb.escape()
+	fmt.Fprintf(w, "// %s, Updated: %s\n", ttb.Title, ttb.Updated)
+	fmt.Fprintf(w, "const (\n")
+	for _, tr := range trs {
+		fmt.Fprintf(w, "%s = %#x", tr.Keyword, tr.Value)
+		fmt.Fprintf(w, "// %s\n", tr.OrigKeyword)
+	}
+	fmt.Fprintf(w, ")\n")
+	return nil
+}
+
+type tosTCByte struct {
+	XMLName  xml.Name          `xml:"registry"`
+	Title    string            `xml:"title"`
+	Updated  string            `xml:"updated"`
+	Note     string            `xml:"note"`
+	RegTitle string            `xml:"registry>title"`
+	Records  []tosTCByteRecord `xml:"registry>record"`
+}
+
+type tosTCByteRecord struct {
+	Binary  string `xml:"binary"`
+	Keyword string `xml:"keyword"`
+}
+
+type canonTOSTCByteRecord struct {
+	OrigKeyword string
+	Keyword     string
+	Value       int
+}
+
+func (ttb *tosTCByte) escape() []canonTOSTCByteRecord {
+	trs := make([]canonTOSTCByteRecord, len(ttb.Records))
+	sr := strings.NewReplacer(
+		"Capable", "",
+		"(", "",
+		")", "",
+		"+", "",
+		"-", "",
+		"/", "",
+		".", "",
+		" ", "",
+	)
+	for i, tr := range ttb.Records {
+		s := strings.TrimSpace(tr.Keyword)
+		trs[i].OrigKeyword = s
+		ss := strings.Split(s, " ")
+		if len(ss) > 1 {
+			trs[i].Keyword = strings.Join(ss[1:], " ")
+		} else {
+			trs[i].Keyword = ss[0]
+		}
+		trs[i].Keyword = sr.Replace(trs[i].Keyword)
+		n, err := strconv.ParseUint(tr.Binary, 2, 8)
+		if err != nil {
+			continue
+		}
+		trs[i].Value = int(n)
+	}
+	return trs
+}</pre>
+<h2>vendor/src/code.google.com/p/go.net/ipv6/gentest.go:12</h2>
+<pre>package main
+
+import (
+	"bytes"
+	"encoding/xml"
+	"fmt"
+	"go/format"
+	"io"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+)
+
+var registries = []struct {
+	url   string
+	parse func(io.Writer, io.Reader) error
+}{
+	{
+		"http://www.iana.org/assignments/dscp-registry/dscp-registry.xml",
+		parseDSCPRegistry,
+	},
+	{
+		"http://www.iana.org/assignments/ipv4-tos-byte/ipv4-tos-byte.xml",
+		parseTOSTCByte,
+	},
+}
+
+func main() {
+	var bb bytes.Buffer
+	fmt.Fprintf(&bb, "// go run gentv.go\n")
+	fmt.Fprintf(&bb, "// GENERATED BY THE COMMAND ABOVE; DO NOT EDIT\n\n")
+	fmt.Fprintf(&bb, "package ipv6_test\n\n")
+	for _, r := range registries {
+		resp, err := http.Get(r.url)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			fmt.Fprintf(os.Stderr, "got HTTP status code %v for %v\n", resp.StatusCode, r.url)
+			os.Exit(1)
+		}
+		if err := r.parse(&bb, resp.Body); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(&bb, "\n")
+	}
+	b, err := format.Source(bb.Bytes())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	os.Stdout.Write(b)
+}
+
+func parseDSCPRegistry(w io.Writer, r io.Reader) error {
+	dec := xml.NewDecoder(r)
+	var dr dscpRegistry
+	if err := dec.Decode(&dr); err != nil {
+		return err
+	}
+	drs := dr.escape()
+	fmt.Fprintf(w, "// %s, Updated: %s\n", dr.Title, dr.Updated)
+	fmt.Fprintf(w, "const (\n")
+	for _, dr := range drs {
+		fmt.Fprintf(w, "DiffServ%s = %#x", dr.Name, dr.Value)
+		fmt.Fprintf(w, "// %s\n", dr.OrigName)
+	}
+	fmt.Fprintf(w, ")\n")
+	return nil
+}
+
+type dscpRegistry struct {
+	XMLName     xml.Name     `xml:"registry"`
+	Title       string       `xml:"title"`
+	Updated     string       `xml:"updated"`
+	Note        string       `xml:"note"`
+	RegTitle    string       `xml:"registry>title"`
+	PoolRecords []dscpRecord `xml:"registry>record"`
+	Records     []dscpRecord `xml:"registry>registry>record"`
+}
+
+type dscpRecord struct {
+	Name  string `xml:"name"`
+	Space string `xml:"space"`
+}
+
+type canonDSCPRecord struct {
+	OrigName string
+	Name     string
+	Value    int
+}
+
+func (drr *dscpRegistry) escape() []canonDSCPRecord {
+	drs := make([]canonDSCPRecord, len(drr.Records))
+	sr := strings.NewReplacer(
+		"+", "",
+		"-", "",
+		"/", "",
+		".", "",
+		" ", "",
+	)
+	for i, dr := range drr.Records {
+		s := strings.TrimSpace(dr.Name)
+		drs[i].OrigName = s
+		drs[i].Name = sr.Replace(s)
+		n, err := strconv.ParseUint(dr.Space, 2, 8)
+		if err != nil {
+			continue
+		}
+		drs[i].Value = int(n) << 2
+	}
+	return drs
+}
+
+func parseTOSTCByte(w io.Writer, r io.Reader) error {
+	dec := xml.NewDecoder(r)
+	var ttb tosTCByte
+	if err := dec.Decode(&ttb); err != nil {
+		return err
+	}
+	trs := ttb.escape()
+	fmt.Fprintf(w, "// %s, Updated: %s\n", ttb.Title, ttb.Updated)
+	fmt.Fprintf(w, "const (\n")
+	for _, tr := range trs {
+		fmt.Fprintf(w, "%s = %#x", tr.Keyword, tr.Value)
+		fmt.Fprintf(w, "// %s\n", tr.OrigKeyword)
+	}
+	fmt.Fprintf(w, ")\n")
+	return nil
+}
+
+type tosTCByte struct {
+	XMLName  xml.Name          `xml:"registry"`
+	Title    string            `xml:"title"`
+	Updated  string            `xml:"updated"`
+	Note     string            `xml:"note"`
+	RegTitle string            `xml:"registry>title"`
+	Records  []tosTCByteRecord `xml:"registry>record"`
+}
+
+type tosTCByteRecord struct {
+	Binary  string `xml:"binary"`
+	Keyword string `xml:"keyword"`
+}
+
+type canonTOSTCByteRecord struct {
+	OrigKeyword string
+	Keyword     string
+	Value       int
+}
+
+func (ttb *tosTCByte) escape() []canonTOSTCByteRecord {
+	trs := make([]canonTOSTCByteRecord, len(ttb.Records))
+	sr := strings.NewReplacer(
+		"Capable", "",
+		"(", "",
+		")", "",
+		"+", "",
+		"-", "",
+		"/", "",
+		".", "",
+		" ", "",
+	)
+	for i, tr := range ttb.Records {
+		s := strings.TrimSpace(tr.Keyword)
+		trs[i].OrigKeyword = s
+		ss := strings.Split(s, " ")
+		if len(ss) > 1 {
+			trs[i].Keyword = strings.Join(ss[1:], " ")
+		} else {
+			trs[i].Keyword = ss[0]
+		}
+		trs[i].Keyword = sr.Replace(trs[i].Keyword)
+		n, err := strconv.ParseUint(tr.Binary, 2, 8)
+		if err != nil {
+			continue
+		}
+		trs[i].Value = int(n)
+	}
+	return trs
+}</pre>
+<h1>#6 found 2 clones</h1>
+<h2>pkg/jsonlog/jsonlog_marshalling.go:114</h2>
+<pre>                                                         {
+	const hex = "0123456789abcdef"
+
+	buf.WriteByte('"')
+	start := 0
+	for i := 0; i < len(s); {
+		if b := s[i]; b < utf8.RuneSelf {
+			if 0x20 <= b && b != '\\' && b != '"' && b != '<' && b != '>' && b != '&' {
+				i++
+				continue
+			}
+			if start < i {
+				buf.WriteString(s[start:i])
+			}
+			switch b {
+			case '\\', '"':
+				buf.WriteByte('\\')
+				buf.WriteByte(b)
+			case '\n':
+				buf.WriteByte('\\')
+				buf.WriteByte('n')
+			case '\r':
+				buf.WriteByte('\\')
+				buf.WriteByte('r')
+			default:
+
+				buf.WriteString(`\u00`)
+				buf.WriteByte(hex[b>>4])
+				buf.WriteByte(hex[b&0xF])
+			}
+			i++
+			start = i
+			continue
+		}
+		c, size := utf8.DecodeRuneInString(s[i:])
+		if c == utf8.RuneError && size == 1 {
+			if start < i {
+				buf.WriteString(s[start:i])
+			}
+			buf.WriteString(`\ufffd`)
+			i += size
+			start = i
+			continue
+		}
+
+		if c == '\u2028' || c == '\u2029' {
+			if start < i {
+				buf.WriteString(s[start:i])
+			}
+			buf.WriteString(`\u202`)
+			buf.WriteByte(hex[c&0xF])
+			i += size
+			start = i
+			continue
+		}
+		i += size
+	}
+	if start < len(s) {
+		buf.WriteString(s[start:])
+	}
+	buf.WriteByte('"')
+}</pre>
+<h2>pkg/jsonlog/jsonlogbytes.go:54</h2>
+<pre>                                                                {
+	const hex = "0123456789abcdef"
+
+	buf.WriteByte('"')
+	start := 0
+	for i := 0; i < len(s); {
+		if b := s[i]; b < utf8.RuneSelf {
+			if 0x20 <= b && b != '\\' && b != '"' && b != '<' && b != '>' && b != '&' {
+				i++
+				continue
+			}
+			if start < i {
+				buf.Write(s[start:i])
+			}
+			switch b {
+			case '\\', '"':
+				buf.WriteByte('\\')
+				buf.WriteByte(b)
+			case '\n':
+				buf.WriteByte('\\')
+				buf.WriteByte('n')
+			case '\r':
+				buf.WriteByte('\\')
+				buf.WriteByte('r')
+			default:
+
+				buf.WriteString(`\u00`)
+				buf.WriteByte(hex[b>>4])
+				buf.WriteByte(hex[b&0xF])
+			}
+			i++
+			start = i
+			continue
+		}
+		c, size := utf8.DecodeRune(s[i:])
+		if c == utf8.RuneError && size == 1 {
+			if start < i {
+				buf.Write(s[start:i])
+			}
+			buf.WriteString(`\ufffd`)
+			i += size
+			start = i
+			continue
+		}
+
+		if c == '\u2028' || c == '\u2029' {
+			if start < i {
+				buf.Write(s[start:i])
+			}
+			buf.WriteString(`\u202`)
+			buf.WriteByte(hex[c&0xF])
+			i += size
+			start = i
+			continue
+		}
+		i += size
+	}
+	if start < len(s) {
+		buf.Write(s[start:])
+	}
+	buf.WriteByte('"')
+}</pre>
+<h1>#7 found 3 clones</h1>
+<h2>daemon/container_unit_test.go:8</h2>
+<pre>func TestParseNetworkOptsPrivateOnly(t *testing.T) {
+	ports, bindings, err := nat.ParsePortSpecs([]string{"192.168.1.100::80"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ports) != 1 {
+		t.Logf("Expected 1 got %d", len(ports))
+		t.FailNow()
+	}
+	if len(bindings) != 1 {
+		t.Logf("Expected 1 got %d", len(bindings))
+		t.FailNow()
+	}
+	for k := range ports {
+		if k.Proto() != "tcp" {
+			t.Logf("Expected tcp got %s", k.Proto())
+			t.Fail()
+		}
+		if k.Port() != "80" {
+			t.Logf("Expected 80 got %s", k.Port())
+			t.Fail()
+		}
+		b, exists := bindings[k]
+		if !exists {
+			t.Log("Binding does not exist")
+			t.FailNow()
+		}
+		if len(b) != 1 {
+			t.Logf("Expected 1 got %d", len(b))
+			t.FailNow()
+		}
+		s := b[0]
+		if s.HostPort != "" {
+			t.Logf("Expected \"\" got %s", s.HostPort)
+			t.Fail()
+		}
+		if s.HostIp != "192.168.1.100" {
+			t.Fail()
+		}
+	}
+}</pre>
+<h2>daemon/container_unit_test.go:50</h2>
+<pre>func TestParseNetworkOptsPublic(t *testing.T) {
+	ports, bindings, err := nat.ParsePortSpecs([]string{"192.168.1.100:8080:80"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ports) != 1 {
+		t.Logf("Expected 1 got %d", len(ports))
+		t.FailNow()
+	}
+	if len(bindings) != 1 {
+		t.Logf("Expected 1 got %d", len(bindings))
+		t.FailNow()
+	}
+	for k := range ports {
+		if k.Proto() != "tcp" {
+			t.Logf("Expected tcp got %s", k.Proto())
+			t.Fail()
+		}
+		if k.Port() != "80" {
+			t.Logf("Expected 80 got %s", k.Port())
+			t.Fail()
+		}
+		b, exists := bindings[k]
+		if !exists {
+			t.Log("Binding does not exist")
+			t.FailNow()
+		}
+		if len(b) != 1 {
+			t.Logf("Expected 1 got %d", len(b))
+			t.FailNow()
+		}
+		s := b[0]
+		if s.HostPort != "8080" {
+			t.Logf("Expected 8080 got %s", s.HostPort)
+			t.Fail()
+		}
+		if s.HostIp != "192.168.1.100" {
+			t.Fail()
+		}
+	}
+}</pre>
+<h2>daemon/container_unit_test.go:127</h2>
+<pre>func TestParseNetworkOptsUdp(t *testing.T) {
+	ports, bindings, err := nat.ParsePortSpecs([]string{"192.168.1.100::6000/udp"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ports) != 1 {
+		t.Logf("Expected 1 got %d", len(ports))
+		t.FailNow()
+	}
+	if len(bindings) != 1 {
+		t.Logf("Expected 1 got %d", len(bindings))
+		t.FailNow()
+	}
+	for k := range ports {
+		if k.Proto() != "udp" {
+			t.Logf("Expected udp got %s", k.Proto())
+			t.Fail()
+		}
+		if k.Port() != "6000" {
+			t.Logf("Expected 6000 got %s", k.Port())
+			t.Fail()
+		}
+		b, exists := bindings[k]
+		if !exists {
+			t.Log("Binding does not exist")
+			t.FailNow()
+		}
+		if len(b) != 1 {
+			t.Logf("Expected 1 got %d", len(b))
+			t.FailNow()
+		}
+		s := b[0]
+		if s.HostPort != "" {
+			t.Logf("Expected \"\" got %s", s.HostPort)
+			t.Fail()
+		}
+		if s.HostIp != "192.168.1.100" {
+			t.Fail()
+		}
+	}
+}</pre>
+<h1>#8 found 2 clones</h1>
+<h2>vendor/src/github.com/docker/libnetwork/portmapper/mapper_test.go:39</h2>
+<pre>func TestMapTCPPorts(t *testing.T) {
+	defer netutils.SetupTestNetNS(t)()
+	pm := New()
+	dstIP1 := net.ParseIP("192.168.0.1")
+	dstIP2 := net.ParseIP("192.168.0.2")
+	dstAddr1 := &net.TCPAddr{IP: dstIP1, Port: 80}
+	dstAddr2 := &net.TCPAddr{IP: dstIP2, Port: 80}
+
+	srcAddr1 := &net.TCPAddr{Port: 1080, IP: net.ParseIP("172.16.0.1")}
+	srcAddr2 := &net.TCPAddr{Port: 1080, IP: net.ParseIP("172.16.0.2")}
+
+	addrEqual := func(addr1, addr2 net.Addr) bool {
+		return (addr1.Network() == addr2.Network()) && (addr1.String() == addr2.String())
+	}
+
+	if host, err := pm.Map(srcAddr1, dstIP1, 80, true); err != nil {
+		t.Fatalf("Failed to allocate port: %s", err)
+	} else if !addrEqual(dstAddr1, host) {
+		t.Fatalf("Incorrect mapping result: expected %s:%s, got %s:%s",
+			dstAddr1.String(), dstAddr1.Network(), host.String(), host.Network())
+	}
+
+	if _, err := pm.Map(srcAddr1, dstIP1, 80, true); err == nil {
+		t.Fatalf("Port is in use - mapping should have failed")
+	}
+
+	if _, err := pm.Map(srcAddr2, dstIP1, 80, true); err == nil {
+		t.Fatalf("Port is in use - mapping should have failed")
+	}
+
+	if _, err := pm.Map(srcAddr2, dstIP2, 80, true); err != nil {
+		t.Fatalf("Failed to allocate port: %s", err)
+	}
+
+	if pm.Unmap(dstAddr1) != nil {
+		t.Fatalf("Failed to release port")
+	}
+
+	if pm.Unmap(dstAddr2) != nil {
+		t.Fatalf("Failed to release port")
+	}
+
+	if pm.Unmap(dstAddr2) == nil {
+		t.Fatalf("Port already released, but no error reported")
+	}
+}</pre>
+<h2>vendor/src/github.com/docker/libnetwork/portmapper/mapper_test.go:119</h2>
+<pre>func TestMapUDPPorts(t *testing.T) {
+	defer netutils.SetupTestNetNS(t)()
+	pm := New()
+	dstIP1 := net.ParseIP("192.168.0.1")
+	dstIP2 := net.ParseIP("192.168.0.2")
+	dstAddr1 := &net.UDPAddr{IP: dstIP1, Port: 80}
+	dstAddr2 := &net.UDPAddr{IP: dstIP2, Port: 80}
+
+	srcAddr1 := &net.UDPAddr{Port: 1080, IP: net.ParseIP("172.16.0.1")}
+	srcAddr2 := &net.UDPAddr{Port: 1080, IP: net.ParseIP("172.16.0.2")}
+
+	addrEqual := func(addr1, addr2 net.Addr) bool {
+		return (addr1.Network() == addr2.Network()) && (addr1.String() == addr2.String())
+	}
+
+	if host, err := pm.Map(srcAddr1, dstIP1, 80, true); err != nil {
+		t.Fatalf("Failed to allocate port: %s", err)
+	} else if !addrEqual(dstAddr1, host) {
+		t.Fatalf("Incorrect mapping result: expected %s:%s, got %s:%s",
+			dstAddr1.String(), dstAddr1.Network(), host.String(), host.Network())
+	}
+
+	if _, err := pm.Map(srcAddr1, dstIP1, 80, true); err == nil {
+		t.Fatalf("Port is in use - mapping should have failed")
+	}
+
+	if _, err := pm.Map(srcAddr2, dstIP1, 80, true); err == nil {
+		t.Fatalf("Port is in use - mapping should have failed")
+	}
+
+	if _, err := pm.Map(srcAddr2, dstIP2, 80, true); err != nil {
+		t.Fatalf("Failed to allocate port: %s", err)
+	}
+
+	if pm.Unmap(dstAddr1) != nil {
+		t.Fatalf("Failed to release port")
+	}
+
+	if pm.Unmap(dstAddr2) != nil {
+		t.Fatalf("Failed to release port")
+	}
+
+	if pm.Unmap(dstAddr2) == nil {
+		t.Fatalf("Port already released, but no error reported")
+	}
+}</pre>
+<h1>#9 found 2 clones</h1>
+<h2>integration-cli/docker_cli_create_test.go:104</h2>
+<pre>func (s *DockerSuite) TestCreateWithPortRange(c *check.C) {
+
+	runCmd := exec.Command(dockerBinary, "create", "-p", "3300-3303:3300-3303/tcp", "busybox", "echo")
+	out, _, _, err := runCommandWithStdoutStderr(runCmd)
+	if err != nil {
+		c.Fatal(out, err)
+	}
+
+	cleanedContainerID := strings.TrimSpace(out)
+
+	inspectCmd := exec.Command(dockerBinary, "inspect", cleanedContainerID)
+	out, _, err = runCommandWithOutput(inspectCmd)
+	if err != nil {
+		c.Fatalf("out should've been a container id: %s, %v", out, err)
+	}
+
+	containers := []struct {
+		HostConfig *struct {
+			PortBindings map[nat.Port][]nat.PortBinding
+		}
+	}{}
+	if err := json.Unmarshal([]byte(out), &containers); err != nil {
+		c.Fatalf("Error inspecting the container: %s", err)
+	}
+	if len(containers) != 1 {
+		c.Fatalf("Unexpected container count. Expected 0, received: %d", len(containers))
+	}
+
+	cont := containers[0]
+	if cont.HostConfig == nil {
+		c.Fatalf("Expected HostConfig, got none")
+	}
+
+	if len(cont.HostConfig.PortBindings) != 4 {
+		c.Fatalf("Expected 4 ports bindings, got %d", len(cont.HostConfig.PortBindings))
+	}
+	for k, v := range cont.HostConfig.PortBindings {
+		if len(v) != 1 {
+			c.Fatalf("Expected 1 ports binding, for the port  %s but found %s", k, v)
+		}
+		if k.Port() != v[0].HostPort {
+			c.Fatalf("Expected host port %d to match published port  %d", k.Port(), v[0].HostPort)
+		}
+	}
+
+}</pre>
+<h2>integration-cli/docker_cli_create_test.go:151</h2>
+<pre>func (s *DockerSuite) TestCreateWithiLargePortRange(c *check.C) {
+
+	runCmd := exec.Command(dockerBinary, "create", "-p", "1-65535:1-65535/tcp", "busybox", "echo")
+	out, _, _, err := runCommandWithStdoutStderr(runCmd)
+	if err != nil {
+		c.Fatal(out, err)
+	}
+
+	cleanedContainerID := strings.TrimSpace(out)
+
+	inspectCmd := exec.Command(dockerBinary, "inspect", cleanedContainerID)
+	out, _, err = runCommandWithOutput(inspectCmd)
+	if err != nil {
+		c.Fatalf("out should've been a container id: %s, %v", out, err)
+	}
+
+	containers := []struct {
+		HostConfig *struct {
+			PortBindings map[nat.Port][]nat.PortBinding
+		}
+	}{}
+	if err := json.Unmarshal([]byte(out), &containers); err != nil {
+		c.Fatalf("Error inspecting the container: %s", err)
+	}
+	if len(containers) != 1 {
+		c.Fatalf("Unexpected container count. Expected 0, received: %d", len(containers))
+	}
+
+	cont := containers[0]
+	if cont.HostConfig == nil {
+		c.Fatalf("Expected HostConfig, got none")
+	}
+
+	if len(cont.HostConfig.PortBindings) != 65535 {
+		c.Fatalf("Expected 65535 ports bindings, got %d", len(cont.HostConfig.PortBindings))
+	}
+	for k, v := range cont.HostConfig.PortBindings {
+		if len(v) != 1 {
+			c.Fatalf("Expected 1 ports binding, for the port  %s but found %s", k, v)
+		}
+		if k.Port() != v[0].HostPort {
+			c.Fatalf("Expected host port %d to match published port  %d", k.Port(), v[0].HostPort)
+		}
+	}
+
+}</pre>

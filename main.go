@@ -188,28 +188,29 @@ var (
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
-	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
-	fastFlag          = kingpin.Flag("fast", "Only run fast linters.").Bool()
-	installFlag       = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
-	updateFlag        = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
-	forceFlag         = kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').Bool()
-	debugFlag         = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
-	concurrencyFlag   = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
-	excludeFlag       = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
-	includeFlag       = kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").Strings()
-	skipFlag          = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
-	vendorFlag        = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
-	cycloFlag         = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
-	lineLengthFlag    = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
-	minConfidence     = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").Default(".80").Float()
-	minOccurrences    = kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").Default("3").Int()
-	minConstLength    = kingpin.Flag("min-const-length", "Minimumum constant length.").Default("3").Int()
-	duplThresholdFlag = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
-	sortFlag          = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
-	testFlag          = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
-	deadlineFlag      = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
-	errorsFlag        = kingpin.Flag("errors", "Only show errors.").Bool()
-	jsonFlag          = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
+	pathsArg            = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
+	vendoredLintersFlag = kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").Default("true").Bool()
+	fastFlag            = kingpin.Flag("fast", "Only run fast linters.").Bool()
+	installFlag         = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
+	updateFlag          = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
+	forceFlag           = kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').Bool()
+	debugFlag           = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
+	concurrencyFlag     = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
+	excludeFlag         = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
+	includeFlag         = kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").Strings()
+	skipFlag            = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
+	vendorFlag          = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
+	cycloFlag           = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
+	lineLengthFlag      = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
+	minConfidence       = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").Default(".80").Float()
+	minOccurrences      = kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").Default("3").Int()
+	minConstLength      = kingpin.Flag("min-const-length", "Minimumum constant length.").Default("3").Int()
+	duplThresholdFlag   = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
+	sortFlag            = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
+	testFlag            = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
+	deadlineFlag        = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
+	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
+	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -315,7 +316,17 @@ Severity override map (default is "warning"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
-	fixupPath()
+	if *vendoredLintersFlag && *installFlag && *updateFlag {
+		warning(`Linters are now vendored by default, --update ignored. The original
+behaviour can be re-enabled with --no-vendored-linters.
+
+To request an update for a vendored linter file an issue at:
+https://github.com/alecthomas/gometalinter/issues/new
+`)
+		*updateFlag = false
+	}
+
+	configureEnvironment()
 	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
 	// TODO(alec): This will probably need to be enabled by default at a later time.
 	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || *vendorFlag {
@@ -494,6 +505,9 @@ func expandPaths(paths, skip []string) []string {
 
 func makeInstallCommand(linters ...string) []string {
 	cmd := []string{"get"}
+	if *vendoredLintersFlag {
+		cmd = []string{"install"}
+	}
 	if *debugFlag {
 		cmd = append(cmd, "-v")
 	}
@@ -780,15 +794,50 @@ func processOutput(state *linterState, out []byte) {
 	return
 }
 
-// Add all "bin" directories from GOPATH to PATH.
-func fixupPath() {
-	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
+func findVendoredLinters() string {
 	gopaths := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
-	for i, p := range gopaths {
-		gopaths[i] = filepath.Join(p, "bin")
+	for _, p := range gopaths {
+		vendorRoot := filepath.Join(p, "src", "github.com", "alecthomas", "gometalinter", "vendor")
+		if _, err := os.Stat(vendorRoot); err == nil {
+			return vendorRoot
+		}
 	}
-	paths = append(gopaths, paths...)
+	warning("could not find vendored linters in %s", os.Getenv("GOPATH"))
+	return ""
+
+}
+
+// Add all "bin" directories from GOPATH to PATH, as well as GOBIN if set.
+func configureEnvironment() {
+	gopaths := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
+	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
+	gobin := os.Getenv("GOBIN")
+
+	if *vendoredLintersFlag {
+		vendorRoot := findVendoredLinters()
+		if vendorRoot != "" {
+			debug("found vendored linters at %s, updating environment", vendorRoot)
+			gobin = filepath.Join(vendorRoot, "bin")
+			// "go install" panics when one GOPATH element is beneath another, so we just set
+			// our vendor root instead.
+			if *installFlag {
+				gopaths = []string{vendorRoot}
+			}
+		}
+	}
+	for _, p := range gopaths {
+		paths = append(paths, filepath.Join(p, "bin"))
+	}
+	if gobin != "" {
+		paths = append([]string{gobin}, paths...)
+	}
+
 	path := strings.Join(paths, string(os.PathListSeparator))
+	gopath := strings.Join(gopaths, string(os.PathListSeparator))
 	os.Setenv("PATH", path)
 	debug("PATH=%s", os.Getenv("PATH"))
+	os.Setenv("GOPATH", gopath)
+	debug("GOPATH=%s", os.Getenv("GOPATH"))
+	os.Setenv("GOBIN", gobin)
+	debug("GOBIN=%s", os.Getenv("GOBIN"))
 }

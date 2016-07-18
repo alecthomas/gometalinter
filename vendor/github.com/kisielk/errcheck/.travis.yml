@@ -1,0 +1,6 @@
+language: go
+go: 1.5.2
+sudo: false
+
+script:
+  - go test -race ./...

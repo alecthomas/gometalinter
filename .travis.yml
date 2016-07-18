@@ -1,6 +1,7 @@
 sudo: false
 language: go
 install:
-    - go get -t -v ./...
+    - go get -t -v . ./regressiontests
     - go run main.go --install
-go: 1.5
+go: 1.6
+script: go test -v . ./regressiontests

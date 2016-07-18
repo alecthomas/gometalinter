@@ -1,0 +1,45 @@
+package: github.com/alecthomas/gometalinter
+import:
+- package: github.com/google/shlex
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+- package: gopkg.in/alecthomas/kingpin.v2
+- package: github.com/tsenart/deadcode
+- package: github.com/golang/lint
+  subpackages:
+  - golint
+- package: golang.org/x/tools
+  subpackages:
+  - cmd/gotype
+  - cmd/goimports
+- package: github.com/kisielk/errcheck
+- package: github.com/opennota/check
+  subpackages:
+  - cmd/varcheck
+  - cmd/structcheck
+  - cmd/aligncheck
+- package: github.com/alecthomas/gocyclo
+- package: github.com/gordonklaus/ineffassign
+- package: github.com/mibk/dupl
+- package: github.com/mvdan/interfacer
+  subpackages:
+  - cmd/interfacer
+- package: github.com/mdempsky/unconvert
+- package: github.com/kisielk/gotool
+- package: honnef.co/go/simple
+  subpackages:
+  - cmd/gosimple
+- package: honnef.co/go/staticcheck
+  subpackages:
+  - cmd/staticcheck
+- package: github.com/client9/misspell
+  subpackages:
+  - cmd/misspell
+- package: github.com/walle/lll
+  subpackages:
+  - cmd/lll
+- package: github.com/jgautheron/goconst
+  subpackages:
+  - cmd/goconst
+- package: honnef.co/go/lint
