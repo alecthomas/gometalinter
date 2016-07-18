@@ -116,6 +116,7 @@ var (
 	lintersFlag = map[string]string{
 		"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"deadcode":    `deadcode {path}:^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+		"unused":      `unused {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 		"errcheck":    `errcheck -abspath {path}:^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)[\s\t]+(?P<message>.*)$`,
 		"goconst":     `goconst -min-occurrences {min_occurrences} -min-length {min_const_length} {path}:PATH:LINE:COL:MESSAGE`,
@@ -163,6 +164,7 @@ var (
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
 		"deadcode":    "github.com/tsenart/deadcode",
+		"unused":      "honnef.co/go/unused",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 		"misspell":    "github.com/client9/misspell/cmd/misspell",
 		"ineffassign": "github.com/gordonklaus/ineffassign",
@@ -184,8 +186,9 @@ var (
 		"interfacer":  true,
 		"golint":      true,
 		"gosimple":    true,
+		"unused":      true,
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "unused"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	pathsArg          = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
