@@ -137,6 +137,7 @@ var (
 		"gosimple":    "gosimple {path}:PATH:LINE:COL:MESSAGE",
 		"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
 		"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
+		"gas":         `gas -fmt=csv {path}/*.go:^(?P<path>[^,]+),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell"}
 	enabledLinters            = []string{}
@@ -173,6 +174,7 @@ var (
 		"goconst":     "github.com/jgautheron/goconst/cmd/goconst",
 		"gosimple":    "honnef.co/go/simple/cmd/gosimple",
 		"staticcheck": "honnef.co/go/staticcheck/cmd/staticcheck",
+		"gas":         "github.com/HewlettPackard/gas",
 	}
 	acceptsEllipsis = map[string]bool{
 		"errcheck":    true,

@@ -43,3 +43,4 @@ import:
   subpackages:
   - cmd/goconst
 - package: honnef.co/go/lint
+- package: github.com/HewlettPackard/gas

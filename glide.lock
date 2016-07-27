@@ -1,16 +1,16 @@
-hash: e8ee24bc746cb1e42734396f1df063198725401bc2b0269a4f4359b74adf1650
-updated: 2016-07-18T16:00:02.086944644+10:00
+hash: 6638eb3d988c120e3632e94ad124119e94ef1a3e961685ddde4f93542ba7f805
+updated: 2016-07-28T00:02:50.350648996+10:00
 imports:
 - name: github.com/alecthomas/gocyclo
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/alecthomas/template
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - parse
 - name: github.com/alecthomas/units
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/client9/misspell
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/misspell
 - name: github.com/davecgh/go-spew
@@ -18,31 +18,33 @@ imports:
   subpackages:
   - spew
 - name: github.com/golang/lint
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - golint
 - name: github.com/google/shlex
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/gordonklaus/ineffassign
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
+- name: github.com/HewlettPackard/gas
+  version: 2d0a26dafe724d54aeef9cb373fc01aefb072a4b
 - name: github.com/jgautheron/goconst
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/goconst
 - name: github.com/kisielk/errcheck
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/kisielk/gotool
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/mdempsky/unconvert
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/mibk/dupl
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/mvdan/interfacer
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/interfacer
 - name: github.com/opennota/check
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/varcheck
   - cmd/structcheck
@@ -52,30 +54,30 @@ imports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - assert
 - name: github.com/tsenart/deadcode
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: github.com/walle/lll
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/lll
 - name: golang.org/x/tools
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/gotype
   - cmd/goimports
 - name: gopkg.in/alecthomas/kingpin.v2
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: honnef.co/go/lint
-  version: a730e73f0085f274d67b586a1d587fd6e42e6708
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
 - name: honnef.co/go/simple
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/gosimple
 - name: honnef.co/go/staticcheck
-  version: 7dcc1134feb169bbec07a431d6e799428dd936ba
+  version: e169aacac236ba53744e97fe930a5b4afb96351c
   subpackages:
   - cmd/staticcheck
 testImports: []
