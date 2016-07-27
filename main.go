@@ -109,6 +109,11 @@ func (s *sortedIssues) Less(i, j int) bool {
 }
 
 var (
+	// Locations to look for vendored linters.
+	vendoredSearchPaths = [][]string{
+		{"github.com", "alecthomas", "gometalinter", "vendor"},
+		{"gopkg.in", "alecthomas", "gometalinter.v1", "vendor"},
+	}
 	predefinedPatterns = map[string]string{
 		"PATH:LINE:COL:MESSAGE": `^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"PATH:LINE:MESSAGE":     `^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
@@ -798,10 +803,14 @@ func processOutput(state *linterState, out []byte) {
 
 func findVendoredLinters() string {
 	gopaths := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
-	for _, p := range gopaths {
-		vendorRoot := filepath.Join(p, "src", "github.com", "alecthomas", "gometalinter", "vendor")
-		if _, err := os.Stat(vendorRoot); err == nil {
-			return vendorRoot
+	for _, home := range vendoredSearchPaths {
+		for _, p := range gopaths {
+			joined := append([]string{p, "src"}, home...)
+			vendorRoot := filepath.Join(joined...)
+			fmt.Println(vendorRoot)
+			if _, err := os.Stat(vendorRoot); err == nil {
+				return vendorRoot
+			}
 		}
 	}
 	return ""
