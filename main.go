@@ -804,7 +804,6 @@ func findVendoredLinters() string {
 			return vendorRoot
 		}
 	}
-	warning("could not find vendored linters in %s", os.Getenv("GOPATH"))
 	return ""
 
 }
@@ -817,16 +816,18 @@ func configureEnvironment() {
 
 	if *vendoredLintersFlag && *installFlag {
 		vendorRoot := findVendoredLinters()
-		if vendorRoot != "" {
-			debug("found vendored linters at %s, updating environment", vendorRoot)
-			if gobin == "" {
-				gobin = filepath.Join(vendorRoot, "bin")
-			}
-			// "go install" panics when one GOPATH element is beneath another, so we just set
-			// our vendor root instead.
-			gopaths = []string{vendorRoot}
+		if vendorRoot == "" {
+			kingpin.Fatalf("could not find vendored linters in %s", os.Getenv("GOPATH"))
 		}
+		debug("found vendored linters at %s, updating environment", vendorRoot)
+		if gobin == "" {
+			gobin = filepath.Join(gopaths[0], "bin")
+		}
+		// "go install" panics when one GOPATH element is beneath another, so we just set
+		// our vendor root instead.
+		gopaths = []string{vendorRoot}
 	}
+
 	for _, p := range gopaths {
 		paths = append(paths, filepath.Join(p, "bin"))
 	}
