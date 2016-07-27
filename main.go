@@ -815,16 +815,16 @@ func configureEnvironment() {
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
 	gobin := os.Getenv("GOBIN")
 
-	if *vendoredLintersFlag {
+	if *vendoredLintersFlag && *installFlag {
 		vendorRoot := findVendoredLinters()
 		if vendorRoot != "" {
 			debug("found vendored linters at %s, updating environment", vendorRoot)
-			gobin = filepath.Join(vendorRoot, "bin")
+			if gobin == "" {
+				gobin = filepath.Join(vendorRoot, "bin")
+			}
 			// "go install" panics when one GOPATH element is beneath another, so we just set
 			// our vendor root instead.
-			if *installFlag {
-				gopaths = []string{vendorRoot}
-			}
+			gopaths = []string{vendorRoot}
 		}
 	}
 	for _, p := range gopaths {
