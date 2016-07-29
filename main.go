@@ -208,7 +208,7 @@ var (
 	excludeFlag         = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
 	includeFlag         = kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").Strings()
 	skipFlag            = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
-	vendorFlag          = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
+	vendorFlag          = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Default("true").Bool()
 	cycloFlag           = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
 	lineLengthFlag      = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
 	minConfidence       = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").Default(".80").Float()
