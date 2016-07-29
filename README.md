@@ -51,8 +51,19 @@ Disabled by default (enable with `--enable=<linter>`):
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
+- [unused](https://github.com/dominikh/go-unused) - Find unused variables.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
+
+## Installing
+
+There are two options for installing gometalinter.
+
+1. Install a stable version, eg. `go get -u gopkg.in/alecthomas/gometalinter.v1`.
+   I will generally only tag a new stable version when it has passed the Travis
+  regression tests. The downside is that the binary will be called `gometalinter.v1`.
+2. Install from HEAD with: `go get -u github.com/alecthomas/gometalinter`.
+   This has the downside that changes to gometalinter may break.
 
 ## Quickstart
 
@@ -65,7 +76,7 @@ $ go get -u github.com/alecthomas/gometalinter
 Install all known linters:
 
 ```
-$ gometalinter --install --update
+$ gometalinter --install
 Installing:
   structcheck
   aligncheck
@@ -82,6 +93,9 @@ Installing:
   goconst
   gosimple
   staticcheck
+  unused
+  misspell
+  lll
 ```
 
 Run it:
@@ -156,7 +170,7 @@ are three things to try in that case:
 #### 1. Update to the latest build of gometalinter and all linters
 
     go get -u github.com/alecthomas/gometalinter
-    gometalinter --install --update
+    gometalinter --install
 
 If you're lucky, this will fix the problem.
 
@@ -182,122 +196,6 @@ Failing all else, if the problem looks like a bug please file an issue and
 include the output of `gometalinter --debug`.
 
 ## Details
-
-```
-$ gometalinter --help
-usage: gometalinter [<flags>] [<path>...]
-
-Aggregate and normalise the output of a whole bunch of Go linters.
-
-Default linters:
-
-gofmt
-      gofmt -l -s ./*.go
-      :^(?P<path>[^\n]+)$
-gotype  (golang.org/x/tools/cmd/gotype)
-      gotype -e {tests=-a} .
-      :PATH:LINE:COL:MESSAGE
-goimports (golang.org/x/tools/cmd/goimports)
-      goimports -l ./*.go
-      :^(?P<path>[^\n]+)$
-testify
-      go test
-      :Location:\s+(?P<path>[^:]+):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)
-test
-      go test
-      :^--- FAIL: .*$\s+(?P<path>[^:]+):(?P<line>\d+): (?P<message>.*)$
-dupl  (github.com/mibk/dupl)
-      dupl -plumbing -threshold {duplthreshold} ./*.go
-      :^(?P<path>[^\s][^:]+?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$
-golint  (github.com/golang/lint/golint)
-      golint -min_confidence {min_confidence} .
-      :PATH:LINE:COL:MESSAGE
-structcheck  (github.com/opennota/check/cmd/structcheck)
-      structcheck {tests=-t} .
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$
-aligncheck  (github.com/opennota/check/cmd/aligncheck)
-      aligncheck .
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$
-gocyclo  (github.com/alecthomas/gocyclo)
-      gocyclo -over {mincyclo} .
-      :^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>[^:]+):(?P<line>\d+):(\d+)$
-vet
-      go tool vet ./*.go
-      :PATH:LINE:MESSAGE
-errcheck  (github.com/alecthomas/errcheck)
-      errcheck .
-      :^(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+)\t(?P<message>.*)$
-ineffassign  (github.com/gordonklaus/ineffassign)
-      ineffassign -n .
-      :PATH:LINE:COL:MESSAGE
-vetshadow
-      go tool vet --shadow ./*.go
-      :PATH:LINE:MESSAGE
-varcheck  (github.com/opennota/check/cmd/varcheck)
-      varcheck .
-      :^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>\w+)$
-deadcode  (github.com/tsenart/deadcode)
-      deadcode .
-      :^deadcode: (?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
-interfacer  (github.com/mvdan/interfacer/cmd/interfacer)
-      interfacer ./
-      :PATH:LINE:MESSAGE
-goconst  (github.com/jgautheron/goconst/cmd/goconst)
-      goconst ./
-      :PATH:LINE:COL:MESSAGE
-gosimple  (honnef.co/go/simple/cmd/gosimple)
-      gosimple .
-      ^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
-staticcheck  (honnef.co/go/staticcheck/cmd/staticcheck)
-      staticcheck .
-      ^(?P<path>[^\s][^\r\n:]+?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$
-
-Severity override map (default is "warning"):
-
-gotype -> error
-test -> error
-testify -> error
-vet -> error
-
-Flags:
-      --help                Show context-sensitive help (also try --help-long
-                            and --help-man).
-      --fast                Only run fast linters.
-  -i, --install             Attempt to install all known linters.
-  -u, --update              Pass -u to go tool when installing.
-  -f, --force               Pass -f to go tool when installing.
-  -d, --debug               Display messages for failed linters, etc.
-  -j, --concurrency=16      Number of concurrent linters to run.
-  -e, --exclude=REGEXP      Exclude messages matching these regular expressions.
-      --cyclo-over=10       Report functions with cyclomatic complexity over N
-                            (using gocyclo).
-      --line-length=80      Report lines longer than N (using lll).
-      --min-confidence=.80  Minimum confidence interval to pass to golint.
-      --min-occurrences=3   Minimum occurrences to pass to goconst.
-      --dupl-threshold=50   Minimum token sequence as a clone for dupl.
-      --sort=none           Sort output by any of none, path, line, column,
-                            severity, message, linter.
-  -t, --tests               Include test files for linters that support this
-                            option
-      --deadline=5s         Cancel linters if they have not completed within
-                            this duration.
-      --errors              Only show errors.
-      --json                Generate structured JSON rather than standard
-                            line-based output.
-  -D, --disable=LINTER      List of linters to disable (testify,test).
-  -E, --enable=LINTER       Enable previously disabled linters.
-      --linter=NAME:COMMAND:PATTERN
-                            Specify a linter.
-      --message-overrides=LINTER:MESSAGE
-                            Override message from linter. {message} will be
-                            expanded to the original message.
-      --severity=LINTER:SEVERITY
-                            Map of linter severities.
-      --disable-all         Disable all linters.
-
-Args:
-  [<path>]  Directory to lint. Defaults to ".". <path>/... will recurse.
-```
 
 Additional linters can be configured via the command line:
 
