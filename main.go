@@ -145,7 +145,7 @@ var (
 		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
 	}
-	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell"}
+	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell", "unused"}
 	enabledLinters            = []string{}
 	linterMessageOverrideFlag = map[string]string{
 		"errcheck":    "error return value not checked ({message})",
@@ -180,7 +180,7 @@ var (
 		"staticcheck": "honnef.co/go/staticcheck/cmd/staticcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"unconvert":   "github.com/mdempsky/unconvert",
-		"unused":      "honnef.co/go/unused",
+		"unused":      "honnef.co/go/unused/cmd/unused",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
 	}
 	acceptsEllipsis = map[string]bool{
