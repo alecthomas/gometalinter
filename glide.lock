@@ -1,16 +1,16 @@
-hash: 6638eb3d988c120e3632e94ad124119e94ef1a3e961685ddde4f93542ba7f805
-updated: 2016-07-28T00:02:50.350648996+10:00
+hash: ef2bdb7980b79cb993883bc5a4181179770e6522491233f7d1a5fcf9767c12e9
+updated: 2016-07-29T00:30:47.588032349+10:00
 imports:
 - name: github.com/alecthomas/gocyclo
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/alecthomas/template
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - parse
 - name: github.com/alecthomas/units
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/client9/misspell
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/misspell
 - name: github.com/davecgh/go-spew
@@ -18,33 +18,33 @@ imports:
   subpackages:
   - spew
 - name: github.com/golang/lint
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - golint
 - name: github.com/google/shlex
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/gordonklaus/ineffassign
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/HewlettPackard/gas
-  version: 2d0a26dafe724d54aeef9cb373fc01aefb072a4b
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/jgautheron/goconst
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/goconst
 - name: github.com/kisielk/errcheck
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/kisielk/gotool
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/mdempsky/unconvert
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/mibk/dupl
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/mvdan/interfacer
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/interfacer
 - name: github.com/opennota/check
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/varcheck
   - cmd/structcheck
@@ -54,30 +54,32 @@ imports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - assert
 - name: github.com/tsenart/deadcode
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: github.com/walle/lll
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/lll
 - name: golang.org/x/tools
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/gotype
   - cmd/goimports
 - name: gopkg.in/alecthomas/kingpin.v2
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: honnef.co/go/lint
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
 - name: honnef.co/go/simple
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/gosimple
 - name: honnef.co/go/staticcheck
-  version: e169aacac236ba53744e97fe930a5b4afb96351c
+  version: ca893dd614514129373c254b6b0b8544b988f7b7
   subpackages:
   - cmd/staticcheck
+- name: honnef.co/go/unused
+  version: 9057d575b3bb51f1e1251088a8b8196f4226f936
 testImports: []

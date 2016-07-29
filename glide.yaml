@@ -44,3 +44,4 @@ import:
   - cmd/goconst
 - package: honnef.co/go/lint
 - package: github.com/HewlettPackard/gas
+- package: honnef.co/go/unused
