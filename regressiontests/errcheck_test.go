@@ -4,7 +4,7 @@ import "testing"
 
 func TestErrcheck(t *testing.T) {
 	t.Parallel()
-	source := `package test
+	source := `package moo
 
 func f() error { return nil}
 func test() { f() }
