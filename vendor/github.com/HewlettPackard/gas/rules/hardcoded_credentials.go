@@ -15,9 +15,10 @@
 package rules
 
 import (
-	gas "github.com/HewlettPackard/gas/core"
 	"go/ast"
 	"regexp"
+
+	gas "github.com/HewlettPackard/gas/core"
 )
 
 type CredsAssign struct {
@@ -30,8 +31,11 @@ func (r *CredsAssign) Match(n ast.Node, c *gas.Context) (gi *gas.Issue, err erro
 		for _, i := range node.Lhs {
 			if ident, ok := i.(*ast.Ident); ok {
 				if r.pattern.MatchString(ident.Name) {
-					gi = gas.NewIssue(c, n, r.What, r.Severity, r.Confidence)
-					break
+					for _, e := range node.Rhs {
+						if _, ok := e.(*ast.BasicLit); ok {
+							return gas.NewIssue(c, n, r.What, r.Severity, r.Confidence), nil
+						}
+					}
 				}
 			}
 		}
@@ -41,7 +45,7 @@ func (r *CredsAssign) Match(n ast.Node, c *gas.Context) (gi *gas.Issue, err erro
 
 func NewHardcodedCredentials() (r gas.Rule, n ast.Node) {
 	r = &CredsAssign{
-		pattern: regexp.MustCompile("(?i)passwd|pass|password|pwd|secret|token"),
+		pattern: regexp.MustCompile(`(?i)passwd|pass|password|pwd|secret|token`),
 		MetaData: gas.MetaData{
 			What:       "Potential hardcoded credentials",
 			Confidence: gas.Low,

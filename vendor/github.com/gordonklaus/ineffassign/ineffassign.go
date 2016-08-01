@@ -37,7 +37,10 @@ func main() {
 			return nil
 		}
 		if fi.IsDir() {
-			if *dontRecurseFlag && path != root || filepath.Base(path) == "testdata" {
+			if path != root && (
+				*dontRecurseFlag ||
+					filepath.Base(path) == "testdata" ||
+					filepath.Base(path) == "vendor") {
 				return filepath.SkipDir
 			}
 			return nil

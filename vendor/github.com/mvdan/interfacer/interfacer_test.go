@@ -25,7 +25,6 @@ import (
 const testdata = "testdata"
 
 var (
-	name     = flag.String("name", "", "name of the test to run")
 	warnsRe  = regexp.MustCompile(`^WARN (.*)\n?$`)
 	singleRe = regexp.MustCompile(`([^ ]*) can be ([^ ]*)(,|$)`)
 )
@@ -112,8 +111,10 @@ func wantedWarnings(t *testing.T, p string) []Warn {
 }
 
 func doTest(t *testing.T, p string) {
-	warns := wantedWarnings(t, p)
-	doTestWarns(t, p, warns, p)
+	t.Run(p, func(t *testing.T) {
+		warns := wantedWarnings(t, p)
+		doTestWarns(t, p, warns, p)
+	})
 }
 
 func warnsJoin(warns []Warn) string {
@@ -130,7 +131,7 @@ func doTestWarns(t *testing.T, name string, exp []Warn, args ...string) {
 		t.Fatalf("Did not want error in %s:\n%v", name, err)
 	}
 	if !reflect.DeepEqual(exp, got) {
-		t.Fatalf("Output mismatch in %s:\nExpected:\n%s\nGot:\n%s",
+		t.Fatalf("Output mismatch in %s:\nwant:\n%sgot:\n%s",
 			name, warnsJoin(exp), warnsJoin(got))
 	}
 }
@@ -253,19 +254,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestCheckWarnings(t *testing.T) {
-	switch {
-	case *name == "":
-	case strings.HasSuffix(*name, ".go"):
-		runFileTests(t, *name)
-		return
-	case strings.HasPrefix(*name, "./"):
-		runLocalTests(t, *name)
-		return
-	default:
-		runNonlocalTests(t, *name)
-		return
-	}
+func TestWarns(t *testing.T) {
 	runFileTests(t)
 	runLocalTests(t)
 	runNonlocalTests(t)
@@ -292,9 +281,6 @@ func doTestError(t *testing.T, name, exp string, args ...string) {
 }
 
 func TestErrors(t *testing.T) {
-	if *name != "" {
-		t.Skip()
-	}
 	// non-existent Go file
 	doTestError(t, "missing.go", "open missing.go: no such file or directory")
 	// local non-existent non-recursive
@@ -306,9 +292,6 @@ func TestErrors(t *testing.T) {
 }
 
 func TestExtraArg(t *testing.T) {
-	if *name != "" {
-		t.Skip()
-	}
 	err := CheckArgsOutput([]string{"single", "--", "foo", "bar"}, ioutil.Discard, false)
 	got := err.Error()
 	want := "unwanted extra args: [foo bar]"

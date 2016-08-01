@@ -6,6 +6,12 @@ import (
 
 func TestFalsePositives(t *testing.T) {
 	cases := []string{
+		"  http.Redirect(w, req, req.URL.Path, http.StatusFound) ",
+		"url is http://zeebra.com ",
+		"path is /zeebra?zeebra=zeebra ",
+		"Malcom_McLean",
+		"implementor", // alt spelling, see https://github.com/client9/misspell/issues/46
+		"searchtypes",
 		" witness",
 		"returndata",
 		"UNDERSTOOD",
@@ -98,7 +104,7 @@ func TestFalsePositives(t *testing.T) {
 	r := New()
 	r.Debug = true
 	for casenum, tt := range cases {
-		got := r.Replace(tt)
+		got, _ := r.Replace(tt)
 		if got != tt {
 			t.Errorf("%d: %q got converted to %q", casenum, tt, got)
 		}

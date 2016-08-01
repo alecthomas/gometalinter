@@ -34,21 +34,24 @@ func toDiscard(usage *varUsage) bool {
 	return false
 }
 
+func allCalls(usage *varUsage, all, ftypes map[string]string) {
+	for fname := range usage.calls {
+		all[fname] = ftypes[fname]
+	}
+	for to := range usage.assigned {
+		allCalls(to, all, ftypes)
+	}
+}
+
 func (v *visitor) interfaceMatching(param *types.Var, usage *varUsage) (string, string) {
 	if toDiscard(usage) {
 		return "", ""
 	}
-	allFuncs := typeFuncMap(param.Type())
+	ftypes := typeFuncMap(param.Type())
 	called := make(map[string]string, len(usage.calls))
-	for fname := range usage.calls {
-		called[fname] = allFuncs[fname]
-	}
+	allCalls(usage, called, ftypes)
 	s := funcMapString(called)
-	name := v.ifaceOf(s)
-	if name == "" {
-		return "", ""
-	}
-	return name, s
+	return v.ifaceOf(s), s
 }
 
 func progPackages(prog *loader.Program) ([]*types.Package, error) {
@@ -371,9 +374,8 @@ func compositeIdentType(t types.Type, i int) types.Type {
 		return x.Elem()
 	case *types.Slice:
 		return x.Elem()
-	default:
-		return nil
 	}
+	return nil
 }
 
 func (v *visitor) onComposite(cl *ast.CompositeLit) {
@@ -491,9 +493,8 @@ func willAddAllocation(t types.Type) bool {
 	switch t.Underlying().(type) {
 	case *types.Pointer, *types.Interface:
 		return false
-	default:
-		return true
 	}
+	return true
 }
 
 func (v *visitor) paramNewType(funcName string, param *types.Var, usage *varUsage) string {

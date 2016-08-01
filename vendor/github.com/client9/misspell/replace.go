@@ -2,23 +2,9 @@ package misspell
 
 import (
 	"bytes"
-	"log"
+	"regexp"
 	"strings"
-	"text/scanner"
 )
-
-// Diff is datastructure showing what changed in a single line
-type Diff struct {
-	Filename  string
-	Line      int
-	Column    int
-	Original  string
-	Corrected string
-}
-
-func isWhite(ch byte) bool {
-	return ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r'
-}
 
 func min(x, y int) int {
 	if x < y {
@@ -34,80 +20,72 @@ func max(x, y int) int {
 	return y
 }
 
-// commonPrefixWordLength finds the common prefix then backs up until
-// it finds whitespace.  Given "foo bar" and "foo bat", this will
-// return "foo " NOT "foo ba"
-func commonPrefixWordLength(a, b string) int {
-	// re-order so len(a) <= len(b) always
-	if len(a) > len(b) {
-		b, a = a, b
-	}
-	lastWhite := 0
-	for i := 0; i < len(a); i++ {
-		ch := a[i]
-		if ch != b[i] {
-			if lastWhite == 0 {
-				return 0
-			}
-			return min(lastWhite+1, len(a))
-		}
-		if isWhite(ch) {
-			lastWhite = i
-		}
-
-	}
-	return len(a)
-}
-
-// commonSuffixWordLength
-func commonSuffixWordLength(a, b string) int {
-	alen, blen := len(a), len(b)
-	n := min(alen, blen)
-	lastWhite := 0
-	for i := 0; i < n; i++ {
-		ch := a[alen-i-1]
-		if ch != b[blen-i-1] {
-			if lastWhite == 0 && !isWhite(a[alen-1]) {
-				return 0
-			}
-			return min(lastWhite+1, n)
-		}
-		if isWhite(ch) {
-			lastWhite = i
+func inArray(haystack []string, needle string) bool {
+	for _, word := range haystack {
+		if needle == word {
+			return true
 		}
 	}
-	return n
-}
-
-// Return the misspelled word, the correction and the column position
-//
-func corrected(instr, outstr string) (string, string, int) {
-	prefixLen := commonPrefixWordLength(instr, outstr)
-	suffixLen := commonSuffixWordLength(instr, outstr)
-	orig := instr[prefixLen : len(instr)-suffixLen]
-	corr := outstr[prefixLen : len(outstr)-suffixLen]
-	return orig, corr, prefixLen
-}
-
-// shouldUndo checks if a corrected string should be kept as original
-func shouldUndo(s string) bool {
-	// this is some blob of text that has no spaces for 20 characters!
-	// Smells like programming or some base64 mess
-	if len(s) > 20 {
-		return true
-	}
-
-	// perhaps a URL
-	if strings.Contains(s, "/") {
-		return true
-	}
-
 	return false
+}
+
+var wordRegexp = regexp.MustCompile(`[a-zA-Z']+`)
+
+/*
+line1 and line2 are different
+extract words from each line1
+
+replace word -> newword
+if word == new-word
+  continue
+if new-word in list of replacements
+  continue
+new word not original, and not in list of replacements
+  some substring got mixed up.  UNdo
+*/
+func recheckLine(s string, rep *strings.Replacer, corrected map[string]bool) (string, []Diff) {
+	diffs := []Diff{}
+	out := ""
+	first := 0
+	redacted := RemovePath(StripURL(s))
+
+	idx := wordRegexp.FindAllStringIndex(redacted, -1)
+	for _, ab := range idx {
+		word := s[ab[0]:ab[1]]
+		newword := rep.Replace(word)
+		if newword == word {
+			// no replacement done
+			continue
+		}
+		if corrected[strings.ToLower(newword)] {
+			// word got corrected into something we know
+			out += s[first:ab[0]] + newword
+			first = ab[1]
+			diffs = append(diffs, Diff{
+				Original:  word,
+				Corrected: newword,
+				Column:    ab[0],
+			})
+			continue
+		}
+		// Word got corrected into something unknown. Ignore it
+	}
+	out += s[first:]
+	return out, diffs
+}
+
+// Diff is datastructure showing what changed in a single line
+type Diff struct {
+	Filename  string
+	Line      int
+	Column    int
+	Original  string
+	Corrected string
 }
 
 // DiffLines produces a grep-like diff between two strings showing
 // filename, linenum and change.  It is not meant to be a comprehensive diff.
-func DiffLines(input, output string) (string, []Diff) {
+func DiffLines(input, output string, r *strings.Replacer, c map[string]bool) (string, []Diff) {
 	var changes []Diff
 
 	// fast case -- no changes!
@@ -127,32 +105,15 @@ func DiffLines(input, output string) (string, []Diff) {
 			buf.WriteString(outlines[i])
 			continue
 		}
-		s1, s2, col := corrected(inlines[i], outlines[i])
-		if shouldUndo(s1) {
-			buf.WriteString(inlines[i])
-			continue
+		newline, linediffs := recheckLine(inlines[i], r, c)
+		buf.WriteString(newline)
+		for _, d := range linediffs {
+			d.Line = i + 1
+			changes = append(changes, d)
 		}
-
-		diff := Diff{
-			Line:      i + 1, // lines start at 1
-			Column:    col,   // columns start at 0
-			Original:  s1,
-			Corrected: s2,
-		}
-		changes = append(changes, diff)
-		buf.WriteString(outlines[i])
 	}
 
 	return buf.String(), changes
-}
-
-func inArray(haystack []string, needle string) bool {
-	for _, word := range haystack {
-		if needle == word {
-			return true
-		}
-	}
-	return false
 }
 
 // Replacer is the main struct for spelling correction
@@ -160,6 +121,7 @@ type Replacer struct {
 	Replacements []string
 	Debug        bool
 	engine       *strings.Replacer
+	corrected    map[string]bool
 }
 
 // New creates a new default Replacer using the main rule list
@@ -195,74 +157,16 @@ func (r *Replacer) AddRuleList(additions []string) {
 
 // Compile compiles the rules.  Required before using the Replace functions
 func (r *Replacer) Compile() {
+	r.corrected = make(map[string]bool)
+	for i := 1; i < len(r.Replacements); i += 2 {
+		r.corrected[strings.ToLower(r.Replacements[i])] = true
+	}
 	r.engine = strings.NewReplacer(r.Replacements...)
 }
 
 // Replace make spelling corrects to the input string
-func (r *Replacer) Replace(input string) string {
-	if r.Debug {
-		r.ReplaceDebug(input)
-	}
-	return r.engine.Replace(input)
-}
-
-// ReplaceDebug logs exactly what was matched and replaced for use
-// in debugging
-func (r *Replacer) ReplaceDebug(input string) {
-	for linenum, line := range strings.Split(input, "\n") {
-		for i := 0; i < len(r.Replacements); i += 2 {
-			idx := strings.Index(line, r.Replacements[i])
-			if idx != -1 {
-				left := max(0, idx-10)
-				right := min(idx+len(r.Replacements[i])+10, len(line))
-				snippet := strings.TrimSpace(line[left:right])
-				log.Printf("line %d: Found %q in %q  (%q)",
-					linenum+1, r.Replacements[i], snippet, r.Replacements[i+1])
-			}
-		}
-	}
-}
-
-// ReplaceGo is a specialized routine for correcting Golang source
-// files.  Currently only checks comments, not identifiers for
-// spelling.
-//
-// Other items:
-//   - check strings, but need to ignore
-//      * import "statements" blocks
-//      * import ( "blocks" )
-//   - skip first comment (line 0) if build comment
-//
-func (r *Replacer) ReplaceGo(input string) string {
-	var s scanner.Scanner
-	s.Init(strings.NewReader(input))
-	s.Mode = scanner.ScanIdents | scanner.ScanFloats | scanner.ScanChars | scanner.ScanStrings | scanner.ScanRawStrings | scanner.ScanComments
-	lastPos := 0
-	output := ""
-	for {
-
-		switch s.Scan() {
-		case scanner.Comment:
-			origComment := s.TokenText()
-			newComment := r.Replace(origComment)
-
-			if origComment != newComment {
-				// s.Pos().Offset is the end of the current token
-				//  subtract len(origComment) to get the start of token
-				offset := s.Pos().Offset
-				output = output + input[lastPos:offset-len(origComment)] + newComment
-				lastPos = offset
-			}
-		case scanner.EOF:
-			// no changes, no copies
-			if lastPos == 0 {
-				return input
-			}
-			if lastPos >= len(input) {
-				return output
-			}
-
-			return output + input[lastPos:]
-		}
-	}
+func (r *Replacer) Replace(input string) (string, []Diff) {
+	news := r.engine.Replace(input)
+	news, changes := DiffLines(input, news, r.engine, r.corrected)
+	return news, changes
 }

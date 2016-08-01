@@ -96,8 +96,9 @@ func doPackage(fs *token.FileSet, pkg *ast.Package) {
 			}
 		}
 	}
-	// init() is always used
+	// init() and _ are always used
 	p.used["init"] = true
+	p.used["_"] = true
 	if pkg.Name != "main" {
 		// exported names are marked used for non-main packages.
 		for name := range p.decl {

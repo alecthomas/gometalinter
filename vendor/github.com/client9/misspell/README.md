@@ -58,7 +58,7 @@ $ misspell -locale US important.txt
 important.txt:10:20 found "colour" a misspelling of "color"
 ```
 
-Add the `-local UK` flag!
+Add the `-locale UK` flag!
 
 ```bash
 $ echo "My favorite color is blue" | misspell -locale UK

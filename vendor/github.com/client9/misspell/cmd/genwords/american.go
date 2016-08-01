@@ -145,89 +145,8 @@ func dictBritish() map[string]string {
 		"yogurts",
 	}
 
-	needLeft := []string{
-		"plowed",
-		"plowing",
-		"esophagus",
-		"esophaguses",
-		"etiology",
-		"armor",
-		"estrogen",
-		"practice",
-		"fiber",
-		"odor",
-		"center",
-		"color",
-		"meter",
-		"meters",
-		"miter",
-		"program",
-	}
-
-	needRight := []string{
-		"labor",
-		"appall",
-		"valor",
-		"clangor",
-		"epaulet",
-		"rancor",
-		"harbor",
-		"splendor",
-	}
-
-	needBoth := []string{
-		"molt",
-		"specters",
-		"specter",
-		"rigor",
-		"miters",
-		"balk",
-		"luster",
-		"habor",
-		"arbor",
-		"meager",
-		"plow",
-		"humor",
-		"honor",
-		"liter",
-		"vigor",
-		"vapor",
-		"aging",
-		"fibers",
-		"story",
-		"mold",
-		"gram",
-		"grams",
-		"centigram",
-		"centigrams",
-		"milligram",
-		"milligrams",
-		"clamor",
-		"kilogram",
-		"kilograms",
-		"distill",
-		"fulfill",
-		"check",
-		"checks",
-		"install",
-		"ton",
-		"tons",
-		"tire",
-		"tires",
-		"edema",
-	}
-
 	for _, word := range needDelete {
 		delete(dict, word)
-	}
-	for _, word := range needLeft {
-		addLeftDelimiter(dict, word)
-	}
-	for _, word := range needRight {
-		addRightDelimiter(dict, word)
-	}
-	for _, word := range needBoth {
-		addBothDelimiter(dict, word)
 	}
 
 	dict = expandCase(dict)
@@ -245,52 +164,8 @@ func dictAmerican() map[string]string {
 		"Bannister",
 		"Louvre",
 	}
-	needLeft := []string{
-		"arbour",
-		"cheque",
-		"chilli",
-		"cosy",
-		"gramme",
-		"grammes",
-		"mould",
-		"moulder",
-		"moulders",
-		"mouldered",
-		"mouldering",
-		"tonne",
-		"tonnes",
-		"tyre",
-	}
-	needRight := []string{
-		"appal",
-		"distil",
-		"instil",
-		"enthral",
-		"fulfil",
-		"enrol",
-		"instal",
-		"moult",
-		"programme",
-		"uninstal",
-	}
-	needBoth := []string{
-		"sombre",
-	}
-
 	dict := parseWikipediaFormat(american)
-
-	for _, word := range needLeft {
-		addLeftDelimiter(dict, word)
-	}
-	for _, word := range needRight {
-		addRightDelimiter(dict, word)
-	}
-	for _, word := range needBoth {
-		addBothDelimiter(dict, word)
-	}
-
 	dict = expandCase(dict)
-
 	for _, word := range needCaseDelete {
 		removeCase(dict, word)
 	}
