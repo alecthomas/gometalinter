@@ -809,7 +809,6 @@ func findVendoredLinters() string {
 		for _, p := range gopaths {
 			joined := append([]string{p, "src"}, home...)
 			vendorRoot := filepath.Join(joined...)
-			fmt.Println(vendorRoot)
 			if _, err := os.Stat(vendorRoot); err == nil {
 				return vendorRoot
 			}
