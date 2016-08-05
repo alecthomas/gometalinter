@@ -144,6 +144,7 @@ var (
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>[^:]+):(?P<line>\d+):(?P<col>\d+):[\s\t]+(?P<message>.*)$`,
 		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
 		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
+		"copyfighter": "copyfighter {path}:PATH:LINE:COL:MESSAGE",
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell", "unused"}
 	enabledLinters            = []string{}
@@ -182,6 +183,7 @@ var (
 		"unconvert":   "github.com/mdempsky/unconvert",
 		"unused":      "honnef.co/go/unused/cmd/unused",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
+		"copyfighter": "github.com/jmhodges/copyfighter",
 	}
 	acceptsEllipsis = map[string]bool{
 		"aligncheck":  true,
