@@ -433,7 +433,7 @@ func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concu
 		}
 		linterPaths := paths
 		// Most linters don't exclude vendor paths when recursing, so we don't use ... paths.
-		if acceptsEllipsis[linter.Name] && !*vendorFlag {
+		if acceptsEllipsis[linter.Name] && !*vendorFlag && len(ellipsisPaths) > 0 {
 			linterPaths = ellipsisPaths
 		}
 		for _, path := range linterPaths {
