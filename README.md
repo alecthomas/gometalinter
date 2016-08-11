@@ -124,6 +124,14 @@ format. Note that this can be *very* slow, and you may need to increase the lint
 
 ## FAQ
 
+### Using a configuration file
+
+gomatelinter supports linting via a configuration file, and invoking:
+
+```
+gometalinter @somefile
+```
+
 ### Exit status
 
 gometalinter sets two bits of the exit status to indicate different issues:
