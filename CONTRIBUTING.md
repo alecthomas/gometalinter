@@ -13,7 +13,7 @@ are three things to try in that case:
 #### 1. Update to the latest build of gometalinter and all linters
 
     go get -u github.com/alecthomas/gometalinter
-    gometalinter --install --update
+    gometalinter --install
 
 If you're lucky, this will fix the problem.
 
