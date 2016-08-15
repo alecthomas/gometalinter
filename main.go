@@ -193,6 +193,7 @@ var (
 		"structcheck": true,
 		"test":        true,
 		"varcheck":    true,
+		"unconvert":   true,
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
