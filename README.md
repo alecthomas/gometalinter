@@ -124,6 +124,10 @@ format. Note that this can be *very* slow, and you may need to increase the lint
 
 ## FAQ
 
+### Configuration file
+
+gometalinter can load flags from a file with the syntax `@<file>`.
+
 ### Exit status
 
 gometalinter sets two bits of the exit status to indicate different issues:
