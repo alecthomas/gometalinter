@@ -3,5 +3,5 @@ language: go
 install:
     - go get -t -v . ./regressiontests
     - go run main.go --install
-go: 1.6
+go: 1.7
 script: go test -v . ./regressiontests

@@ -221,6 +221,7 @@ var (
 	deadlineFlag        = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
 	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
 	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
+	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -314,7 +315,6 @@ func (v Vars) Replace(s string) string {
 func main() {
 	// Linters are by their very nature, short lived, so disable GC.
 	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
-	_ = os.Setenv("GOGC", "off")
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 Default linters:
@@ -326,6 +326,9 @@ Severity override map (default is "warning"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
+	if !*enableGCFlag {
+		_ = os.Setenv("GOGC", "off")
+	}
 	if *vendoredLintersFlag && *installFlag && *updateFlag {
 		warning(`Linters are now vendored by default, --update ignored. The original
 behaviour can be re-enabled with --no-vendored-linters.
