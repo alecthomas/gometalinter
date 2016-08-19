@@ -197,6 +197,7 @@ var (
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
+	outputKeys  = []string{"console", "json", "checkstyle"}
 
 	pathsArg            = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	vendoredLintersFlag = kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").Default("true").Bool()
@@ -222,6 +223,7 @@ var (
 	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
 	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
+	outputFlag          = kingpin.Flag("output", fmt.Sprintf("Output format, one of %s", strings.Join(outputKeys, ", "))).Default("console").Enum(outputKeys...)
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -338,6 +340,14 @@ https://github.com/alecthomas/gometalinter/issues/new
 `)
 		*updateFlag = false
 	}
+	// Honor json flag for backwards compatibility
+	if *outputFlag == "console" && *jsonFlag {
+		*outputFlag = "json"
+	}
+	// Force sorting by path if checkstyle output is selected
+	if *outputFlag == "checkstyle" {
+		*sortFlag = []string{"path"}
+	}
 
 	configureEnvironment()
 	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
@@ -370,9 +380,14 @@ https://github.com/alecthomas/gometalinter/issues/new
 	linters := lintersFromFlags()
 	status := 0
 	issues, errch := runLinters(linters, paths, *pathsArg, *concurrencyFlag, exclude, include)
-	if *jsonFlag {
+	switch *outputFlag {
+	case "checkstyle":
+		status |= outputToCheckstyle(issues)
+	case "json":
 		status |= outputToJSON(issues)
-	} else {
+	case "console":
+		fallthrough
+	default:
 		status |= outputToConsole(issues)
 	}
 	for err := range errch {

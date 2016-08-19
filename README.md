@@ -214,3 +214,18 @@ stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
 stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
 stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (deadcode)
 ```
+
+## Different output modes
+
+`gometalinter` supports three types of different output modes:
+
+* `console` - default plain-text output mode.
+* `json` - structured JSON output mode, useful for integration with other tools.
+* `checkstyle` - XML encoded output compatible with
+  [checkstyle](http://checkstyle.sourceforge.net/) tool. Useful for integration
+  with tools that already support checkstyle documents (for example JENKINS
+  [Checkstyle Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Checkstyle+Plugin)).
+
+Output mode can be changed with `--output=console|json|checkstyle` flag. Flag 
+`--json` is left for backwards compatibility and is identical to
+`--output=json`.
