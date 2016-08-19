@@ -223,7 +223,7 @@ var (
 	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
 	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
-	outputFlag          = kingpin.Flag("output", fmt.Sprintf("Output format, one of %s", strings.Join(outputKeys, ", "))).Default("console").Enum(outputKeys...)
+	outputFlag          = kingpin.Flag("output", fmt.Sprintf("Output format, one of %s.", strings.Join(outputKeys, ", "))).Default("console").Enum(outputKeys...)
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
