@@ -214,3 +214,13 @@ stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
 stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
 stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (deadcode)
 ```
+
+## Checkstyle XML format
+
+`gometalinter` supports [checkstyle](http://checkstyle.sourceforge.net/)
+compatible XML output format. It is tiggered with `--checkstyle` flag:
+
+	gometalinter --checkstyle
+
+Checkstyle format can be used to integrate gometalinter with Jenkins CI with the
+help of [Checkstyle Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Checkstyle+Plugin).

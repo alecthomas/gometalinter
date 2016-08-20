@@ -221,6 +221,7 @@ var (
 	deadlineFlag        = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
 	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
 	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
+	checkstyleFlag      = kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
 )
 
@@ -338,6 +339,12 @@ https://github.com/alecthomas/gometalinter/issues/new
 `)
 		*updateFlag = false
 	}
+	// Force sorting by path if checkstyle mode is selected
+	// !jsonFlag check is required to handle:
+	// 	gometalinter --json --checkstyle --sort=severity
+	if *checkstyleFlag && !*jsonFlag {
+		*sortFlag = []string{"path"}
+	}
 
 	configureEnvironment()
 	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
@@ -372,6 +379,8 @@ https://github.com/alecthomas/gometalinter/issues/new
 	issues, errch := runLinters(linters, paths, *pathsArg, *concurrencyFlag, exclude, include)
 	if *jsonFlag {
 		status |= outputToJSON(issues)
+	} else if *checkstyleFlag {
+		status |= outputToCheckstyle(issues)
 	} else {
 		status |= outputToConsole(issues)
 	}
