@@ -54,9 +54,8 @@ func outputToCheckstyle(issues chan *Issue) int {
 	if lastFile != nil {
 		out.Files = append(out.Files, lastFile)
 	}
-	fmt.Println(`<?xml version="1.0" encoding="UTF-8"?>`)
 	d, err := xml.Marshal(&out)
 	kingpin.FatalIfError(err, "")
-	fmt.Printf("%s\n", d)
+	fmt.Printf("%s%s\n", xml.Header, d)
 	return status
 }
