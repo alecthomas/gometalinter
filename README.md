@@ -223,4 +223,4 @@ compatible XML output format. It is tiggered with `--checkstyle` flag:
 	gometalinter --checkstyle
 
 Checkstyle format can be used to integrate gometalinter with Jenkins CI with the
-help of [Checkstyle Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Checkstyle+Plugin)).
+help of [Checkstyle Plugin](https://wiki.jenkins-ci.org/display/JENKINS/Checkstyle+Plugin).
