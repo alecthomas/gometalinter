@@ -197,7 +197,6 @@ var (
 	}
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
-	outputKeys  = []string{"console", "json", "checkstyle"}
 
 	pathsArg            = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	vendoredLintersFlag = kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").Default("true").Bool()
@@ -222,8 +221,8 @@ var (
 	deadlineFlag        = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
 	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
 	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
+	checkstyleFlag      = kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
-	outputFlag          = kingpin.Flag("output", fmt.Sprintf("Output format, one of %s.", strings.Join(outputKeys, ", "))).Default("console").Enum(outputKeys...)
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -340,12 +339,10 @@ https://github.com/alecthomas/gometalinter/issues/new
 `)
 		*updateFlag = false
 	}
-	// Honor json flag for backwards compatibility
-	if *outputFlag == "console" && *jsonFlag {
-		*outputFlag = "json"
-	}
-	// Force sorting by path if checkstyle output is selected
-	if *outputFlag == "checkstyle" {
+	// Force sorting by path if checkstyle mode is selected
+	// !jsonFlag check is required to handle:
+	// 	gometalinter --json --checkstyle --sort=severity
+	if *checkstyleFlag && !*jsonFlag {
 		*sortFlag = []string{"path"}
 	}
 
@@ -380,14 +377,11 @@ https://github.com/alecthomas/gometalinter/issues/new
 	linters := lintersFromFlags()
 	status := 0
 	issues, errch := runLinters(linters, paths, *pathsArg, *concurrencyFlag, exclude, include)
-	switch *outputFlag {
-	case "checkstyle":
-		status |= outputToCheckstyle(issues)
-	case "json":
+	if *jsonFlag {
 		status |= outputToJSON(issues)
-	case "console":
-		fallthrough
-	default:
+	} else if *checkstyleFlag {
+		status |= outputToCheckstyle(issues)
+	} else {
 		status |= outputToConsole(issues)
 	}
 	for err := range errch {
