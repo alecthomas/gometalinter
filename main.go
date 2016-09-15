@@ -233,6 +233,11 @@ func disableAllLinters(*kingpin.ParseContext) error {
 	return nil
 }
 
+func enableAllLinters(*kingpin.ParseContext) error {
+	disabledLinters = []string{}
+	return nil
+}
+
 func init() {
 	kingpin.Flag("disable", fmt.Sprintf("List of linters to disable (%s).", strings.Join(disabledLinters, ","))).PlaceHolder("LINTER").Short('D').StringsVar(&disabledLinters)
 	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').StringsVar(&enabledLinters)
@@ -240,6 +245,7 @@ func init() {
 	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
 	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
 	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllLinters).Bool()
+	kingpin.Flag("enable-all", "Enable all linters.").Action(enableAllLinters).Bool()
 }
 
 type Issue struct {
