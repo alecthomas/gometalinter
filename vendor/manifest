@@ -77,7 +77,7 @@
 			"importpath": "github.com/mibk/dupl",
 			"repository": "https://github.com/mibk/dupl",
 			"vcs": "git",
-			"revision": "415e882ea21ca7012cc49906cb338f34d2d4b4d6",
+			"revision": "d8ac57fa998861b7aeaa149bba1cb7fceeace18f",
 			"branch": "master",
 			"notests": true
 		},

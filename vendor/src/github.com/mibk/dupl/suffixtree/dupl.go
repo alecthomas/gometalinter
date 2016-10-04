@@ -1,5 +1,7 @@
 package suffixtree
 
+import "sort"
+
 type Match struct {
 	Ps  []Pos
 	Len Pos
@@ -30,9 +32,14 @@ func newContextList() *contextList {
 }
 
 func (c *contextList) getAll() []Pos {
+	keys := make([]int, 0, len(c.lists))
+	for k := range c.lists {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
 	var ps []Pos
-	for _, pl := range c.lists {
-		ps = append(ps, pl.positions...)
+	for _, k := range keys {
+		ps = append(ps, c.lists[k].positions...)
 	}
 	return ps
 }

@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/mibk/dupl/job"
@@ -168,18 +169,18 @@ func (LocalFileReader) ReadFile(node *syntax.Node) ([]byte, error) {
 func printDupls(duplChan <-chan syntax.Match) {
 	groups := make(map[string][][]*syntax.Node)
 	for dupl := range duplChan {
-		hash := dupl.Hash
-		if _, ok := groups[hash]; ok {
-			groups[hash] = append(groups[hash], dupl.Frags...)
-		} else {
-			groups[hash] = dupl.Frags
-		}
+		groups[dupl.Hash] = append(groups[dupl.Hash], dupl.Frags...)
 	}
+	keys := make([]string, 0, len(groups))
+	for k := range groups {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
 	p := getPrinter()
-	for _, group := range groups {
-		uniq := unique(group)
-		if len(uniq) != 1 {
+	for _, k := range keys {
+		uniq := unique(groups[k])
+		if len(uniq) > 1 {
 			p.Print(uniq)
 		}
 	}
@@ -197,18 +198,18 @@ func getPrinter() output.Printer {
 }
 
 func unique(group [][]*syntax.Node) [][]*syntax.Node {
-	fileMap := make(map[string]map[int]bool)
+	fileMap := make(map[string]map[int]struct{})
 
 	var newGroup [][]*syntax.Node
 	for _, seq := range group {
 		node := seq[0]
 		file, ok := fileMap[node.Filename]
 		if !ok {
-			file = make(map[int]bool)
+			file = make(map[int]struct{})
 			fileMap[node.Filename] = file
 		}
-		if _, ok = file[node.Pos]; !ok {
-			file[node.Pos] = true
+		if _, ok := file[node.Pos]; !ok {
+			file[node.Pos] = struct{}{}
 			newGroup = append(newGroup, seq)
 		}
 	}
