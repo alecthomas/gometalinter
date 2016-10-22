@@ -223,6 +223,7 @@ var (
 	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
 	checkstyleFlag      = kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
+	aggregateFlag       = kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").Bool()
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -434,7 +435,7 @@ func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concu
 	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
 	concurrencych := make(chan bool, *concurrencyFlag)
 	incomingIssues := make(chan *Issue, 1000000)
-	processedIssues := maybeSortIssues(incomingIssues)
+	processedIssues := maybeSortIssues(maybeAggregateIssues(incomingIssues))
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
 		// Recreated in each loop because it is mutated by executeLinter().
@@ -591,6 +592,13 @@ func installLinters() {
 	}
 	warning("failed to install one or more linters: %s (installing individually)", err)
 	installLintersIndividually(targets)
+}
+
+func maybeAggregateIssues(issues chan *Issue) chan *Issue {
+	if !*aggregateFlag {
+		return issues
+	}
+	return aggregateIssues(issues)
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
