@@ -118,6 +118,7 @@ var (
 		"PATH:LINE:COL:MESSAGE": `^(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 	}
+	vetRe       = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
 	lintersFlag = map[string]string{
 		"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"deadcode":    `deadcode {path}:^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
@@ -142,8 +143,8 @@ var (
 		"unconvert":   "unconvert {path}:PATH:LINE:COL:MESSAGE",
 		"unused":      `unused {path}:PATH:LINE:COL:MESSAGE`,
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"vet":         "go tool vet {path}/*.go:PATH:LINE:MESSAGE",
-		"vetshadow":   "go tool vet --shadow {path}/*.go:PATH:LINE:MESSAGE",
+		"vet":         `go tool vet {path}/*.go:` + vetRe,
+		"vetshadow":   `go tool vet --shadow {path}/*.go:` + vetRe,
 	}
 	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell", "unused"}
 	enabledLinters            = []string{}
@@ -772,13 +773,19 @@ func processOutput(state *linterState, out []byte) {
 	for _, indices := range all {
 		group := [][]byte{}
 		for i := 0; i < len(indices); i += 2 {
-			fragment := out[indices[i]:indices[i+1]]
+			var fragment []byte
+			if indices[i] != -1 {
+				fragment = out[indices[i]:indices[i+1]]
+			}
 			group = append(group, fragment)
 		}
 
 		issue := &Issue{Line: 1}
 		issue.Linter = LinterFromName(state.Name)
 		for i, name := range re.SubexpNames() {
+			if group[i] == nil {
+				continue
+			}
 			part := string(group[i])
 			if name != "" {
 				state.vars[name] = part
