@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/google/shlex"
@@ -225,6 +226,7 @@ var (
 	checkstyleFlag      = kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
 	aggregateFlag       = kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").Bool()
+	formatFlag          = kingpin.Flag("format", "Output format.").Default("{{.Path}}:{{.Line}}:{{if gt .Col 0}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})").String()
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -260,11 +262,12 @@ type Issue struct {
 }
 
 func (i *Issue) String() string {
-	col := ""
-	if i.Col != 0 {
-		col = fmt.Sprintf("%d", i.Col)
-	}
-	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
+	tmpl, err := template.New("output").Parse(*formatFlag)
+	kingpin.FatalIfError(err, "Invalid output format")
+	buf := new(bytes.Buffer)
+	err = tmpl.Execute(buf, i)
+	kingpin.FatalIfError(err, "Invalid output format")
+	return buf.String()
 }
 
 func debug(format string, args ...interface{}) {
