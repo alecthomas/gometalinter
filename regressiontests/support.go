@@ -58,7 +58,7 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	}
 
 	// Run gometalinter.
-	args := []string{"go", "run", "../main.go", "../checkstyle.go", "--disable-all", "--enable", linter, "--json", dir}
+	args := []string{"go", "run", "../main.go", "../checkstyle.go", "../aggregate.go", "--disable-all", "--enable", linter, "--json", dir}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(args[0], args[1:]...)
 	if !assert.NoError(t, err) {
