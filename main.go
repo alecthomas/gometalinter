@@ -197,8 +197,10 @@ var (
 		"varcheck":    true,
 		"unconvert":   true,
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
-	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
+	slowLinters    = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
+	sortKeys       = []string{"none", "path", "line", "column", "severity", "message", "linter"}
+	formatFlag     = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"
+	formatTemplate = &template.Template{}
 
 	pathsArg            = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	vendoredLintersFlag = kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").Default("true").Bool()
@@ -226,7 +228,6 @@ var (
 	checkstyleFlag      = kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").Bool()
 	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
 	aggregateFlag       = kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").Bool()
-	formatFlag          = kingpin.Flag("format", "Output format.").Default("{{.Path}}:{{.Line}}:{{if gt .Col 0}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})").String()
 )
 
 func disableAllLinters(*kingpin.ParseContext) error {
@@ -242,7 +243,15 @@ func enableAllLinters(*kingpin.ParseContext) error {
 	return nil
 }
 
+func compileOutputTemplate(*kingpin.ParseContext) error {
+	tmpl, err := template.New("output").Parse(formatFlag)
+	formatTemplate = tmpl
+	return err
+}
+
 func init() {
+	kingpin.FatalIfError(compileOutputTemplate(nil), "")
+
 	kingpin.Flag("disable", fmt.Sprintf("List of linters to disable (%s).", strings.Join(disabledLinters, ","))).PlaceHolder("LINTER").Short('D').StringsVar(&disabledLinters)
 	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').StringsVar(&enabledLinters)
 	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&lintersFlag)
@@ -250,6 +259,7 @@ func init() {
 	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
 	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllLinters).Bool()
 	kingpin.Flag("enable-all", "Enable all linters.").Action(enableAllLinters).Bool()
+	kingpin.Flag("format", "Output format.").Default(formatFlag).Action(compileOutputTemplate).StringVar(&formatFlag)
 }
 
 type Issue struct {
@@ -262,10 +272,8 @@ type Issue struct {
 }
 
 func (i *Issue) String() string {
-	tmpl, err := template.New("output").Parse(*formatFlag)
-	kingpin.FatalIfError(err, "Invalid output format")
 	buf := new(bytes.Buffer)
-	err = tmpl.Execute(buf, i)
+	err := formatTemplate.Execute(buf, i)
 	kingpin.FatalIfError(err, "Invalid output format")
 	return buf.String()
 }
