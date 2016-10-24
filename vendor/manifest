@@ -29,7 +29,7 @@
 			"importpath": "github.com/golang/lint",
 			"repository": "https://github.com/golang/lint",
 			"vcs": "git",
-			"revision": "c7bacac2b21ca01afa1dee0acf64df3ce047c28f",
+			"revision": "3390df4df2787994aea98de825b964ac7944b817",
 			"branch": "master",
 			"notests": true
 		},
