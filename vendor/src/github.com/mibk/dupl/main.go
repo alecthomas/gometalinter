@@ -138,7 +138,7 @@ func crawlPaths(paths []string) chan string {
 		for _, path := range paths {
 			info, err := os.Lstat(path)
 			if err != nil {
-				panic(err)
+				log.Fatal(err)
 			}
 			if !info.IsDir() {
 				fchan <- path
@@ -160,12 +160,6 @@ func crawlPaths(paths []string) chan string {
 	return fchan
 }
 
-type LocalFileReader struct{}
-
-func (LocalFileReader) ReadFile(node *syntax.Node) ([]byte, error) {
-	return ioutil.ReadFile(node.Filename)
-}
-
 func printDupls(duplChan <-chan syntax.Match) {
 	groups := make(map[string][][]*syntax.Node)
 	for dupl := range duplChan {
@@ -181,20 +175,28 @@ func printDupls(duplChan <-chan syntax.Match) {
 	for _, k := range keys {
 		uniq := unique(groups[k])
 		if len(uniq) > 1 {
-			p.Print(uniq)
+			if err := p.Print(uniq); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 	p.Finish()
 }
 
 func getPrinter() output.Printer {
-	fr := LocalFileReader{}
+	var fr fileReader
 	if *html {
-		return output.NewHtmlPrinter(os.Stdout, fr)
+		return output.NewHTMLPrinter(os.Stdout, fr)
 	} else if *plumbing {
 		return output.NewPlumbingPrinter(os.Stdout, fr)
 	}
 	return output.NewTextPrinter(os.Stdout, fr)
+}
+
+type fileReader struct{}
+
+func (fileReader) ReadFile(filename string) ([]byte, error) {
+	return ioutil.ReadFile(filename)
 }
 
 func unique(group [][]*syntax.Node) [][]*syntax.Node {

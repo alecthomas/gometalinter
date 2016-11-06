@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"go/types"
 	htmltemplate "html/template"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -25,7 +26,6 @@ var Funcs = []lint.Func{
 	CheckEncodingBinary,
 	CheckTimeSleepConstant,
 	CheckWaitgroupAdd,
-	CheckWaitgroupCopy,
 	CheckInfiniteEmptyLoop,
 	CheckDeferInInfiniteLoop,
 	CheckTestMainExit,
@@ -38,9 +38,13 @@ var Funcs = []lint.Func{
 	CheckEarlyDefer,
 	CheckEmptyCriticalSection,
 	CheckIneffectiveCopy,
+	CheckDiffSizeComparison,
+	CheckCanonicalHeaderKey,
+	CheckBenchmarkN,
 }
 
 var DubiousFuncs = []lint.Func{
+	CheckDubiousSyncPoolPointers,
 	CheckDubiousDeferInChannelRangeLoop,
 }
 
@@ -296,23 +300,6 @@ func CheckWaitgroupAdd(f *lint.File) {
 		if fn.FullName() == "(*sync.WaitGroup).Add" {
 			f.Errorf(sel, 1, "should call %s before starting the goroutine to avoid a race",
 				f.Render(stmt))
-		}
-		return true
-	}
-	f.Walk(fn)
-}
-
-func CheckWaitgroupCopy(f *lint.File) {
-	fn := func(node ast.Node) bool {
-		fn, ok := node.(*ast.FuncType)
-		if !ok {
-			return true
-		}
-		for _, arg := range fn.Params.List {
-			typ := f.Pkg.TypesInfo.TypeOf(arg.Type)
-			if typ != nil && typ.String() == "sync.WaitGroup" {
-				f.Errorf(arg, 1, "should pass sync.WaitGroup by pointer")
-			}
 		}
 		return true
 	}
@@ -754,6 +741,38 @@ func CheckEarlyDefer(f *lint.File) {
 	f.Walk(fn)
 }
 
+func CheckDubiousSyncPoolPointers(f *lint.File) {
+	fn := func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		if sel.Sel.Name != "Put" {
+			return true
+		}
+		typ := f.Pkg.TypesInfo.TypeOf(sel.X)
+		if typ == nil || (typ.String() != "sync.Pool" && typ.String() != "*sync.Pool") {
+			return true
+		}
+
+		arg := f.Pkg.TypesInfo.TypeOf(call.Args[0])
+		underlying := arg.Underlying()
+		switch underlying.(type) {
+		case *types.Pointer, *types.Map, *types.Chan, *types.Interface:
+			// all pointer types
+			return true
+		}
+		f.Errorf(call.Args[0], 1, "non-pointer type %s put into sync.Pool", arg.String())
+		return false
+	}
+	f.Walk(fn)
+}
+
 func CheckEmptyCriticalSection(f *lint.File) {
 	mutexParams := func(s ast.Stmt) (selectorTokens []string, funcName string, ok bool) {
 		expr, ok := s.(*ast.ExprStmt)
@@ -844,6 +863,157 @@ func CheckIneffectiveCopy(f *lint.File) {
 				f.Errorf(star, 1, "*&x will be simplified to x. It will not copy x.")
 			}
 		}
+		return true
+	}
+	f.Walk(fn)
+}
+
+func constantInt(f *lint.File, expr ast.Expr) (int, bool) {
+	tv := f.Pkg.TypesInfo.Types[expr]
+	if tv.Value == nil {
+		return 0, false
+	}
+	if tv.Value.Kind() != constant.Int {
+		return 0, false
+	}
+	v, ok := constant.Int64Val(tv.Value)
+	if !ok {
+		return 0, false
+	}
+	return int(v), true
+}
+
+func sliceSize(f *lint.File, expr ast.Expr) (int, bool) {
+	if slice, ok := expr.(*ast.SliceExpr); ok {
+		low := 0
+		high := 0
+		if slice.Low != nil {
+			v, ok := constantInt(f, slice.Low)
+			if !ok {
+				return 0, false
+			}
+			low = v
+		}
+		if slice.High == nil {
+			v, ok := sliceSize(f, slice.X)
+			if !ok {
+				return 0, false
+			}
+			high = v
+		} else {
+			v, ok := constantInt(f, slice.High)
+			if !ok {
+				return 0, false
+			}
+			high = v
+		}
+		return high - low, true
+	}
+
+	tv := f.Pkg.TypesInfo.Types[expr]
+	if tv.Value == nil {
+		return 0, false
+	}
+	if tv.Value.Kind() != constant.String {
+		return 0, false
+	}
+	return len(constant.StringVal(tv.Value)), true
+}
+
+func CheckDiffSizeComparison(f *lint.File) {
+	fn := func(node ast.Node) bool {
+		expr, ok := node.(*ast.BinaryExpr)
+		if !ok {
+			return true
+		}
+		if expr.Op != token.EQL && expr.Op != token.NEQ {
+			return true
+		}
+
+		_, isSlice1 := expr.X.(*ast.SliceExpr)
+		_, isSlice2 := expr.Y.(*ast.SliceExpr)
+		if !isSlice1 && !isSlice2 {
+			// Only do the check if at least one side has a slicing
+			// expression. Otherwise we'll just run into false
+			// positives because of debug toggles and the like.
+			return true
+		}
+		left, ok1 := sliceSize(f, expr.X)
+		right, ok2 := sliceSize(f, expr.Y)
+		if !ok1 || !ok2 {
+			return true
+		}
+		if left == right {
+			return true
+		}
+		f.Errorf(expr, 1, "comparing strings of different sizes for equality will always return false")
+		return true
+	}
+	f.Walk(fn)
+}
+
+func CheckCanonicalHeaderKey(f *lint.File) {
+	fn := func(node ast.Node) bool {
+		assign, ok := node.(*ast.AssignStmt)
+		if ok {
+			// TODO(dh): This risks missing some Header reads, for
+			// example in `h1["foo"] = h2["foo"]` – these edge
+			// cases are probably rare enough to ignore for now.
+			for _, expr := range assign.Lhs {
+				op, ok := expr.(*ast.IndexExpr)
+				if !ok {
+					continue
+				}
+				if types.TypeString(f.Pkg.TypesInfo.TypeOf(op.X), nil) == "net/http.Header" {
+					return false
+				}
+			}
+			return true
+		}
+		op, ok := node.(*ast.IndexExpr)
+		if !ok {
+			return true
+		}
+		if types.TypeString(f.Pkg.TypesInfo.TypeOf(op.X), nil) != "net/http.Header" {
+			return true
+		}
+		typ := f.Pkg.TypesInfo.Types[op.Index]
+		if typ.Value == nil {
+			return true
+		}
+		if typ.Value.Kind() != constant.String {
+			return true
+		}
+		s := constant.StringVal(typ.Value)
+		if s == http.CanonicalHeaderKey(s) {
+			return true
+		}
+		f.Errorf(op, 1, "keys in http.Header are canonicalized, %q is not canonical; fix the constant or use http.CanonicalHeaderKey", s)
+		return true
+	}
+	f.Walk(fn)
+}
+
+func CheckBenchmarkN(f *lint.File) {
+	fn := func(node ast.Node) bool {
+		assign, ok := node.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		if len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+		sel, ok := assign.Lhs[0].(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		if sel.Sel.Name != "N" {
+			return true
+		}
+		if types.TypeString(f.Pkg.TypesInfo.TypeOf(sel.X), nil) != "*testing.B" {
+			return true
+		}
+		f.Errorf(assign, 1, "should not assign to %s", f.Render(sel))
 		return true
 	}
 	f.Walk(fn)
