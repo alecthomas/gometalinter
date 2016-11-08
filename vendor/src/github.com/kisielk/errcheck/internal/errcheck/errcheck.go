@@ -10,13 +10,12 @@ import (
 	"go/ast"
 	"go/build"
 	"go/token"
+	"go/types"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
-
-	"go/types"
 
 	"golang.org/x/tools/go/loader"
 )
@@ -220,10 +219,29 @@ func (v *visitor) ignoreCall(call *ast.CallExpr) bool {
 			if re, ok := v.ignore[pkg.Path()]; ok {
 				return re.MatchString(id.Name)
 			}
+
+			// if current package being considered is vendored, check to see if it should be ignored based
+			// on the unvendored path.
+			if nonVendoredPkg, ok := nonVendoredPkgPath(pkg.Path()); ok {
+				if re, ok := v.ignore[nonVendoredPkg]; ok {
+					return re.MatchString(id.Name)
+				}
+			}
 		}
 	}
 
 	return false
+}
+
+// nonVendoredPkgPath returns the unvendored version of the provided package path (or returns the provided path if it
+// does not represent a vendored path). The second return value is true if the provided package was vendored, false
+// otherwise.
+func nonVendoredPkgPath(pkgPath string) (string, bool) {
+	lastVendorIndex := strings.LastIndex(pkgPath, "/vendor/")
+	if lastVendorIndex == -1 {
+		return pkgPath, false
+	}
+	return pkgPath[lastVendorIndex+len("/vendor/"):], true
 }
 
 // errorsByArg returns a slice s such that

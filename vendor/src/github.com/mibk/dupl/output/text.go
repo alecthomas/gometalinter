@@ -9,11 +9,11 @@ import (
 )
 
 type FileReader interface {
-	ReadFile(node *syntax.Node) ([]byte, error)
+	ReadFile(filename string) ([]byte, error)
 }
 
 type Printer interface {
-	Print(dups [][]*syntax.Node)
+	Print(dups [][]*syntax.Node) error
 	Finish()
 }
 
@@ -30,17 +30,21 @@ func NewTextPrinter(w io.Writer, fr FileReader) *TextPrinter {
 	}
 }
 
-func (p *TextPrinter) Print(dups [][]*syntax.Node) {
+func (p *TextPrinter) Print(dups [][]*syntax.Node) error {
 	p.cnt++
 	fmt.Fprintf(p.writer, "found %d clones:\n", len(dups))
-	clones := p.prepareClonesInfo(dups)
+	clones, err := p.prepareClonesInfo(dups)
+	if err != nil {
+		return err
+	}
 	sort.Sort(byNameAndLine(clones))
 	for _, cl := range clones {
 		fmt.Fprintf(p.writer, "  %s:%d,%d\n", cl.filename, cl.lineStart, cl.lineEnd)
 	}
+	return nil
 }
 
-func (p *TextPrinter) prepareClonesInfo(dups [][]*syntax.Node) []clone {
+func (p *TextPrinter) prepareClonesInfo(dups [][]*syntax.Node) ([]clone, error) {
 	clones := make([]clone, len(dups))
 	for i, dup := range dups {
 		cnt := len(dup)
@@ -50,16 +54,16 @@ func (p *TextPrinter) prepareClonesInfo(dups [][]*syntax.Node) []clone {
 		nstart := dup[0]
 		nend := dup[cnt-1]
 
-		file, err := p.freader.ReadFile(nstart)
+		file, err := p.freader.ReadFile(nstart.Filename)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		cl := clone{filename: nstart.Filename}
 		cl.lineStart, cl.lineEnd = blockLines(file, nstart.Pos, nend.End)
 		clones[i] = cl
 	}
-	return clones
+	return clones, nil
 }
 
 func (p *TextPrinter) Finish() {

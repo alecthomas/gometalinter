@@ -24,6 +24,8 @@ type Context struct {
 // The path "std" is expanded to all packages in the Go standard library.
 // The path "cmd" is expanded to all Go standard commands.
 // The string "..." is treated as a wildcard within a path.
+// When matching recursively, directories are ignored if they are prefixed with
+// a dot or an underscore (such as ".foo" or "_foo"), or are named "testdata".
 // Relative import paths are not converted to full import paths.
 // If args is empty, a single element "." is returned.
 func (c *Context) ImportPaths(args []string) []string {
@@ -37,6 +39,8 @@ func (c *Context) ImportPaths(args []string) []string {
 // The path "std" is expanded to all packages in the Go standard library.
 // The path "cmd" is expanded to all Go standard commands.
 // The string "..." is treated as a wildcard within a path.
+// When matching recursively, directories are ignored if they are prefixed with
+// a dot or an underscore (such as ".foo" or "_foo"), or are named "testdata".
 // Relative import paths are not converted to full import paths.
 // If args is empty, a single element "." is returned.
 func ImportPaths(args []string) []string {

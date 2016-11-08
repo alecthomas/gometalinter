@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,8 @@ var Funcs = []lint.Func{
 	LintSimplerReturn,
 	LintReceiveIntoBlank,
 	LintFormatInt,
+	LintSimplerStructConversion,
+	LintTrim,
 }
 
 func LintSingleCaseSelect(f *lint.File) {
@@ -93,6 +96,9 @@ func LintLoopCopy(f *lint.File) {
 		}
 		lhs, ok := stmt.Lhs[0].(*ast.IndexExpr)
 		if !ok {
+			return true
+		}
+		if _, ok := f.Pkg.TypesInfo.TypeOf(lhs.X).(*types.Slice); !ok {
 			return true
 		}
 		lidx, ok := lhs.Index.(*ast.Ident)
@@ -221,9 +227,6 @@ func LintStringsContains(f *lint.File) {
 		}
 		funIdent := sel.Sel
 		if pkgIdent.Name != "strings" && pkgIdent.Name != "bytes" {
-			return true
-		}
-		if pkgIdent.Name == "bytes" && funIdent.Name != "Index" {
 			return true
 		}
 		newFunc := ""
@@ -437,12 +440,31 @@ func LintIfReturn(f *lint.File) {
 	f.Walk(fn)
 }
 
-// lintRedundantNilCheckWithLen checks for the following reduntant nil-checks:
+// LintRedundantNilCheckWithLen checks for the following reduntant nil-checks:
 //
 //   if x == nil || len(x) == 0 {}
-//   if x != nil && len(x) ... {  // or any operator len(x) > 0, len(x) != 0, len(x) > 10000
+//   if x != nil && len(x) != 0 {}
+//   if x != nil && len(x) == N {} (where N != 0)
+//   if x != nil && len(x) > N {}
+//   if x != nil && len(x) >= N {} (where N != 0)
 //
 func LintRedundantNilCheckWithLen(f *lint.File) {
+	isConstZero := func(expr ast.Expr) (isConst bool, isZero bool) {
+		lit, ok := expr.(*ast.BasicLit)
+		if ok {
+			return true, lit.Kind == token.INT && lit.Value == "0"
+		}
+		id, ok := expr.(*ast.Ident)
+		if !ok {
+			return false, false
+		}
+		c, ok := f.Pkg.TypesInfo.ObjectOf(id).(*types.Const)
+		if !ok {
+			return false, false
+		}
+		return true, c.Val().Kind() == constant.Int && c.Val().String() == "0"
+	}
+
 	fn := func(node ast.Node) bool {
 		// check that expr is "x || y" or "x && y"
 		expr, ok := node.(*ast.BinaryExpr)
@@ -501,13 +523,36 @@ func LintRedundantNilCheckWithLen(f *lint.File) {
 			return true
 		}
 
-		// avoid false positive for "xx != nil && len(xx) == 0"
-		if !eqNil && lint.IsZero(y.Y) && y.Op == token.EQL {
-			return true
+		if !eqNil {
+			isConst, isZero := isConstZero(y.Y)
+			if !isConst {
+				return true
+			}
+			switch y.Op {
+			case token.EQL:
+				// avoid false positive for "xx != nil && len(xx) == 0"
+				if isZero {
+					return true
+				}
+			case token.GEQ:
+				// avoid false positive for "xx != nil && len(xx) >= 0"
+				if isZero {
+					return true
+				}
+			case token.NEQ:
+				// avoid false positive for "xx != nil && len(xx) != <non-zero>"
+				if !isZero {
+					return true
+				}
+			case token.GTR:
+				// ok
+			default:
+				return true
+			}
 		}
 
 		// finally check that xx type is one of array, slice, map or chan
-		// this is mainly to prevent false negative in case if xx is a pointer to an array
+		// this is to prevent false positive in case if xx is a pointer to an array
 		var nilType string
 		switch f.Pkg.TypesInfo.TypeOf(xx).(type) {
 		case *types.Slice:
@@ -914,4 +959,309 @@ func LintFormatInt(f *lint.File) {
 		return true
 	}
 	f.Walk(fn)
+}
+
+func LintSimplerStructConversion(f *lint.File) {
+	fn := func(node ast.Node) bool {
+		lit, ok := node.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		typ1 := f.Pkg.TypesInfo.TypeOf(lit.Type)
+		if typ1 == nil {
+			return true
+		}
+		// FIXME support pointer to struct
+		s1, ok := typ1.Underlying().(*types.Struct)
+		if !ok {
+			return true
+		}
+
+		n := s1.NumFields()
+		var typ2 types.Type
+		var ident *ast.Ident
+		getSelType := func(expr ast.Expr) (types.Type, *ast.Ident, bool) {
+			sel, ok := expr.(*ast.SelectorExpr)
+			if !ok {
+				return nil, nil, false
+			}
+			ident, ok := sel.X.(*ast.Ident)
+			if !ok {
+				return nil, nil, false
+			}
+			typ := f.Pkg.TypesInfo.TypeOf(sel.X)
+			return typ, ident, typ != nil
+		}
+		if len(lit.Elts) == 0 {
+			return true
+		}
+		for i, elt := range lit.Elts {
+			n--
+			var t types.Type
+			var id *ast.Ident
+			var ok bool
+			switch elt := elt.(type) {
+			case *ast.SelectorExpr:
+				t, id, ok = getSelType(elt)
+				if !ok {
+					return true
+				}
+				if i >= s1.NumFields() || s1.Field(i).Name() != elt.Sel.Name {
+					return true
+				}
+			case *ast.KeyValueExpr:
+				var sel *ast.SelectorExpr
+				sel, ok = elt.Value.(*ast.SelectorExpr)
+				if !ok {
+					return true
+				}
+
+				if elt.Key.(*ast.Ident).Name != sel.Sel.Name {
+					return true
+				}
+				t, id, ok = getSelType(elt.Value)
+			}
+			if !ok {
+				return true
+			}
+			if typ2 != nil && typ2 != t {
+				return true
+			}
+			if ident != nil && ident.Obj != id.Obj {
+				return true
+			}
+			typ2 = t
+			ident = id
+		}
+
+		if n != 0 {
+			return true
+		}
+
+		if typ2 == nil {
+			return true
+		}
+
+		s2, ok := typ2.Underlying().(*types.Struct)
+		if !ok {
+			return true
+		}
+		if typ1 == typ2 {
+			return true
+		}
+		if !structsIdentical(s1, s2) {
+			return true
+		}
+		f.Errorf(node, 1, "should use type conversion instead of struct literal")
+		return true
+	}
+	f.Walk(fn)
+}
+
+func LintTrim(f *lint.File) {
+	// TODO(dh): implement the same for suffix
+	sameNonDynamic := func(node1, node2 ast.Node) bool {
+		if reflect.TypeOf(node1) != reflect.TypeOf(node2) {
+			return false
+		}
+
+		switch node1 := node1.(type) {
+		case *ast.Ident:
+			return node1.Obj == node2.(*ast.Ident).Obj
+		case *ast.SelectorExpr:
+			return f.Render(node1) == f.Render(node2)
+		case *ast.IndexExpr:
+			return f.Render(node1) == f.Render(node2)
+		}
+		return false
+	}
+
+	isLenOnIdent := func(fn ast.Expr, ident ast.Expr) bool {
+		call, ok := fn.(*ast.CallExpr)
+		if !ok {
+			return false
+		}
+		if fn, ok := call.Fun.(*ast.Ident); !ok || fn.Name != "len" {
+			return false
+		}
+		if len(call.Args) != 1 {
+			return false
+		}
+		return sameNonDynamic(call.Args[0], ident)
+	}
+
+	fn := func(node ast.Node) bool {
+		var pkg string
+		var fun string
+
+		ifstmt, ok := node.(*ast.IfStmt)
+		if !ok {
+			return true
+		}
+		if ifstmt.Init != nil {
+			return true
+		}
+		if ifstmt.Else != nil {
+			return true
+		}
+		if len(ifstmt.Body.List) != 1 {
+			return true
+		}
+		condCall, ok := ifstmt.Cond.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		call, ok := condCall.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		if lint.IsIdent(call.X, "strings") {
+			pkg = "strings"
+		} else if lint.IsIdent(call.X, "bytes") {
+			pkg = "bytes"
+		} else {
+			return true
+		}
+		if lint.IsIdent(call.Sel, "HasPrefix") {
+			fun = "HasPrefix"
+		} else if lint.IsIdent(call.Sel, "HasSuffix") {
+			fun = "HasSuffix"
+		} else {
+			return true
+		}
+
+		assign, ok := ifstmt.Body.List[0].(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		if assign.Tok != token.ASSIGN {
+			return true
+		}
+		if len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+		if !sameNonDynamic(condCall.Args[0], assign.Lhs[0]) {
+			return true
+		}
+		slice, ok := assign.Rhs[0].(*ast.SliceExpr)
+		if !ok {
+			return true
+		}
+		if slice.Slice3 {
+			return true
+		}
+		if !sameNonDynamic(slice.X, condCall.Args[0]) {
+			return true
+		}
+		var index ast.Expr
+		switch fun {
+		case "HasPrefix":
+			// TODO(dh) We could detect a High that is len(s), but another
+			// rule will already flag that, anyway.
+			if slice.High != nil {
+				return true
+			}
+			index = slice.Low
+		case "HasSuffix":
+			if slice.Low != nil {
+				n, ok := intLit(f, slice.Low)
+				if !ok || n != 0 {
+					return true
+				}
+			}
+			index = slice.High
+		}
+
+		switch index := index.(type) {
+		case *ast.CallExpr:
+			if fun != "HasPrefix" {
+				return true
+			}
+			if fn, ok := index.Fun.(*ast.Ident); !ok || fn.Name != "len" {
+				return true
+			}
+			if len(index.Args) != 1 {
+				return true
+			}
+			id3 := index.Args[0]
+			switch oid3 := condCall.Args[1].(type) {
+			case *ast.BasicLit:
+				if pkg != "strings" {
+					return false
+				}
+				lit, ok := id3.(*ast.BasicLit)
+				if !ok {
+					return true
+				}
+				s1, ok1 := stringLit(f, lit)
+				s2, ok2 := stringLit(f, condCall.Args[1])
+				if !ok1 || !ok2 || s1 != s2 {
+					return true
+				}
+			default:
+				if !sameNonDynamic(id3, oid3) {
+					return true
+				}
+			}
+		case *ast.BasicLit, *ast.Ident:
+			if fun != "HasPrefix" {
+				return true
+			}
+			if pkg != "strings" {
+				return true
+			}
+			string, ok1 := stringLit(f, condCall.Args[1])
+			int, ok2 := intLit(f, slice.Low)
+			if !ok1 || !ok2 || int != int64(len(string)) {
+				return true
+			}
+		case *ast.BinaryExpr:
+			if fun != "HasSuffix" {
+				return true
+			}
+			if index.Op != token.SUB {
+				return true
+			}
+			if !isLenOnIdent(index.X, condCall.Args[0]) ||
+				!isLenOnIdent(index.Y, condCall.Args[1]) {
+				return true
+			}
+		default:
+			return true
+		}
+
+		var replacement string
+		switch fun {
+		case "HasPrefix":
+			replacement = "TrimPrefix"
+		case "HasSuffix":
+			replacement = "TrimSuffix"
+		}
+		f.Errorf(ifstmt, 1, "should replace this if statement with an unconditional %s.%s", pkg, replacement)
+		return true
+	}
+	f.Walk(fn)
+}
+
+func stringLit(f *lint.File, expr ast.Expr) (string, bool) {
+	tv := f.Pkg.TypesInfo.Types[expr]
+	if tv.Value == nil {
+		return "", false
+	}
+	if tv.Value.Kind() != constant.String {
+		return "", false
+	}
+	return constant.StringVal(tv.Value), true
+}
+
+func intLit(f *lint.File, expr ast.Expr) (int64, bool) {
+	tv := f.Pkg.TypesInfo.Types[expr]
+	if tv.Value == nil {
+		return 0, false
+	}
+	if tv.Value.Kind() != constant.Int {
+		return 0, false
+	}
+	val, _ := constant.Int64Val(tv.Value)
+	return val, true
 }

@@ -25,15 +25,19 @@ import (
 	"unicode"
 
 	"github.com/kisielk/gotool"
-	"golang.org/x/tools/container/intsets"
+	"golang.org/x/text/width"
 	"golang.org/x/tools/go/loader"
 )
 
 // Unnecessary conversions are identified by the position
 // of their left parenthesis within a source file.
 
-func apply(file string, edits *intsets.Sparse) {
-	if edits.IsEmpty() {
+type editSet map[token.Position]struct{}
+
+type fileToEditSet map[string]editSet
+
+func apply(file string, edits editSet) {
+	if len(edits) == 0 {
 		return
 	}
 
@@ -46,7 +50,7 @@ func apply(file string, edits *intsets.Sparse) {
 	// Note: We modify edits during the walk.
 	v := editor{edits: edits, file: fset.File(f.Package)}
 	ast.Walk(&v, f)
-	if !edits.IsEmpty() {
+	if len(edits) != 0 {
 		log.Printf("%s: missing edits %s", file, edits)
 	}
 
@@ -64,7 +68,7 @@ func apply(file string, edits *intsets.Sparse) {
 }
 
 type editor struct {
-	edits *intsets.Sparse
+	edits editSet
 	file  *token.File
 }
 
@@ -87,73 +91,74 @@ func (e *editor) Visit(n ast.Node) ast.Visitor {
 }
 
 func (e *editor) rewrite(f *ast.Expr) {
-	n, ok := (*f).(*ast.CallExpr)
+	call, ok := (*f).(*ast.CallExpr)
 	if !ok {
 		return
 	}
-	off := e.file.Offset(n.Lparen)
-	if !e.edits.Has(off) {
+
+	pos := e.file.Position(call.Lparen)
+	if _, ok := e.edits[pos]; !ok {
 		return
 	}
-	*f = n.Args[0]
-	e.edits.Remove(off)
+	*f = call.Args[0]
+	delete(e.edits, pos)
 }
 
-func print(name string, edits *intsets.Sparse) {
-	if edits.IsEmpty() {
-		return
-	}
+var (
+	cr = []byte{'\r'}
+	nl = []byte{'\n'}
+)
 
-	buf, err := ioutil.ReadFile(name)
-	if err != nil {
-		log.Fatal(err)
-	}
+func print(conversions []token.Position) {
+	var file string
+	var lines [][]byte
 
-	fset := token.NewFileSet()
-	f, err := parser.ParseFile(fset, name, buf, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	file := fset.File(f.Package)
-	for _, p := range edits.AppendTo(nil) {
-		pos := file.Position(file.Pos(p))
+	for _, pos := range conversions {
 		fmt.Printf("%s:%d:%d: unnecessary conversion\n", pos.Filename, pos.Line, pos.Column)
 		if *flagV {
-			line := lineForOffset(buf, pos.Offset)
+			if pos.Filename != file {
+				buf, err := ioutil.ReadFile(pos.Filename)
+				if err != nil {
+					log.Fatal(err)
+				}
+				file = pos.Filename
+				lines = bytes.Split(buf, nl)
+			}
+
+			line := bytes.TrimSuffix(lines[pos.Line-1], cr)
 			fmt.Printf("%s\n", line)
-			fmt.Printf("%s^\n", rub(line[:pos.Column-1]))
+
+			// For files processed by cgo, Column is the
+			// column location after cgo processing, which
+			// may be different than the source column
+			// that we want here. In lieu of a better
+			// heuristic for detecting this case, at least
+			// avoid panicking if column is out of bounds.
+			if pos.Column <= len(line) {
+				fmt.Printf("%s^\n", rub(line[:pos.Column-1]))
+			}
 		}
 	}
 }
 
+// Rub returns a copy of buf with all non-whitespace characters replaced
+// by spaces (like rubbing them out with white out).
 func rub(buf []byte) []byte {
 	// TODO(mdempsky): Handle combining characters?
-	// TODO(mdempsky): Handle East Asian wide characters?
 	var res bytes.Buffer
-	for _, c := range string(buf) {
-		if !unicode.IsSpace(c) {
-			c = ' '
+	for _, r := range string(buf) {
+		if unicode.IsSpace(r) {
+			res.WriteRune(r)
+			continue
 		}
-		res.WriteRune(c)
+		switch width.LookupRune(r).Kind() {
+		case width.EastAsianWide, width.EastAsianFullwidth:
+			res.WriteString("  ")
+		default:
+			res.WriteByte(' ')
+		}
 	}
 	return res.Bytes()
-}
-
-func lineForOffset(buf []byte, off int) []byte {
-	sol := bytes.LastIndexByte(buf[:off], '\n')
-	if sol < 0 {
-		sol = 0
-	} else {
-		sol += 1
-	}
-	eol := bytes.IndexByte(buf[off:], '\n')
-	if eol < 0 {
-		eol = len(buf)
-	} else {
-		eol += off
-	}
-	return buf[sol:eol]
 }
 
 var (
@@ -188,7 +193,7 @@ func main() {
 		return
 	}
 
-	var m map[string]*intsets.Sparse
+	var m fileToEditSet
 	if *flagAll {
 		m = mergeEdits(importPaths)
 	} else {
@@ -207,19 +212,15 @@ func main() {
 		}
 		wg.Wait()
 	} else {
-		var files []string
-		for f := range m {
-			files = append(files, f)
-		}
-		sort.Strings(files)
-		found := false
-		for _, f := range files {
-			if !m[f].IsEmpty() {
-				found = true
+		var conversions []token.Position
+		for _, positions := range m {
+			for pos := range positions {
+				conversions = append(conversions, pos)
 			}
-			print(f, m[f])
 		}
-		if found {
+		sort.Sort(byPosition(conversions))
+		print(conversions)
+		if len(conversions) > 0 {
 			os.Exit(1)
 		}
 	}
@@ -267,12 +268,16 @@ var plats = [...]struct {
 	{"windows", "amd64"},
 }
 
-func mergeEdits(importPaths []string) map[string]*intsets.Sparse {
-	m := make(map[string]*intsets.Sparse)
+func mergeEdits(importPaths []string) fileToEditSet {
+	m := make(fileToEditSet)
 	for _, plat := range plats {
 		for f, e := range computeEdits(importPaths, plat.goos, plat.goarch, false) {
 			if e0, ok := m[f]; ok {
-				e0.IntersectionWith(e)
+				for k := range e0 {
+					if _, ok := e[k]; !ok {
+						delete(e0, k)
+					}
+				}
 			} else {
 				m[f] = e
 			}
@@ -287,7 +292,7 @@ func (noImporter) Import(path string) (*types.Package, error) {
 	panic("golang.org/x/tools/go/loader said this wouldn't be called")
 }
 
-func computeEdits(importPaths []string, os, arch string, cgoEnabled bool) map[string]*intsets.Sparse {
+func computeEdits(importPaths []string, os, arch string, cgoEnabled bool) fileToEditSet {
 	ctxt := build.Default
 	ctxt.GOOS = os
 	ctxt.GOARCH = arch
@@ -306,7 +311,7 @@ func computeEdits(importPaths []string, os, arch string, cgoEnabled bool) map[st
 
 	type res struct {
 		file  string
-		edits *intsets.Sparse
+		edits editSet
 	}
 	ch := make(chan res)
 	var wg sync.WaitGroup
@@ -316,9 +321,9 @@ func computeEdits(importPaths []string, os, arch string, cgoEnabled bool) map[st
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				v := visitor{pkg: pkg, file: conf.Fset.File(file.Package)}
+				v := visitor{pkg: pkg, file: conf.Fset.File(file.Package), edits: make(editSet)}
 				ast.Walk(&v, file)
-				ch <- res{v.file.Name(), &v.edits}
+				ch <- res{v.file.Name(), v.edits}
 			}()
 		}
 	}
@@ -327,7 +332,7 @@ func computeEdits(importPaths []string, os, arch string, cgoEnabled bool) map[st
 		close(ch)
 	}()
 
-	m := make(map[string]*intsets.Sparse)
+	m := make(fileToEditSet)
 	for r := range ch {
 		m[r.file] = r.edits
 	}
@@ -342,7 +347,7 @@ type step struct {
 type visitor struct {
 	pkg   *loader.PackageInfo
 	file  *token.File
-	edits intsets.Sparse
+	edits editSet
 	path  []step
 }
 
@@ -397,8 +402,31 @@ func (v *visitor) unconvert(call *ast.CallExpr) {
 		fmt.Println("Skipped a possible type conversion because of -safe at", v.file.Position(call.Pos()))
 		return
 	}
+	if v.isCgoCheckPointerContext() {
+		// cmd/cgo generates explicit type conversions that
+		// are often redundant when introducing
+		// _cgoCheckPointer calls (issue #16).  Users can't do
+		// anything about these, so skip over them.
+		return
+	}
 
-	v.edits.Insert(v.file.Offset(call.Lparen))
+	v.edits[v.file.Position(call.Lparen)] = struct{}{}
+}
+
+func (v *visitor) isCgoCheckPointerContext() bool {
+	ctxt := &v.path[len(v.path)-2]
+	if ctxt.i != 1 {
+		return false
+	}
+	call, ok := ctxt.n.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	ident, ok := call.Fun.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	return ident.Name == "_cgoCheckPointer"
 }
 
 // isSafeContext reports whether the current context requires
@@ -599,4 +627,24 @@ func asBuiltin(n ast.Expr, info *types.Info) (*types.Builtin, bool) {
 
 	b, ok := obj.(*types.Builtin)
 	return b, ok
+}
+
+type byPosition []token.Position
+
+func (p byPosition) Len() int {
+	return len(p)
+}
+
+func (p byPosition) Less(i, j int) bool {
+	if p[i].Filename != p[j].Filename {
+		return p[i].Filename < p[j].Filename
+	}
+	if p[i].Line != p[j].Line {
+		return p[i].Line < p[j].Line
+	}
+	return p[i].Column < p[j].Column
+}
+
+func (p byPosition) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
 }

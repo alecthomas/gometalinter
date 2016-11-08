@@ -2,55 +2,12 @@ package misspell
 
 import (
 	"bytes"
+	"regexp"
 	"strings"
 )
 
-// Functions to remove non-words such as URLs, file paths, etc.
-
-// This needs auditing as I believe it is wrong
-func enURLChar(c rune) bool {
-	return (c >= 'a' && c <= 'z') ||
-		(c >= 'A' && c <= 'Z') ||
-		(c >= '0' && c <= '9') ||
-		c == '-' ||
-		c == '_' ||
-		c == '\\' ||
-		c == '.' ||
-		c == ':' ||
-		c == ';' ||
-		c == '/' ||
-		c == '~' ||
-		c == '%' ||
-		c == '*' ||
-		c == '$' ||
-		c == '[' ||
-		c == ']' ||
-		c == '?' ||
-		c == '#' ||
-		c == '!'
-}
-func enNotURLChar(c rune) bool {
-	return !enURLChar(c)
-}
-
-// RemoveURL attempts to strip away obvious URLs
-//
-func RemoveURL(s string) string {
-	var idx int
-
-	for {
-		if idx = strings.Index(s, "http"); idx == -1 {
-			return s
-		}
-
-		news := s[:idx]
-		endx := strings.IndexFunc(s[idx:], enNotURLChar)
-		if endx != -1 {
-			news = news + " " + s[idx+endx:]
-		}
-		s = news
-	}
-}
+var reEmail = regexp.MustCompile(`[a-zA-Z0-9_.%+-]+@[a-zA-Z0-9-.]+\.[a-zA-Z]{2,6}[^a-zA-Z]`)
+var reHost = regexp.MustCompile(`[a-zA-Z0-9-.]+\.[a-zA-Z]+`)
 
 // RemovePath attempts to strip away embedded file system paths, e.g.
 //  /foo/bar or /static/myimg.png
@@ -95,4 +52,25 @@ func RemovePath(s string) string {
 		}
 	}
 	return out.String()
+}
+
+// replaceWithBlanks returns a string with the same number of spaces as the input
+func replaceWithBlanks(s string) string {
+	return strings.Repeat(" ", len(s))
+}
+
+// RemoveEmail remove email-like strings, e.g. "nickg+junk@xfoobar.com", "nickg@xyz.abc123.biz"
+func RemoveEmail(s string) string {
+	return reEmail.ReplaceAllStringFunc(s, replaceWithBlanks)
+}
+
+// RemoveHost removes host-like strings "foobar.com" "abc123.fo1231.biz"
+func RemoveHost(s string) string {
+	return reHost.ReplaceAllStringFunc(s, replaceWithBlanks)
+}
+
+// RemoveNotWords blanks out all the not words
+func RemoveNotWords(s string) string {
+	// do most selective/specific first
+	return RemoveHost(RemoveEmail(RemovePath(StripURL(s))))
 }
