@@ -739,7 +739,7 @@ func executeLinter(state *linterState) error {
 	}
 
 	processOutput(state, buf.Bytes())
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	debug("%s linter took %s", state.Name, elapsed)
 	return nil
 }
