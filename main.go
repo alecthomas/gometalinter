@@ -347,7 +347,9 @@ Severity override map (default is "warning"):
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
 	if !*enableGCFlag {
-		_ = os.Setenv("GOGC", "off")
+		if err := os.Setenv("GOGC", "off"); err != nil {
+			warning("setenv: %v", err)
+		}
 	}
 	if *vendoredLintersFlag && *installFlag && *updateFlag {
 		warning(`Linters are now vendored by default, --update ignored. The original
@@ -369,7 +371,9 @@ https://github.com/alecthomas/gometalinter/issues/new
 	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
 	// TODO(alec): This will probably need to be enabled by default at a later time.
 	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || *vendorFlag {
-		os.Setenv("GO15VENDOREXPERIMENT", "1")
+		if err := os.Setenv("GO15VENDOREXPERIMENT", "1"); err != nil {
+			warning("setenv: %v", err)
+		}
 		*skipFlag = append(*skipFlag, "vendor")
 		*vendorFlag = true
 	}
@@ -739,7 +743,7 @@ func executeLinter(state *linterState) error {
 	}
 
 	processOutput(state, buf.Bytes())
-	elapsed := time.Now().Sub(start)
+	elapsed := time.Since(start)
 	debug("%s linter took %s", state.Name, elapsed)
 	return nil
 }
@@ -892,10 +896,19 @@ func configureEnvironment() {
 
 	path := strings.Join(paths, string(os.PathListSeparator))
 	gopath := strings.Join(gopaths, string(os.PathListSeparator))
-	os.Setenv("PATH", path)
+
+	if err := os.Setenv("PATH", path); err != nil {
+		warning("setenv: %v", err)
+	}
 	debug("PATH=%s", os.Getenv("PATH"))
-	os.Setenv("GOPATH", gopath)
+
+	if err := os.Setenv("GOPATH", gopath); err != nil {
+		warning("setenv: %v", err)
+	}
 	debug("GOPATH=%s", os.Getenv("GOPATH"))
-	os.Setenv("GOBIN", gobin)
+
+	if err := os.Setenv("GOBIN", gobin); err != nil {
+		warning("setenv: %v", err)
+	}
 	debug("GOBIN=%s", os.Getenv("GOBIN"))
 }
