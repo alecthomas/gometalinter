@@ -50,7 +50,7 @@ func (l *Linter) String() string {
 }
 
 func LinterFromName(name string) *Linter {
-	s := lintersFlag[name]
+	s := config.Linters[name]
 	parts := strings.SplitN(s, ":", 2)
 	pattern := parts[1]
 	if p, ok := predefinedPatterns[pattern]; ok {
@@ -63,8 +63,8 @@ func LinterFromName(name string) *Linter {
 		Command:          s[0:strings.Index(s, ":")],
 		Pattern:          pattern,
 		InstallFrom:      installMap[name],
-		SeverityOverride: Severity(linterSeverityFlag[name]),
-		MessageOverride:  linterMessageOverrideFlag[name],
+		SeverityOverride: Severity(config.Severity[name]),
+		MessageOverride:  config.MessageOverride[name],
 		regex:            re,
 	}
 }
@@ -109,7 +109,46 @@ func (s *sortedIssues) Less(i, j int) bool {
 	return true
 }
 
+// Config for gometalinter. This can be loaded from a JSON file with --config.
+type Config struct {
+	DisableAll      bool
+	EnableAll       bool
+	Linters         map[string]string
+	Disable         []string
+	Enable          []string
+	MessageOverride map[string]string
+	Severity        map[string]string
+	VendoredLinters bool
+	Format          string
+	Fast            bool
+	Install         bool
+	Update          bool
+	Force           bool
+	Debug           bool
+	Concurrency     int
+	Exclude         []string
+	Include         []string
+	Skip            []string
+	Vendor          bool
+	Cyclo           int
+	LineLength      int
+	MinConfidence   float64
+	MinOccurrences  int
+	MinConstLength  int
+	DuplThreshold   int
+	Sort            []string
+	Test            bool
+	Deadline        time.Duration
+	Errors          bool
+	JSON            bool
+	Checkstyle      bool
+	EnableGC        bool
+	Aggregate       bool
+}
+
 var (
+	vetRe = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
+
 	// Locations to look for vendored linters.
 	vendoredSearchPaths = [][]string{
 		{"github.com", "alecthomas", "gometalinter", "vendor"},
@@ -118,50 +157,6 @@ var (
 	predefinedPatterns = map[string]string{
 		"PATH:LINE:COL:MESSAGE": `^(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
-	}
-	vetRe       = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
-	lintersFlag = map[string]string{
-		"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"deadcode":    `deadcode {path}:^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>.*?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
-		"errcheck":    `errcheck -abspath {path}:PATH:LINE:COL:MESSAGE`,
-		"gas":         `gas -fmt=csv {path}/*.go:^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
-		"goconst":     `goconst -min-occurrences {min_occurrences} -min-length {min_const_length} {path}:PATH:LINE:COL:MESSAGE`,
-		"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>.*?\.go):(?P<line>\d+):(\d+)$`,
-		"gofmt":       `gofmt -l -s {path}/*.go:^(?P<path>.*?\.go)$`,
-		"goimports":   `goimports -l {path}/*.go:^(?P<path>.*?\.go)$`,
-		"golint":      "golint -min_confidence {min_confidence} {path}:PATH:LINE:COL:MESSAGE",
-		"gosimple":    "gosimple {path}:PATH:LINE:COL:MESSAGE",
-		"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
-		"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
-		"interfacer":  `interfacer {path}:PATH:LINE:COL:MESSAGE`,
-		"lll":         `lll -g -l {maxlinelength} {path}/*.go:PATH:LINE:MESSAGE`,
-		"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
-		"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
-		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		"test":        `go test {path}:^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
-		"testify":     `go test {path}:Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-		"unconvert":   "unconvert {path}:PATH:LINE:COL:MESSAGE",
-		"unused":      `unused {path}:PATH:LINE:COL:MESSAGE`,
-		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"vet":         `go tool vet {path}/*.go:` + vetRe,
-		"vetshadow":   `go tool vet --shadow {path}/*.go:` + vetRe,
-	}
-	disabledLinters           = []string{"testify", "test", "gofmt", "goimports", "lll", "misspell", "unused"}
-	enabledLinters            = []string{}
-	linterMessageOverrideFlag = map[string]string{
-		"errcheck":    "error return value not checked ({message})",
-		"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
-		"gofmt":       "file is not gofmted with -s",
-		"goimports":   "file is not goimported",
-		"structcheck": "unused struct field {message}",
-		"varcheck":    "unused global variable {message}",
-	}
-	linterSeverityFlag = map[string]string{
-		"gotype":  "error",
-		"test":    "error",
-		"testify": "error",
-		"vet":     "error",
 	}
 	installMap = map[string]string{
 		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
@@ -199,67 +194,112 @@ var (
 	}
 	slowLinters    = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
 	sortKeys       = []string{"none", "path", "line", "column", "severity", "message", "linter"}
-	formatFlag     = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"
 	formatTemplate = &template.Template{}
 
-	pathsArg            = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
-	vendoredLintersFlag = kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").Default("true").Bool()
-	fastFlag            = kingpin.Flag("fast", "Only run fast linters.").Bool()
-	installFlag         = kingpin.Flag("install", "Attempt to install all known linters.").Short('i').Bool()
-	updateFlag          = kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').Bool()
-	forceFlag           = kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').Bool()
-	debugFlag           = kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').Bool()
-	concurrencyFlag     = kingpin.Flag("concurrency", "Number of concurrent linters to run.").Default("16").Short('j').Int()
-	excludeFlag         = kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").Strings()
-	includeFlag         = kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").Strings()
-	skipFlag            = kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").Strings()
-	vendorFlag          = kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Bool()
-	cycloFlag           = kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").Default("10").Int()
-	lineLengthFlag      = kingpin.Flag("line-length", "Report lines longer than N (using lll).").Default("80").Int()
-	minConfidence       = kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").Default(".80").Float()
-	minOccurrences      = kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").Default("3").Int()
-	minConstLength      = kingpin.Flag("min-const-length", "Minimumum constant length.").Default("3").Int()
-	duplThresholdFlag   = kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").Default("50").Int()
-	sortFlag            = kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).Default("none").Enums(sortKeys...)
-	testFlag            = kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').Bool()
-	deadlineFlag        = kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").Default("5s").Duration()
-	errorsFlag          = kingpin.Flag("errors", "Only show errors.").Bool()
-	jsonFlag            = kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").Bool()
-	checkstyleFlag      = kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").Bool()
-	enableGCFlag        = kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").Bool()
-	aggregateFlag       = kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").Bool()
+	configFlag *os.File
+
+	pathsArg = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
+
+	// Configuration defaults.
+	config = &Config{
+		Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",
+		Linters: map[string]string{
+			"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+			"deadcode":    `deadcode {path}:^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+			"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>.*?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
+			"errcheck":    `errcheck -abspath {path}:PATH:LINE:COL:MESSAGE`,
+			"gas":         `gas -fmt=csv {path}/*.go:^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
+			"goconst":     `goconst -min-occurrences {min_occurrences} -min-length {min_const_length} {path}:PATH:LINE:COL:MESSAGE`,
+			"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>.*?\.go):(?P<line>\d+):(\d+)$`,
+			"gofmt":       `gofmt -l -s {path}/*.go:^(?P<path>.*?\.go)$`,
+			"goimports":   `goimports -l {path}/*.go:^(?P<path>.*?\.go)$`,
+			"golint":      "golint -min_confidence {min_confidence} {path}:PATH:LINE:COL:MESSAGE",
+			"gosimple":    "gosimple {path}:PATH:LINE:COL:MESSAGE",
+			"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
+			"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
+			"interfacer":  `interfacer {path}:PATH:LINE:COL:MESSAGE`,
+			"lll":         `lll -g -l {maxlinelength} {path}/*.go:PATH:LINE:MESSAGE`,
+			"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
+			"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
+			"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
+			"test":        `go test {path}:^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
+			"testify":     `go test {path}:Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
+			"unconvert":   "unconvert {path}:PATH:LINE:COL:MESSAGE",
+			"unused":      `unused {path}:PATH:LINE:COL:MESSAGE`,
+			"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+			"vet":         `go tool vet {path}/*.go:` + vetRe,
+			"vetshadow":   `go tool vet --shadow {path}/*.go:` + vetRe,
+		},
+		Severity: map[string]string{
+			"gotype":  "error",
+			"test":    "error",
+			"testify": "error",
+			"vet":     "error",
+		},
+		MessageOverride: map[string]string{
+			"errcheck":    "error return value not checked ({message})",
+			"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
+			"gofmt":       "file is not gofmted with -s",
+			"goimports":   "file is not goimported",
+			"structcheck": "unused struct field {message}",
+			"varcheck":    "unused global variable {message}",
+		},
+		Disable: []string{
+			"testify", "test", "gofmt", "goimports", "lll", "misspell", "unused", "dupl",
+		},
+		Enable:          []string{},
+		VendoredLinters: true,
+		Concurrency:     16,
+		Cyclo:           10,
+		LineLength:      80,
+		MinConfidence:   0.8,
+		MinOccurrences:  3,
+		MinConstLength:  3,
+		DuplThreshold:   50,
+		Sort:            []string{"none"},
+		Deadline:        time.Second * 5,
+	}
 )
 
-func disableAllLinters(*kingpin.ParseContext) error {
-	disabledLinters = []string{}
-	for linter := range lintersFlag {
-		disabledLinters = append(disabledLinters, linter)
-	}
-	return nil
-}
-
-func enableAllLinters(*kingpin.ParseContext) error {
-	disabledLinters = []string{}
-	return nil
-}
-
-func compileOutputTemplate(*kingpin.ParseContext) error {
-	tmpl, err := template.New("output").Parse(formatFlag)
-	formatTemplate = tmpl
-	return err
+func loadConfig(*kingpin.ParseContext) error {
+	return json.NewDecoder(configFlag).Decode(config)
 }
 
 func init() {
-	kingpin.FatalIfError(compileOutputTemplate(nil), "")
-
-	kingpin.Flag("disable", fmt.Sprintf("List of linters to disable (%s).", strings.Join(disabledLinters, ","))).PlaceHolder("LINTER").Short('D').StringsVar(&disabledLinters)
-	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').StringsVar(&enabledLinters)
-	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&lintersFlag)
-	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&linterMessageOverrideFlag)
-	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&linterSeverityFlag)
-	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllLinters).Bool()
-	kingpin.Flag("enable-all", "Enable all linters.").Action(enableAllLinters).Bool()
-	kingpin.Flag("format", "Output format.").Default(formatFlag).Action(compileOutputTemplate).StringVar(&formatFlag)
+	kingpin.Flag("config", "Load JSON configuration from file.").Action(loadConfig).FileVar(&configFlag)
+	kingpin.Flag("disable", fmt.Sprintf("List of linters to disable (%s).", strings.Join(config.Disable, ","))).PlaceHolder("LINTER").Short('D').StringsVar(&config.Disable)
+	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').StringsVar(&config.Enable)
+	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
+	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&config.MessageOverride)
+	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
+	kingpin.Flag("disable-all", "Disable all linters.").BoolVar(&config.DisableAll)
+	kingpin.Flag("enable-all", "Enable all linters.").BoolVar(&config.EnableAll)
+	kingpin.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
+	kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
+	kingpin.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
+	kingpin.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
+	kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').BoolVar(&config.Update)
+	kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').BoolVar(&config.Force)
+	kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
+	kingpin.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder("16").Short('j').IntVar(&config.Concurrency)
+	kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
+	kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
+	kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
+	kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").BoolVar(&config.Vendor)
+	kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").PlaceHolder("10").IntVar(&config.Cyclo)
+	kingpin.Flag("line-length", "Report lines longer than N (using lll).").PlaceHolder("80").IntVar(&config.LineLength)
+	kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").PlaceHolder(".80").FloatVar(&config.MinConfidence)
+	kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").PlaceHolder("3").IntVar(&config.MinOccurrences)
+	kingpin.Flag("min-const-length", "Minimumum constant length.").PlaceHolder("3").IntVar(&config.MinConstLength)
+	kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").PlaceHolder("50").IntVar(&config.DuplThreshold)
+	kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).PlaceHolder("none").EnumsVar(&config.Sort, sortKeys...)
+	kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').BoolVar(&config.Test)
+	kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("5s").DurationVar(&config.Deadline)
+	kingpin.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
+	kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
+	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
+	kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
+	kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
 }
 
 type Issue struct {
@@ -279,7 +319,7 @@ func (i *Issue) String() string {
 }
 
 func debug(format string, args ...interface{}) {
-	if *debugFlag {
+	if config.Debug {
 		fmt.Fprintf(os.Stderr, "DEBUG: "+format+"\n", args...)
 	}
 }
@@ -290,7 +330,7 @@ func warning(format string, args ...interface{}) {
 
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
-	for name := range lintersFlag {
+	for name := range config.Linters {
 		linter := LinterFromName(name)
 		install := "(" + linter.InstallFrom + ")"
 		if install == "()" {
@@ -303,7 +343,7 @@ func formatLinters() string {
 
 func formatSeverity() string {
 	w := bytes.NewBuffer(nil)
-	for name, severity := range linterSeverityFlag {
+	for name, severity := range config.Severity {
 		fmt.Fprintf(w, "  %s -> %s\n", name, severity)
 	}
 	return w.String()
@@ -337,7 +377,7 @@ func main() {
 	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
-Default linters:
+PlaceHolder linters:
 
 %s
 
@@ -346,63 +386,25 @@ Severity override map (default is "warning"):
 %s
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
-	if !*enableGCFlag {
-		if err := os.Setenv("GOGC", "off"); err != nil {
-			warning("setenv: %v", err)
-		}
-	}
-	if *vendoredLintersFlag && *installFlag && *updateFlag {
-		warning(`Linters are now vendored by default, --update ignored. The original
-behaviour can be re-enabled with --no-vendored-linters.
-
-To request an update for a vendored linter file an issue at:
-https://github.com/alecthomas/gometalinter/issues/new
-`)
-		*updateFlag = false
-	}
-	// Force sorting by path if checkstyle mode is selected
-	// !jsonFlag check is required to handle:
-	// 	gometalinter --json --checkstyle --sort=severity
-	if *checkstyleFlag && !*jsonFlag {
-		*sortFlag = []string{"path"}
-	}
 
 	configureEnvironment()
-	// Default to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
-	// TODO(alec): This will probably need to be enabled by default at a later time.
-	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || *vendorFlag {
-		if err := os.Setenv("GO15VENDOREXPERIMENT", "1"); err != nil {
-			warning("setenv: %v", err)
-		}
-		*skipFlag = append(*skipFlag, "vendor")
-		*vendorFlag = true
-	}
-	var exclude *regexp.Regexp
-	if len(*excludeFlag) > 0 {
-		exclude = regexp.MustCompile(strings.Join(*excludeFlag, "|"))
-	}
 
-	var include *regexp.Regexp
-	if len(*includeFlag) > 0 {
-		include = regexp.MustCompile(strings.Join(*includeFlag, "|"))
-	}
-
-	if *installFlag {
+	if config.Install {
 		installLinters()
 		return
 	}
 
-	runtime.GOMAXPROCS(*concurrencyFlag)
+	include, exclude := processConfig(config)
 
 	start := time.Now()
-	paths := expandPaths(*pathsArg, *skipFlag)
+	paths := expandPaths(*pathsArg, config.Skip)
 
 	linters := lintersFromFlags()
 	status := 0
-	issues, errch := runLinters(linters, paths, *pathsArg, *concurrencyFlag, exclude, include)
-	if *jsonFlag {
+	issues, errch := runLinters(linters, paths, *pathsArg, config.Concurrency, exclude, include)
+	if config.JSON {
 		status |= outputToJSON(issues)
-	} else if *checkstyleFlag {
+	} else if config.Checkstyle {
 		status |= outputToCheckstyle(issues)
 	} else {
 		status |= outputToConsole(issues)
@@ -416,10 +418,63 @@ https://github.com/alecthomas/gometalinter/issues/new
 	os.Exit(status)
 }
 
+func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Regexp) {
+	tmpl, err := template.New("output").Parse(config.Format)
+	kingpin.FatalIfError(err, "invalid format %q", config.Format)
+	formatTemplate = tmpl
+	if config.DisableAll {
+		config.Disable = []string{}
+		for linter := range config.Linters {
+			config.Disable = append(config.Disable, linter)
+		}
+	}
+	if config.EnableAll {
+		config.Disable = []string{}
+	}
+	if !config.EnableGC {
+		_ = os.Setenv("GOGC", "off")
+	}
+	if config.VendoredLinters && config.Install && config.Update {
+		warning(`Linters are now vendored by default, --update ignored. The original
+behaviour can be re-enabled with --no-vendored-linters.
+
+To request an update for a vendored linter file an issue at:
+https://github.com/alecthomas/gometalinter/issues/new
+`)
+		config.Update = false
+	}
+	// Force sorting by path if checkstyle mode is selected
+	// !jsonFlag check is required to handle:
+	// 	gometalinter --json --checkstyle --sort=severity
+	if config.Checkstyle && !config.JSON {
+		config.Sort = []string{"path"}
+	}
+
+	// PlaceHolder to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
+	// TODO(alec): This will probably need to be enabled by default at a later time.
+	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || config.Vendor {
+		if err := os.Setenv("GO15VENDOREXPERIMENT", "1"); err != nil {
+			warning("setenv GO15VENDOREXPERIMENT: %s", err)
+		}
+		config.Skip = append(config.Skip, "vendor")
+		config.Vendor = true
+	}
+	if len(config.Exclude) > 0 {
+		exclude = regexp.MustCompile(strings.Join(config.Exclude, "|"))
+	}
+
+	if len(config.Include) > 0 {
+		include = regexp.MustCompile(strings.Join(config.Include, "|"))
+	}
+
+	runtime.GOMAXPROCS(config.Concurrency)
+	return include, exclude
+}
+
 func outputToConsole(issues chan *Issue) int {
 	status := 0
 	for issue := range issues {
-		if *errorsFlag && issue.Severity != Error {
+		if config.Errors && issue.Severity != Error {
 			continue
 		}
 		fmt.Println(issue.String())
@@ -432,7 +487,7 @@ func outputToJSON(issues chan *Issue) int {
 	fmt.Println("[")
 	status := 0
 	for issue := range issues {
-		if *errorsFlag && issue.Severity != Error {
+		if config.Errors && issue.Severity != Error {
 			continue
 		}
 		if status != 0 {
@@ -449,32 +504,32 @@ func outputToJSON(issues chan *Issue) int {
 
 func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
-	concurrencych := make(chan bool, *concurrencyFlag)
+	concurrencych := make(chan bool, config.Concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := maybeSortIssues(maybeAggregateIssues(incomingIssues))
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
 		// Recreated in each loop because it is mutated by executeLinter().
 		vars := Vars{
-			"duplthreshold":    fmt.Sprintf("%d", *duplThresholdFlag),
-			"mincyclo":         fmt.Sprintf("%d", *cycloFlag),
-			"maxlinelength":    fmt.Sprintf("%d", *lineLengthFlag),
-			"min_confidence":   fmt.Sprintf("%f", *minConfidence),
-			"min_occurrences":  fmt.Sprintf("%d", *minOccurrences),
-			"min_const_length": fmt.Sprintf("%d", *minConstLength),
+			"duplthreshold":    fmt.Sprintf("%d", config.DuplThreshold),
+			"mincyclo":         fmt.Sprintf("%d", config.Cyclo),
+			"maxlinelength":    fmt.Sprintf("%d", config.LineLength),
+			"min_confidence":   fmt.Sprintf("%f", config.MinConfidence),
+			"min_occurrences":  fmt.Sprintf("%d", config.MinOccurrences),
+			"min_const_length": fmt.Sprintf("%d", config.MinConstLength),
 			"tests":            "",
 		}
-		if *testFlag {
+		if config.Test {
 			vars["tests"] = "-t"
 		}
 		linterPaths := paths
 		// Most linters don't exclude vendor paths when recursing, so we don't use ... paths.
-		if acceptsEllipsis[linter.Name] && !*vendorFlag && len(ellipsisPaths) > 0 {
+		if acceptsEllipsis[linter.Name] && !config.Vendor && len(ellipsisPaths) > 0 {
 			linterPaths = ellipsisPaths
 		}
 		for _, path := range linterPaths {
 			wg.Add(1)
-			deadline := time.After(*deadlineFlag)
+			deadline := time.After(config.Deadline)
 			state := &linterState{
 				Linter:   linter,
 				issues:   incomingIssues,
@@ -550,16 +605,16 @@ func expandPaths(paths, skip []string) []string {
 
 func makeInstallCommand(linters ...string) []string {
 	cmd := []string{"get"}
-	if *vendoredLintersFlag {
+	if config.VendoredLinters {
 		cmd = []string{"install"}
 	}
-	if *debugFlag {
+	if config.Debug {
 		cmd = append(cmd, "-v")
 	}
-	if *updateFlag {
+	if config.Update {
 		cmd = append(cmd, "-u")
 	}
-	if *forceFlag {
+	if config.Force {
 		cmd = append(cmd, "-f")
 	}
 	cmd = append(cmd, linters...)
@@ -611,20 +666,20 @@ func installLinters() {
 }
 
 func maybeAggregateIssues(issues chan *Issue) chan *Issue {
-	if !*aggregateFlag {
+	if !config.Aggregate {
 		return issues
 	}
 	return aggregateIssues(issues)
 }
 
 func maybeSortIssues(issues chan *Issue) chan *Issue {
-	if reflect.DeepEqual([]string{"none"}, *sortFlag) {
+	if reflect.DeepEqual([]string{"none"}, config.Sort) {
 		return issues
 	}
 	out := make(chan *Issue, 1000000)
 	sorted := &sortedIssues{
 		issues: []*Issue{},
-		order:  *sortFlag,
+		order:  config.Sort,
 	}
 	go func() {
 		for issue := range issues {
@@ -660,7 +715,7 @@ func (l *linterState) InterpolatedCommand() string {
 }
 
 func (l *linterState) ShouldChdir() bool {
-	return *vendorFlag || !strings.HasSuffix(l.path, "/...") || !strings.Contains(l.Command, "{path}")
+	return config.Vendor || !strings.HasSuffix(l.path, "/...") || !strings.Contains(l.Command, "{path}")
 }
 
 func parseCommand(dir, command string) (string, []string, error) {
@@ -762,16 +817,16 @@ func (l *linterState) fixPath(path string) string {
 
 func lintersFromFlags() map[string]*Linter {
 	out := map[string]*Linter{}
-	for name := range lintersFlag {
+	for name := range config.Linters {
 		out[name] = LinterFromName(name)
 	}
-	enabled := make([]string, len(enabledLinters))
-	copy(enabled, enabledLinters)
-	disabled := make([]string, len(disabledLinters))
-	copy(disabled, disabledLinters)
+	enabled := make([]string, len(config.Enable))
+	copy(enabled, config.Enable)
+	disabled := make([]string, len(config.Disable))
+	copy(disabled, config.Disable)
 
 	// Disable slow linters.
-	if *fastFlag {
+	if config.Fast {
 		disabled = append(disabled, slowLinters...)
 	}
 
@@ -833,10 +888,10 @@ func processOutput(state *linterState, out []byte) {
 			case "":
 			}
 		}
-		if m, ok := linterMessageOverrideFlag[state.Name]; ok {
+		if m, ok := config.MessageOverride[state.Name]; ok {
 			issue.Message = state.vars.Replace(m)
 		}
-		if sev, ok := linterSeverityFlag[state.Name]; ok {
+		if sev, ok := config.Severity[state.Name]; ok {
 			issue.Severity = Severity(sev)
 		} else {
 			issue.Severity = "warning"
@@ -873,7 +928,7 @@ func configureEnvironment() {
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
 	gobin := os.Getenv("GOBIN")
 
-	if *vendoredLintersFlag && *installFlag {
+	if config.VendoredLinters && config.Install {
 		vendorRoot := findVendoredLinters()
 		if vendorRoot == "" {
 			kingpin.Fatalf("could not find vendored linters in %s", os.Getenv("GOPATH"))
@@ -898,17 +953,17 @@ func configureEnvironment() {
 	gopath := strings.Join(gopaths, string(os.PathListSeparator))
 
 	if err := os.Setenv("PATH", path); err != nil {
-		warning("setenv: %v", err)
+		warning("setenv PATH: %s", err)
 	}
 	debug("PATH=%s", os.Getenv("PATH"))
 
 	if err := os.Setenv("GOPATH", gopath); err != nil {
-		warning("setenv: %v", err)
+		warning("setenv GOPATH: %s", err)
 	}
 	debug("GOPATH=%s", os.Getenv("GOPATH"))
 
 	if err := os.Setenv("GOBIN", gobin); err != nil {
-		warning("setenv: %v", err)
+		warning("setenv GOBIN: %s", err)
 	}
 	debug("GOBIN=%s", os.Getenv("GOBIN"))
 }

@@ -127,7 +127,20 @@ format. Note that this can be *very* slow, and you may need to increase the lint
 
 ### Configuration file
 
-gometalinter can load flags from a file with the syntax `@<file>`.
+gometalinter now supports a JSON configuration file which can be loaded via
+`--config=<file>`. The format of this file is determined by the Config struct
+in `main.go`.
+
+Refer to the corresponding command-line flags for documentation.
+
+Here is an example configuration file:
+
+```json
+{
+  "DisableAll": true,
+  "Enable": ["deadcode", "unconvert"]
+}
+```
 
 ### Exit status
 
