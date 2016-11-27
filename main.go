@@ -607,15 +607,16 @@ func makeInstallCommand(linters ...string) []string {
 	cmd := []string{"get"}
 	if config.VendoredLinters {
 		cmd = []string{"install"}
+	} else {
+		if config.Update {
+			cmd = append(cmd, "-u")
+		}
+		if config.Force {
+			cmd = append(cmd, "-f")
+		}
 	}
 	if config.Debug {
 		cmd = append(cmd, "-v")
-	}
-	if config.Update {
-		cmd = append(cmd, "-u")
-	}
-	if config.Force {
-		cmd = append(cmd, "-f")
 	}
 	cmd = append(cmd, linters...)
 	return cmd
