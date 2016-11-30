@@ -42,7 +42,7 @@ It is intended for use with editor/IDE integration.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
 - [gosimple](https://github.com/dominikh/go-simple) - Report simplifications in code.
-- [staticcheck](https://github.com/dominikh/go-staticcheck) - Check inputs to functions for correctness
+- [staticcheck](https://github.com/dominikh/go-staticcheck) - Statically detect bugs, both obvious and subtle ones.
 
 Disabled by default (enable with `--enable=<linter>`):
 
