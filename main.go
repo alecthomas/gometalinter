@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 type Severity string
@@ -111,11 +111,8 @@ func (s *sortedIssues) Less(i, j int) bool {
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
 type Config struct {
-	DisableAll      bool
-	EnableAll       bool
-	Linters         map[string]string
-	Disable         []string
-	Enable          []string
+	Linters         map[string]string // Linter definitions.
+	Enable          []string          // Linters to enable.
 	MessageOverride map[string]string
 	Severity        map[string]string
 	VendoredLinters bool
@@ -196,13 +193,12 @@ var (
 	sortKeys       = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 	formatTemplate = &template.Template{}
 
-	configFlag *os.File
-
-	pathsArg = kingpin.Arg("path", "Directory to lint. Defaults to \".\". <path>/... will recurse.").Strings()
+	pathsArg = kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 
 	// Configuration defaults.
 	config = &Config{
 		Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",
+		// Linter definitions.
 		Linters: map[string]string{
 			"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 			"deadcode":    `deadcode {path}:^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
@@ -244,10 +240,25 @@ var (
 			"structcheck": "unused struct field {message}",
 			"varcheck":    "unused global variable {message}",
 		},
-		Disable: []string{
-			"testify", "test", "gofmt", "goimports", "lll", "misspell", "unused", "dupl",
+		Enable: []string{
+			"aligncheck",
+			"deadcode",
+			"errcheck",
+			"gas",
+			"goconst",
+			"gocyclo",
+			"golint",
+			"gosimple",
+			"gotype",
+			"ineffassign",
+			"interfacer",
+			"staticcheck",
+			"structcheck",
+			"unconvert",
+			"varcheck",
+			"vet",
+			"vetshadow",
 		},
-		Enable:          []string{},
 		VendoredLinters: true,
 		Concurrency:     16,
 		Cyclo:           10,
@@ -261,19 +272,15 @@ var (
 	}
 )
 
-func loadConfig(*kingpin.ParseContext) error {
-	return json.NewDecoder(configFlag).Decode(config)
-}
-
 func init() {
-	kingpin.Flag("config", "Load JSON configuration from file.").Action(loadConfig).FileVar(&configFlag)
-	kingpin.Flag("disable", fmt.Sprintf("List of linters to disable (%s).", strings.Join(config.Disable, ","))).PlaceHolder("LINTER").Short('D').StringsVar(&config.Disable)
-	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').StringsVar(&config.Enable)
+	kingpin.Flag("config", "Load JSON configuration from file.").Action(loadConfig).String()
+	kingpin.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
+	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
 	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
 	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&config.MessageOverride)
 	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
-	kingpin.Flag("disable-all", "Disable all linters.").BoolVar(&config.DisableAll)
-	kingpin.Flag("enable-all", "Enable all linters.").BoolVar(&config.EnableAll)
+	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
+	kingpin.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
 	kingpin.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
 	kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
 	kingpin.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
@@ -300,6 +307,41 @@ func init() {
 	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
 	kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
 	kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
+}
+
+func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	r, err := os.Open(*element.Value)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	return json.NewDecoder(r).Decode(config)
+}
+
+func disableAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	for i, linter := range config.Enable {
+		if linter == *element.Value {
+			config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
+		}
+	}
+	return nil
+}
+
+func enableAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	config.Enable = append(config.Enable, *element.Value)
+	return nil
+}
+
+func disableAllAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	config.Enable = []string{}
+	return nil
+}
+
+func enableAllAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	for linter := range config.Linters {
+		config.Enable = append(config.Enable, linter)
+	}
+	return nil
 }
 
 type Issue struct {
@@ -422,15 +464,6 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	formatTemplate = tmpl
-	if config.DisableAll {
-		config.Disable = []string{}
-		for linter := range config.Linters {
-			config.Disable = append(config.Disable, linter)
-		}
-	}
-	if config.EnableAll {
-		config.Disable = []string{}
-	}
 	if !config.EnableGC {
 		_ = os.Setenv("GOGC", "off")
 	}
@@ -818,29 +851,13 @@ func (l *linterState) fixPath(path string) string {
 
 func lintersFromFlags() map[string]*Linter {
 	out := map[string]*Linter{}
-	for name := range config.Linters {
-		out[name] = LinterFromName(name)
+	for _, linter := range config.Enable {
+		out[linter] = LinterFromName(linter)
 	}
-	enabled := make([]string, len(config.Enable))
-	copy(enabled, config.Enable)
-	disabled := make([]string, len(config.Disable))
-	copy(disabled, config.Disable)
-
-	// Disable slow linters.
 	if config.Fast {
-		disabled = append(disabled, slowLinters...)
-	}
-
-	disable := map[string]bool{}
-	for _, linter := range disabled {
-		disable[linter] = true
-	}
-	for _, linter := range enabled {
-		delete(disable, linter)
-	}
-
-	for linter := range disable {
-		delete(out, linter)
+		for _, linter := range slowLinters {
+			delete(out, linter)
+		}
 	}
 	return out
 }
