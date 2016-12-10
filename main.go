@@ -29,6 +29,14 @@ const (
 	Error   Severity = "error"
 )
 
+var (
+	// Locations to look for vendored linters.
+	vendoredSearchPaths = [][]string{
+		{"github.com", "alecthomas", "gometalinter", "vendor"},
+		{"gopkg.in", "alecthomas", "gometalinter.v1", "vendor"},
+	}
+)
+
 type Linter struct {
 	Name             string   `json:"name"`
 	Command          string   `json:"command"`
@@ -50,7 +58,7 @@ func (l *Linter) String() string {
 }
 
 func LinterFromName(name string) *Linter {
-	s := config.Linters[name]
+	s := linterDefinitions[name]
 	parts := strings.SplitN(s, ":", 2)
 	pattern := parts[1]
 	if p, ok := predefinedPatterns[pattern]; ok {
@@ -109,174 +117,11 @@ func (s *sortedIssues) Less(i, j int) bool {
 	return true
 }
 
-// Config for gometalinter. This can be loaded from a JSON file with --config.
-type Config struct {
-	Linters         map[string]string // Linter definitions.
-	Enable          []string          // Linters to enable.
-	MessageOverride map[string]string
-	Severity        map[string]string
-	VendoredLinters bool
-	Format          string
-	Fast            bool
-	Install         bool
-	Update          bool
-	Force           bool
-	Debug           bool
-	Concurrency     int
-	Exclude         []string
-	Include         []string
-	Skip            []string
-	Vendor          bool
-	Cyclo           int
-	LineLength      int
-	MinConfidence   float64
-	MinOccurrences  int
-	MinConstLength  int
-	DuplThreshold   int
-	Sort            []string
-	Test            bool
-	Deadline        time.Duration
-	Errors          bool
-	JSON            bool
-	Checkstyle      bool
-	EnableGC        bool
-	Aggregate       bool
-}
-
-var (
-	vetRe = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
-
-	// Locations to look for vendored linters.
-	vendoredSearchPaths = [][]string{
-		{"github.com", "alecthomas", "gometalinter", "vendor"},
-		{"gopkg.in", "alecthomas", "gometalinter.v1", "vendor"},
-	}
-	predefinedPatterns = map[string]string{
-		"PATH:LINE:COL:MESSAGE": `^(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
-	}
-	installMap = map[string]string{
-		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
-		"deadcode":    "github.com/tsenart/deadcode",
-		"dupl":        "github.com/mibk/dupl",
-		"errcheck":    "github.com/kisielk/errcheck",
-		"gas":         "github.com/HewlettPackard/gas",
-		"goconst":     "github.com/jgautheron/goconst/cmd/goconst",
-		"gocyclo":     "github.com/alecthomas/gocyclo",
-		"goimports":   "golang.org/x/tools/cmd/goimports",
-		"golint":      "github.com/golang/lint/golint",
-		"gosimple":    "honnef.co/go/simple/cmd/gosimple",
-		"gotype":      "golang.org/x/tools/cmd/gotype",
-		"ineffassign": "github.com/gordonklaus/ineffassign",
-		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
-		"lll":         "github.com/walle/lll/cmd/lll",
-		"misspell":    "github.com/client9/misspell/cmd/misspell",
-		"staticcheck": "honnef.co/go/staticcheck/cmd/staticcheck",
-		"structcheck": "github.com/opennota/check/cmd/structcheck",
-		"unconvert":   "github.com/mdempsky/unconvert",
-		"unused":      "honnef.co/go/unused/cmd/unused",
-		"varcheck":    "github.com/opennota/check/cmd/varcheck",
-	}
-	acceptsEllipsis = map[string]bool{
-		"aligncheck":  true,
-		"errcheck":    true,
-		"golint":      true,
-		"gosimple":    true,
-		"interfacer":  true,
-		"staticcheck": true,
-		"structcheck": true,
-		"test":        true,
-		"varcheck":    true,
-		"unconvert":   true,
-	}
-	slowLinters    = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
-	sortKeys       = []string{"none", "path", "line", "column", "severity", "message", "linter"}
-	formatTemplate = &template.Template{}
-
-	pathsArg = kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
-
-	// Configuration defaults.
-	config = &Config{
-		Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",
-		// Linter definitions.
-		Linters: map[string]string{
-			"aligncheck":  `aligncheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-			"deadcode":    `deadcode {path}:^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-			"dupl":        `dupl -plumbing -threshold {duplthreshold} {path}/*.go:^(?P<path>.*?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
-			"errcheck":    `errcheck -abspath {path}:PATH:LINE:COL:MESSAGE`,
-			"gas":         `gas -fmt=csv {path}/*.go:^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
-			"goconst":     `goconst -min-occurrences {min_occurrences} -min-length {min_const_length} {path}:PATH:LINE:COL:MESSAGE`,
-			"gocyclo":     `gocyclo -over {mincyclo} {path}:^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>.*?\.go):(?P<line>\d+):(\d+)$`,
-			"gofmt":       `gofmt -l -s {path}/*.go:^(?P<path>.*?\.go)$`,
-			"goimports":   `goimports -l {path}/*.go:^(?P<path>.*?\.go)$`,
-			"golint":      "golint -min_confidence {min_confidence} {path}:PATH:LINE:COL:MESSAGE",
-			"gosimple":    "gosimple {path}:PATH:LINE:COL:MESSAGE",
-			"gotype":      "gotype -e {tests=-a} {path}:PATH:LINE:COL:MESSAGE",
-			"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
-			"interfacer":  `interfacer {path}:PATH:LINE:COL:MESSAGE`,
-			"lll":         `lll -g -l {maxlinelength} {path}/*.go:PATH:LINE:MESSAGE`,
-			"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
-			"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
-			"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-			"test":        `go test {path}:^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
-			"testify":     `go test {path}:Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-			"unconvert":   "unconvert {path}:PATH:LINE:COL:MESSAGE",
-			"unused":      `unused {path}:PATH:LINE:COL:MESSAGE`,
-			"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-			"vet":         `go tool vet {path}/*.go:` + vetRe,
-			"vetshadow":   `go tool vet --shadow {path}/*.go:` + vetRe,
-		},
-		Severity: map[string]string{
-			"gotype":  "error",
-			"test":    "error",
-			"testify": "error",
-			"vet":     "error",
-		},
-		MessageOverride: map[string]string{
-			"errcheck":    "error return value not checked ({message})",
-			"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
-			"gofmt":       "file is not gofmted with -s",
-			"goimports":   "file is not goimported",
-			"structcheck": "unused struct field {message}",
-			"varcheck":    "unused global variable {message}",
-		},
-		Enable: []string{
-			"aligncheck",
-			"deadcode",
-			"errcheck",
-			"gas",
-			"goconst",
-			"gocyclo",
-			"golint",
-			"gosimple",
-			"gotype",
-			"ineffassign",
-			"interfacer",
-			"staticcheck",
-			"structcheck",
-			"unconvert",
-			"varcheck",
-			"vet",
-			"vetshadow",
-		},
-		VendoredLinters: true,
-		Concurrency:     16,
-		Cyclo:           10,
-		LineLength:      80,
-		MinConfidence:   0.8,
-		MinOccurrences:  3,
-		MinConstLength:  3,
-		DuplThreshold:   50,
-		Sort:            []string{"none"},
-		Deadline:        time.Second * 5,
-	}
-)
-
 func init() {
 	kingpin.Flag("config", "Load JSON configuration from file.").Action(loadConfig).String()
 	kingpin.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
 	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
-	kingpin.Flag("linter", "Specify a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
+	kingpin.Flag("linter", "Define a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
 	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&config.MessageOverride)
 	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
 	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
@@ -338,7 +183,7 @@ func disableAllAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) 
 }
 
 func enableAllAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	for linter := range config.Linters {
+	for linter := range linterDefinitions {
 		config.Enable = append(config.Enable, linter)
 	}
 	return nil
@@ -372,7 +217,7 @@ func warning(format string, args ...interface{}) {
 
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
-	for name := range config.Linters {
+	for name := range linterDefinitions {
 		linter := LinterFromName(name)
 		install := "(" + linter.InstallFrom + ")"
 		if install == "()" {
@@ -461,6 +306,11 @@ Severity override map (default is "warning"):
 }
 
 func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Regexp) {
+	// Move configured linters into linterDefinitions.
+	for name, definition := range config.Linters {
+		linterDefinitions[name] = definition
+	}
+
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	formatTemplate = tmpl

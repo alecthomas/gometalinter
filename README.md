@@ -56,6 +56,26 @@ Disabled by default (enable with `--enable=<linter>`):
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
+### Configuration file
+
+gometalinter now supports a JSON configuration file which can be loaded via
+`--config=<file>`. The format of this file is determined by the Config struct
+in `config.go`.
+
+The configuration file mostly corresponds to command-line flags, with the following exceptions:
+
+- Linters defined in the configuration file will overlay existing definitions, not replace them.
+- "Enable" defines the exact set of linters that will be enabled.
+
+Here is an example configuration file:
+
+```json
+{
+  "DisableAll": true,
+  "Enable": ["deadcode", "unconvert"]
+}
+```
+
 ## Installing
 
 There are two options for installing gometalinter.
@@ -124,23 +144,6 @@ Gometalinter also supports the commonly seen `<path>/...` recursive path
 format. Note that this can be *very* slow, and you may need to increase the linter `--deadline` to allow linters to complete.
 
 ## FAQ
-
-### Configuration file
-
-gometalinter now supports a JSON configuration file which can be loaded via
-`--config=<file>`. The format of this file is determined by the Config struct
-in `main.go`.
-
-Refer to the corresponding command-line flags for documentation.
-
-Here is an example configuration file:
-
-```json
-{
-  "DisableAll": true,
-  "Enable": ["deadcode", "unconvert"]
-}
-```
 
 ### Exit status
 
