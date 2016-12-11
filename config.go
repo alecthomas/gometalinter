@@ -24,6 +24,7 @@ type Config struct {
 	Severity        map[string]string
 	VendoredLinters bool
 	Format          string
+	Color           bool
 	Fast            bool
 	Install         bool
 	Update          bool
