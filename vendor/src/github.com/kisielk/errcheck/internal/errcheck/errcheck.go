@@ -106,6 +106,30 @@ type Checker struct {
 
 	// If true, checking of of _test.go files is disabled
 	WithoutTests bool
+
+	exclude map[string]bool
+}
+
+func NewChecker() *Checker {
+	c := Checker{}
+	c.SetExclude(map[string]bool{})
+	return &c
+}
+
+func (c *Checker) SetExclude(l map[string]bool) {
+	// Default exclude for stdlib functions
+	c.exclude = map[string]bool{
+		"math/rand.Read":         true,
+		"(*math/rand.Rand).Read": true,
+
+		"(*bytes.Buffer).Write":       true,
+		"(*bytes.Buffer).WriteByte":   true,
+		"(*bytes.Buffer).WriteRune":   true,
+		"(*bytes.Buffer).WriteString": true,
+	}
+	for k := range l {
+		c.exclude[k] = true
+	}
 }
 
 func (c *Checker) logf(msg string, args ...interface{}) {
@@ -160,6 +184,7 @@ func (c *Checker) CheckPackages(paths ...string) error {
 				blank:   c.Blank,
 				asserts: c.Asserts,
 				lines:   make(map[string][]string),
+				exclude: c.exclude,
 				errors:  []UncheckedError{},
 			}
 
@@ -186,11 +211,37 @@ type visitor struct {
 	blank   bool
 	asserts bool
 	lines   map[string][]string
+	exclude map[string]bool
 
 	errors []UncheckedError
 }
 
+func (v *visitor) excludeCall(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	fn, ok := v.pkg.ObjectOf(sel.Sel).(*types.Func)
+	if !ok {
+		// Shouldn't happen, but be paranoid
+		return false
+	}
+	// The name is fully qualified by the import path, possible type,
+	// function/method name and pointer receiver.
+	//
+	// TODO(dh): vendored packages will have /vendor/ in their name,
+	// thus not matching vendored standard library packages. If we
+	// want to support vendored stdlib packages, we need to implement
+	// FullName with our own logic.
+	name := fn.FullName()
+	return v.exclude[name]
+}
+
 func (v *visitor) ignoreCall(call *ast.CallExpr) bool {
+	if v.excludeCall(call) {
+		return true
+	}
+
 	// Try to get an identifier.
 	// Currently only supports simple expressions:
 	//     1. f()

@@ -53,9 +53,7 @@ func matchPattern(pattern string) func(name string) bool {
 		re = re[:len(re)-len(`/.*`)] + `(/.*)?`
 	}
 	reg := regexp.MustCompile(`^` + re + `$`)
-	return func(name string) bool {
-		return reg.MatchString(name)
-	}
+	return reg.MatchString
 }
 
 func (c *Context) matchPackages(pattern string) []string {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -102,7 +103,7 @@ func reportUncheckedErrors(e *errcheck.UncheckedErrors) {
 func mainCmd(args []string) int {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	checker := &errcheck.Checker{}
+	checker := errcheck.NewChecker()
 	paths, err := parseFlags(checker, args)
 	if err != exitCodeOk {
 		return err
@@ -137,11 +138,32 @@ func parseFlags(checker *errcheck.Checker, args []string) ([]string, int) {
 	ignore := ignoreFlag(map[string]*regexp.Regexp{
 		"fmt": dotStar,
 	})
-	flags.Var(ignore, "ignore", "comma-separated list of pairs of the form pkg:regex\n"+
-		"            the regex is used to ignore names within pkg")
+	flags.Var(ignore, "ignore", "[deprecated] comma-separated list of pairs of the form pkg:regex\n"+
+		"            the regex is used to ignore names within pkg.")
+
+	var excludeFile string
+	flags.StringVar(&excludeFile, "exclude", "", "Path to a file containing a list of functions to exclude from checking")
 
 	if err := flags.Parse(args[1:]); err != nil {
 		return nil, exitFatalError
+	}
+
+	if excludeFile != "" {
+		exclude := make(map[string]bool)
+		fh, err := os.Open(excludeFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not read exclude file: %s\n", err)
+			return nil, exitFatalError
+		}
+		scanner := bufio.NewScanner(fh)
+		for scanner.Scan() {
+			exclude[scanner.Text()] = true
+		}
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintf(os.Stderr, "Could not read exclude file: %s\n", err)
+			return nil, exitFatalError
+		}
+		checker.SetExclude(exclude)
 	}
 
 	checker.Tags = tags
