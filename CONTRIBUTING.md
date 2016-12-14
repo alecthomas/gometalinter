@@ -5,6 +5,16 @@ If your issue seems to be related to an underlying linter, please report an
 issue against that linter rather than gometalinter. For a full list of linters
 and their repositories please see the [README](README.md).
 
+### Do you want to upgrade a vendored linter?
+
+Please send a PR. We use [GVT](https://github.com/FiloSottile/gvt). It should be as simple as:
+
+```
+go install github.com/FiloSottile/gvt
+gvt update <linter>
+git add <paths>
+```
+
 ### Before you report an issue
 
 Sometimes gometalinter will not report issues that you think it should. There
