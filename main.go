@@ -132,6 +132,7 @@ func init() {
 	kingpin.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
 	kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').BoolVar(&config.Update)
 	kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').BoolVar(&config.Force)
+	kingpin.Flag("download-only", "Pass -d to go tool when installing.").BoolVar(&config.DownloadOnly)
 	kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
 	kingpin.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder("16").Short('j').IntVar(&config.Concurrency)
 	kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
@@ -497,6 +498,9 @@ func makeInstallCommand(linters ...string) []string {
 		if config.Force {
 			cmd = append(cmd, "-f")
 		}
+		if config.DownloadOnly {
+			cmd = append(cmd, "-d")
+		}
 	}
 	if config.Debug {
 		cmd = append(cmd, "-v")
@@ -540,7 +544,11 @@ func installLinters() {
 		targets = append(targets, target)
 	}
 	namesStr := strings.Join(names, "\n  ")
-	fmt.Printf("Installing:\n  %s\n", namesStr)
+	if config.DownloadOnly {
+		fmt.Printf("Downloading:\n  %s\n", namesStr)
+	} else {
+		fmt.Printf("Installing:\n  %s\n", namesStr)
+	}
 	err := installLintersWithOneCommand(targets)
 	if err == nil {
 		return
