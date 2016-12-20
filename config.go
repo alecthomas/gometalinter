@@ -28,6 +28,7 @@ type Config struct {
 	Install         bool
 	Update          bool
 	Force           bool
+	DownloadOnly    bool
 	Debug           bool
 	Concurrency     int
 	Exclude         []string
