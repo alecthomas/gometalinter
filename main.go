@@ -60,6 +60,10 @@ func (l *Linter) String() string {
 func LinterFromName(name string) *Linter {
 	s := linterDefinitions[name]
 	parts := strings.SplitN(s, ":", 2)
+	if len(parts) < 2 {
+		kingpin.Fatalf("invalid linter: %q", name)
+	}
+
 	pattern := parts[1]
 	if p, ok := predefinedPatterns[pattern]; ok {
 		pattern = p
