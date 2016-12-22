@@ -61,7 +61,7 @@ func LinterFromName(name string) *Linter {
 	s := linterDefinitions[name]
 	parts := strings.SplitN(s, ":", 2)
 	if len(parts) < 2 {
-		kingpin.FatalUsage("invalid linter: %q", name)
+		kingpin.Fatalf("invalid linter: %q", name)
 	}
 
 	pattern := parts[1]
