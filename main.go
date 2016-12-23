@@ -157,6 +157,7 @@ func init() {
 	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
 	kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
 	kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
+	kingpin.HelpFlag.Short('h')
 }
 
 func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
