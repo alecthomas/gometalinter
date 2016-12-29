@@ -43,6 +43,7 @@ It is intended for use with editor/IDE integration.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
 - [gosimple](https://github.com/dominikh/go-simple) - Report simplifications in code.
 - [staticcheck](https://github.com/dominikh/go-staticcheck) - Statically detect bugs, both obvious and subtle ones.
+- [gas](https://github.com/HewlettPackard/gas) - Inspects source code for security problems by scanning the Go AST.
 
 Disabled by default (enable with `--enable=<linter>`):
 
@@ -117,6 +118,7 @@ Installing:
   unused
   misspell
   lll
+  gas
 ```
 
 Run it:
