@@ -2,10 +2,10 @@
 	"version": 0,
 	"dependencies": [
 		{
-			"importpath": "github.com/HewlettPackard/gas",
-			"repository": "https://github.com/HewlettPackard/gas",
+			"importpath": "github.com/GoASTScanner/gas",
+			"repository": "https://github.com/GoASTScanner/gas",
 			"vcs": "git",
-			"revision": "8261ee58d6de17e45e9eac1754de1898f211600d",
+			"revision": "d4f9b88cbf6b9f190a2425120c9cecc466ec363b",
 			"branch": "master",
 			"notests": true
 		},

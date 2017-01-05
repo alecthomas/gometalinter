@@ -65,7 +65,7 @@ var (
 		"deadcode":    "github.com/tsenart/deadcode",
 		"dupl":        "github.com/mibk/dupl",
 		"errcheck":    "github.com/kisielk/errcheck",
-		"gas":         "github.com/HewlettPackard/gas",
+		"gas":         "github.com/GoASTScanner/gas",
 		"goconst":     "github.com/jgautheron/goconst/cmd/goconst",
 		"gocyclo":     "github.com/alecthomas/gocyclo",
 		"goimports":   "golang.org/x/tools/cmd/goimports",
