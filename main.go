@@ -165,7 +165,14 @@ func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error 
 		return err
 	}
 	defer r.Close()
-	return json.NewDecoder(r).Decode(config)
+	err = json.NewDecoder(r).Decode(config)
+	if err != nil {
+		return err
+	}
+	if config.DeadlineJSONCrutch != "" {
+		config.Deadline, err = time.ParseDuration(config.DeadlineJSONCrutch)
+	}
+	return err
 }
 
 func disableAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
