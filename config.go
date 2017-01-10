@@ -43,12 +43,14 @@ type Config struct {
 	DuplThreshold   int
 	Sort            []string
 	Test            bool
-	Deadline        time.Duration
+	Deadline        time.Duration `json:"-"`
 	Errors          bool
 	JSON            bool
 	Checkstyle      bool
 	EnableGC        bool
 	Aggregate       bool
+
+	DeadlineJSONCrutch string `json:"Deadline"`
 }
 
 // Configuration defaults.
