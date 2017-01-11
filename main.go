@@ -176,6 +176,7 @@ func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error 
 		for i, enable := range config.Enable {
 			if enable == disable {
 				config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
+				break
 			}
 		}
 	}
