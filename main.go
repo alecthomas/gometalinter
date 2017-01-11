@@ -172,6 +172,13 @@ func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error 
 	if config.DeadlineJSONCrutch != "" {
 		config.Deadline, err = time.ParseDuration(config.DeadlineJSONCrutch)
 	}
+	for _, disable := range config.Disable {
+		for i, enable := range config.Enable {
+			if enable == disable {
+				config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
+			}
+		}
+	}
 	return err
 }
 

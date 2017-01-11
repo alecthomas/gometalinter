@@ -16,7 +16,8 @@ type Config struct {
 	Linters map[string]string
 
 	// The set of linters that should be enabled.
-	Enable []string
+	Enable  []string
+	Disable []string
 
 	// A map of linter name to message that is displayed. This is useful when linters display text
 	// that is useful only in isolation, such as errcheck which just reports the construct.
