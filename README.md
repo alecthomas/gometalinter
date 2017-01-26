@@ -20,7 +20,7 @@ It is intended for use with editor/IDE integration.
 - [SublimeLinter plugin](https://github.com/alecthomas/SublimeLinter-contrib-gometalinter).
 - [vim-go](https://github.com/fatih/vim-go) with the `:GoMetaLinter` command.
 - [syntastic (vim)](https://github.com/scrooloose/syntastic/wiki/Go:---gometalinter) `let g:syntastic_go_checkers = ['gometalinter']`
-- [Atom linter plugin](https://atom.io/packages/gometalinter-linter).
+- [Atom go-plus package](https://atom.io/packages/go-plus).
 - [Emacs Flycheck checker](https://github.com/favadi/flycheck-gometalinter).
 - [Go for Visual Studio Code](https://marketplace.visualstudio.com/items?itemName=lukehoban.Go).
 
