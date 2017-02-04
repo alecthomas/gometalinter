@@ -22,7 +22,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"golang.org/x/tools/go/gcimporter15"
+	"golang.org/x/tools/go/gcexportdata"
 )
 
 const styleGuideBase = "https://golang.org/wiki/CodeReviewComments"
@@ -235,30 +235,15 @@ argLoop:
 	return &p.problems[len(p.problems)-1]
 }
 
-var gcImporter = gcimporter.Import
-
-// importer implements go/types.Importer{,From}.
-type importer struct {
-	impFn    func(packages map[string]*types.Package, path, srcDir string) (*types.Package, error)
-	packages map[string]*types.Package
-}
-
-func (i importer) Import(path string) (*types.Package, error) {
-	return i.impFn(i.packages, path, "")
-}
-
-func (i importer) ImportFrom(path, srcDir string, mode types.ImportMode) (*types.Package, error) {
-	return i.impFn(i.packages, path, srcDir)
+var newImporter = func(fset *token.FileSet) types.ImporterFrom {
+	return gcexportdata.NewImporter(fset, make(map[string]*types.Package))
 }
 
 func (p *pkg) typeCheck() error {
 	config := &types.Config{
 		// By setting a no-op error reporter, the type checker does as much work as possible.
-		Error: func(error) {},
-		Importer: importer{
-			impFn:    gcImporter,
-			packages: make(map[string]*types.Package),
-		},
+		Error:    func(error) {},
+		Importer: newImporter(p.fset),
 	}
 	info := &types.Info{
 		Types:  make(map[ast.Expr]types.TypeAndValue),
@@ -1155,21 +1140,30 @@ func (f *file) lintErrors() {
 	}
 }
 
-func lintCapAndPunct(s string) (isCap, isPunct bool) {
+func lintErrorString(s string) (isClean bool, conf float64) {
+	const basicConfidence = 0.8
+	const capConfidence = basicConfidence - 0.2
 	first, firstN := utf8.DecodeRuneInString(s)
 	last, _ := utf8.DecodeLastRuneInString(s)
-	isPunct = last == '.' || last == ':' || last == '!'
-	isCap = unicode.IsUpper(first)
-	if isCap && len(s) > firstN {
-		// Don't flag strings starting with something that looks like an initialism.
-		if second, _ := utf8.DecodeRuneInString(s[firstN:]); unicode.IsUpper(second) {
-			isCap = false
+	if last == '.' || last == ':' || last == '!' || last == '\n' {
+		return false, basicConfidence
+	}
+	if unicode.IsUpper(first) {
+		// People use proper nouns and exported Go identifiers in error strings,
+		// so decrease the confidence of warnings for capitalization.
+		if len(s) <= firstN {
+			return false, capConfidence
+		}
+		// Flag strings starting with something that doesn't look like an initialism.
+		if second, _ := utf8.DecodeRuneInString(s[firstN:]); !unicode.IsUpper(second) {
+			return false, capConfidence
 		}
 	}
-	return
+	return true, 0
 }
 
-// lintErrorStrings examines error strings. It complains if they are capitalized or end in punctuation.
+// lintErrorStrings examines error strings.
+// It complains if they are capitalized or end in punctuation or a newline.
 func (f *file) lintErrorStrings() {
 	f.walk(func(node ast.Node) bool {
 		ce, ok := node.(*ast.CallExpr)
@@ -1190,25 +1184,13 @@ func (f *file) lintErrorStrings() {
 		if s == "" {
 			return true
 		}
-		isCap, isPunct := lintCapAndPunct(s)
-		var msg string
-		switch {
-		case isCap && isPunct:
-			msg = "error strings should not be capitalized and should not end with punctuation"
-		case isCap:
-			msg = "error strings should not be capitalized"
-		case isPunct:
-			msg = "error strings should not end with punctuation"
-		default:
+		clean, conf := lintErrorString(s)
+		if clean {
 			return true
 		}
-		// People use proper nouns and exported Go identifiers in error strings,
-		// so decrease the confidence of warnings for capitalization.
-		conf := 0.8
-		if isCap {
-			conf = 0.6
-		}
-		f.errorf(str, conf, link(styleGuideBase+"#error-strings"), category("errors"), msg)
+
+		f.errorf(str, conf, link(styleGuideBase+"#error-strings"), category("errors"),
+			"error strings should not be capitalized or end with punctuation or a newline")
 		return true
 	})
 }
@@ -1432,7 +1414,7 @@ func (f *file) checkContextKeyType(x *ast.CallExpr) {
 	}
 	key := f.pkg.typesInfo.Types[x.Args[1]]
 
-	if _, ok := key.Type.(*types.Basic); ok {
+	if ktyp, ok := key.Type.(*types.Basic); ok && ktyp.Kind() != types.Invalid {
 		f.errorf(x, 1.0, category("context"), fmt.Sprintf("should not use basic type %s as key in context.WithValue", key.Type))
 	}
 }
