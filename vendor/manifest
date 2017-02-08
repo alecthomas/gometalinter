@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/antonlindstrom/endsentence",
+			"repository": "https://github.com/antonlindstrom/endsentence",
+			"vcs": "git",
+			"revision": "143aa3a26f35f4e51fdb7b3079bf54a872c78372",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/client9/misspell",
 			"repository": "https://github.com/client9/misspell",
 			"vcs": "git",
