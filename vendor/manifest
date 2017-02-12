@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/alecthomas/units",
+			"repository": "https://github.com/alecthomas/units",
+			"vcs": "git",
+			"revision": "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/client9/misspell",
 			"repository": "https://github.com/client9/misspell",
 			"vcs": "git",
@@ -30,6 +38,14 @@
 			"repository": "https://github.com/golang/lint",
 			"vcs": "git",
 			"revision": "5295072ea38460cda1ff822cf6d30a7bf64329bd",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/google/shlex",
+			"repository": "https://github.com/google/shlex",
+			"vcs": "git",
+			"revision": "6f45313302b9c56850fc17f99e40caebce98c716",
 			"branch": "master",
 			"notests": true
 		},
@@ -87,6 +103,15 @@
 			"vcs": "git",
 			"revision": "2927fff6028e3bc73636bf2fb627021a68566a2b",
 			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/nicksnyder/go-i18n/i18n",
+			"repository": "https://github.com/nicksnyder/go-i18n",
+			"vcs": "git",
+			"revision": "2c24b78755bd85f2b97c45f6f1bf906660b59d56",
+			"branch": "master",
+			"path": "/i18n",
 			"notests": true
 		},
 		{
@@ -264,6 +289,22 @@
 			"revision": "9e7459099f9afd6a15464d69d93c6eed49bb545d",
 			"branch": "master",
 			"path": "imports",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/alecthomas/kingpin.v3-unstable",
+			"repository": "https://gopkg.in/alecthomas/kingpin.v3-unstable",
+			"vcs": "git",
+			"revision": "cf3c3c40a98621504e3ca4b45af0c037d3e971cb",
+			"branch": "v3-unstable",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/yaml.v2",
+			"repository": "https://gopkg.in/yaml.v2",
+			"vcs": "git",
+			"revision": "a3f3340b5840cee44f372bddb5880fcbc419b46a",
+			"branch": "v2",
 			"notests": true
 		},
 		{
