@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 
@@ -42,10 +43,15 @@ func outputToCheckstyle(issues chan *Issue) int {
 				Name: issue.Path,
 			}
 		}
+		buf := new(bytes.Buffer)
+		if err := xml.EscapeText(buf, []byte(issue.Message)); err != nil {
+			return status
+		}
+
 		lastFile.Errors = append(lastFile.Errors, &checkstyleError{
 			Column:   issue.Col,
 			Line:     issue.Line,
-			Message:  issue.Message,
+			Message:  buf.String(),
 			Severity: string(issue.Severity),
 			Source:   issue.Linter.Name,
 		})
