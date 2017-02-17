@@ -90,11 +90,7 @@ There are two options for installing gometalinter.
 
 ## Quickstart
 
-Install gometalinter:
-
-```
-$ go get -u github.com/alecthomas/gometalinter
-```
+Install gometalinter (see above).
 
 Install all known linters:
 
