@@ -1,7 +1,10 @@
 sudo: false
 language: go
 install:
-    - go get -t -v . ./regressiontests
-    - gometalinter --install
-go: 1.7
+  - go get -t -v . ./regressiontests
+  - gometalinter --install
+go:
+  - 1.7.x
+  - 1.8.x
+  - tip
 script: go test -v . ./regressiontests
