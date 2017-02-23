@@ -5,7 +5,7 @@
 			"importpath": "github.com/GoASTScanner/gas",
 			"repository": "https://github.com/GoASTScanner/gas",
 			"vcs": "git",
-			"revision": "d4f9b88cbf6b9f190a2425120c9cecc466ec363b",
+			"revision": "1c8e7ff6861b2ee1c4d48a279b5eee07448baa5f",
 			"branch": "master",
 			"notests": true
 		},

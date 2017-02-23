@@ -123,10 +123,12 @@ func (gas *Analyzer) process(filename string, source interface{}) error {
 		}
 
 		conf := types.Config{Importer: importer.Default()}
-		gas.context.Pkg, _ = conf.Check("pkg", gas.context.FileSet, []*ast.File{root}, gas.context.Info)
+		gas.context.Pkg, err = conf.Check("pkg", gas.context.FileSet, []*ast.File{root}, gas.context.Info)
 		if err != nil {
-			gas.logger.Println("failed to check imports")
-			return err
+			// TODO(gm) Type checker not currently considering all files within a package
+			// see: issue #113
+			gas.logger.Printf(`Error during type checking: "%s"`, err)
+			err = nil
 		}
 
 		gas.context.Imports = NewImportInfo()
