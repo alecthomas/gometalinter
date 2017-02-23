@@ -176,7 +176,7 @@ func main() {
 	// Ensure at least one file was specified
 	if flag.NArg() == 0 {
 
-		fmt.Fprintf(os.Stderr, "\nerror: FILE [FILE...] or './...' expected\n")
+		fmt.Fprintf(os.Stderr, "\nError: FILE [FILE...] or './...' expected\n")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -195,9 +195,11 @@ func main() {
 	toAnalyze := getFilesToAnalyze(flag.Args(), excluded)
 
 	for _, file := range toAnalyze {
-		logger.Printf("scanning \"%s\"\n", file)
+		logger.Printf(`Processing "%s"...`, file)
 		if err := analyzer.Process(file); err != nil {
-			logger.Fatal(err)
+			logger.Printf(`Failed to process: "%s"`, file)
+			logger.Println(err)
+			logger.Fatalf(`Halting execution.`)
 		}
 	}
 
@@ -229,14 +231,14 @@ func main() {
 func getFilesToAnalyze(paths []string, excluded *fileList) []string {
 	//log.Println("getFilesToAnalyze: start")
 	var toAnalyze []string
-	for _, path := range paths {
+	for _, relativePath := range paths {
 		//log.Printf("getFilesToAnalyze: processing \"%s\"\n", path)
 		// get the absolute path before doing anything else
-		path, err := filepath.Abs(path)
+		path, err := filepath.Abs(relativePath)
 		if err != nil {
 			log.Fatal(err)
 		}
-		if filepath.Base(path) == "..." {
+		if filepath.Base(relativePath) == "..." {
 			toAnalyze = append(
 				toAnalyze,
 				listFiles(filepath.Dir(path), recurse, excluded)...,
