@@ -10,7 +10,7 @@ and their repositories please see the [README](README.md).
 Please send a PR. We use [GVT](https://github.com/FiloSottile/gvt). It should be as simple as:
 
 ```
-go install github.com/FiloSottile/gvt
+go get github.com/FiloSottile/gvt
 gvt update <linter>
 git add <paths>
 ```
