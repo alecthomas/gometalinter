@@ -236,7 +236,7 @@ stutter.go:16:6:warning: exported type PublicUndocumented should have comment or
 ## Checkstyle XML format
 
 `gometalinter` supports [checkstyle](http://checkstyle.sourceforge.net/)
-compatible XML output format. It is tiggered with `--checkstyle` flag:
+compatible XML output format. It is triggered with `--checkstyle` flag:
 
 	gometalinter --checkstyle
 
