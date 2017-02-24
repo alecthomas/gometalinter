@@ -32,8 +32,8 @@ const (
 var (
 	// Locations to look for vendored linters.
 	vendoredSearchPaths = [][]string{
-		{"github.com", "alecthomas", "gometalinter", "vendor"},
-		{"gopkg.in", "alecthomas", "gometalinter.v1", "vendor"},
+		{"github.com", "alecthomas", "gometalinter", "_linters"},
+		{"gopkg.in", "alecthomas", "gometalinter.v1", "_linters"},
 	}
 )
 

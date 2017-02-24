@@ -11,6 +11,7 @@ Please send a PR. We use [GVT](https://github.com/FiloSottile/gvt). It should be
 
 ```
 go get github.com/FiloSottile/gvt
+cd _linters
 gvt update <linter>
 git add <paths>
 ```

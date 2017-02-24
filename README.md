@@ -162,7 +162,10 @@ There are two main problems running in a CI:
 1. <s>Linters break, causing `gometalinter --install --update` to error</s> (this is no longer an issue as all linters are vendored).
 2. `gometalinter` adds a new linter.
 
-There is no great solution to 1, but for 2, the best option is to disable all linters, then explicitly enable the ones you want:
+I have solved 1 by vendoring the linters.
+
+For 2, the best option is to disable all linters, then explicitly enable the
+ones you want:
 
     gometalinter --disable-all --enable=errcheck --enable=vet --enable=vetshadow ...
 
