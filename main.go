@@ -21,10 +21,11 @@ import (
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
+// Severity of linter message.
 type Severity string
 
 // Linter message severity levels.
-const (
+const ( // nolint
 	Warning Severity = "warning"
 	Error   Severity = "error"
 )
@@ -88,6 +89,8 @@ type sortedIssues struct {
 
 func (s *sortedIssues) Len() int      { return len(s.issues) }
 func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
+
+// nolint: gocyclo
 func (s *sortedIssues) Less(i, j int) bool {
 	l, r := s.issues[i], s.issues[j]
 	for _, key := range s.order {
@@ -165,7 +168,7 @@ func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error 
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer r.Close() // nolint: errcheck
 	err = json.NewDecoder(r).Decode(config)
 	if err != nil {
 		return err
@@ -326,6 +329,7 @@ Severity override map (default is "warning"):
 	os.Exit(status)
 }
 
+// nolint: gocyclo
 func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Regexp) {
 	// Move configured linters into linterDefinitions.
 	for name, definition := range config.Linters {
@@ -410,7 +414,8 @@ func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concu
 	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
 	concurrencych := make(chan bool, config.Concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
-	processedIssues := maybeSortIssues(maybeAggregateIssues(incomingIssues))
+	directives := newDirectiveParser(paths)
+	processedIssues := filterIssuesViaDirectives(directives, maybeSortIssues(maybeAggregateIssues(incomingIssues)))
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
 		// Recreated in each loop because it is mutated by executeLinter().
@@ -463,6 +468,7 @@ func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concu
 	return processedIssues, errch
 }
 
+// nolint: gocyclo
 func expandPaths(paths, skip []string) []string {
 	if len(paths) == 0 {
 		paths = []string{"."}
@@ -532,7 +538,7 @@ func makeInstallCommand(linters ...string) []string {
 func installLintersWithOneCommand(targets []string) error {
 	cmd := makeInstallCommand(targets...)
 	debug("go %s", strings.Join(cmd, " "))
-	c := exec.Command("go", cmd...)
+	c := exec.Command("go", cmd...) // nolint: gas
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
@@ -543,7 +549,7 @@ func installLintersIndividually(targets []string) {
 	for _, target := range targets {
 		cmd := makeInstallCommand(target)
 		debug("go %s", strings.Join(cmd, " "))
-		c := exec.Command("go", cmd...)
+		c := exec.Command("go", cmd...) // nolint: gas
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		if err := c.Run(); err != nil {
@@ -674,7 +680,7 @@ func executeLinter(state *linterState) error {
 	}
 	debug("executing %s %q", exe, args)
 	buf := bytes.NewBuffer(nil)
-	cmd := exec.Command(exe, args...)
+	cmd := exec.Command(exe, args...) // nolint: gas
 	if state.ShouldChdir() {
 		cmd.Dir = state.path
 	}
@@ -740,6 +746,7 @@ func lintersFromFlags() map[string]*Linter {
 	return out
 }
 
+// nolint: gocyclo
 func processOutput(state *linterState, out []byte) {
 	re := state.regex
 	all := re.FindAllSubmatchIndex(out, -1)

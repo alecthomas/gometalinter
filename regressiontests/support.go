@@ -58,7 +58,7 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	}
 
 	// Run gometalinter.
-	args := []string{"go", "run", "../main.go", "../config.go", "../checkstyle.go", "../aggregate.go", "--disable-all", "--enable", linter, "--json", dir}
+	args := []string{"go", "run", "../main.go", "../directives.go", "../config.go", "../checkstyle.go", "../aggregate.go", "--disable-all", "--enable", linter, "--json", dir}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(args[0], args[1:]...)
 	if !assert.NoError(t, err) {
@@ -68,7 +68,7 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	var actual Issues
 	err = json.Unmarshal(output, &actual)
 	if !assert.NoError(t, err) {
-		fmt.Printf("%s\n", output)
+		fmt.Printf("Output: %s\n", output)
 		return
 	}
 
