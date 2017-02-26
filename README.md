@@ -88,6 +88,49 @@ There are two options for installing gometalinter.
 2. Install from HEAD with: `go get -u github.com/alecthomas/gometalinter`.
    This has the downside that changes to gometalinter may break.
 
+## Comment directives
+
+gometalinter supports suppression of linter messages via comment directives. The
+form of the directive is:
+
+```
+// nolint[: <linter>[, <linter>, ...]]
+```
+
+Suppression works in the following way:
+
+1. Line-level suppression
+
+    A comment directive suppresses any linter messages on that line.
+
+    eg. In this example any messages for `a := 10` will be suppressed and errcheck
+    messages for `defer r.Close()` will also be suppressed.
+
+    ```go
+    a := 10 // nolint
+    a = 2
+    defer r.Close() // nolint: errcheck
+    ```
+
+2. Statement-level suppression
+
+    A comment directive at the same indentation level as a statement it
+    immediately precedes will also suppress any linter messages in that entire
+    statement.
+
+    eg. In this example all messages for `SomeFunc()` will be suppressed.
+
+    ```go
+    // nolint
+    func SomeFunc() {
+    }
+    ```
+
+Implementation details: gometalinter now performs parsing of Go source code,
+to extract linter directives and associate them with line ranges. To avoid
+unnecessary processing, parsing is on-demand: the first time a linter emits a
+message for a file, that file is parsed for directives.
+
 ## Quickstart
 
 Install gometalinter (see above).
