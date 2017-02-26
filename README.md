@@ -1,6 +1,29 @@
 # Go Meta Linter
 [![Build Status](https://travis-ci.org/alecthomas/gometalinter.png)](https://travis-ci.org/alecthomas/gometalinter) [![Gitter chat](https://badges.gitter.im/alecthomas.png)](https://gitter.im/alecthomas/Lobby)
 
+<!-- MarkdownTOC -->
+
+- [Editor integration](#editor-integration)
+- [Supported linters](#supported-linters)
+  - [Configuration file](#configuration-file)
+- [Installing](#installing)
+- [Comment directives](#comment-directives)
+- [Quickstart](#quickstart)
+- [FAQ](#faq)
+  - [Exit status](#exit-status)
+  - [What's the best way to use `gometalinter` in CI?](#whats-the-best-way-to-use-gometalinter-in-ci)
+  - [How do I make `gometalinter` work with Go 1.5 vendoring?](#how-do-i-make-gometalinter-work-with-go-15-vendoring)
+  - [Why does `gometalinter --install` install a fork of gocyclo?](#why-does-gometalinter---install-install-a-fork-of-gocyclo)
+  - [Gometalinter is not working](#gometalinter-is-not-working)
+    - [1. Update to the latest build of gometalinter and all linters](#1-update-to-the-latest-build-of-gometalinter-and-all-linters)
+    - [2. Analyse the debug output](#2-analyse-the-debug-output)
+    - [3. Report an issue.](#3-report-an-issue)
+- [Details](#details)
+- [Checkstyle XML format](#checkstyle-xml-format)
+
+<!-- /MarkdownTOC -->
+
+
 The number of tools for statically checking Go source for errors and warnings
 is impressive.
 
