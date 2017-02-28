@@ -141,7 +141,7 @@ func init() {
 	kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').BoolVar(&config.Force)
 	kingpin.Flag("download-only", "Pass -d to go tool when installing.").BoolVar(&config.DownloadOnly)
 	kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
-	kingpin.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder("16").Short('j').IntVar(&config.Concurrency)
+	kingpin.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder(fmt.Sprintf("%d", runtime.NumCPU())).Short('j').IntVar(&config.Concurrency)
 	kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
 	kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
 	kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
