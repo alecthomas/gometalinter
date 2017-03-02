@@ -65,7 +65,7 @@ It is intended for use with editor/IDE integration.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
-- [gosimple](https://github.com/dominikh/go-simple) - Report simplifications in code.
+- [gosimple](https://github.com/dominikh/go-tools/tree/master/cmd/gosimple) - Report simplifications in code.
 - [staticcheck](https://github.com/dominikh/go-staticcheck) - Statically detect bugs, both obvious and subtle ones.
 - [gas](https://github.com/GoASTScanner/gas) - Inspects source code for security problems by scanning the Go AST.
 
