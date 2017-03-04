@@ -98,6 +98,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/stripe/safesql",
+			"repository": "https://github.com/stripe/safesql",
+			"vcs": "git",
+			"revision": "452e37ed794488bd0d99676532f346e03cc6cd2c",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/tsenart/deadcode",
 			"repository": "https://github.com/tsenart/deadcode",
 			"vcs": "git",
@@ -213,6 +221,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "golang.org/x/tools/go/callgraph",
+			"repository": "https://go.googlesource.com/tools",
+			"vcs": "git",
+			"revision": "3537037b0ba3c86130e74019e3880dc7e4c83cef",
+			"branch": "master",
+			"path": "/go/callgraph",
+			"notests": true
+		},
+		{
 			"importpath": "golang.org/x/tools/go/gcexportdata",
 			"repository": "https://go.googlesource.com/tools",
 			"vcs": "git",
@@ -237,6 +254,15 @@
 			"revision": "9e7459099f9afd6a15464d69d93c6eed49bb545d",
 			"branch": "master",
 			"path": "/go/loader",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/tools/go/pointer",
+			"repository": "https://go.googlesource.com/tools",
+			"vcs": "git",
+			"revision": "3537037b0ba3c86130e74019e3880dc7e4c83cef",
+			"branch": "master",
+			"path": "go/pointer",
 			"notests": true
 		},
 		{

@@ -78,6 +78,7 @@ Disabled by default (enable with `--enable=<linter>`):
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
 - [unused](https://github.com/dominikh/go-unused) - Find unused variables.
+- [safesql](https://github.com/stripe/safesql) - Finds potential SQL injection vulnerabilities.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
@@ -182,6 +183,7 @@ Installing:
   misspell
   lll
   gas
+  safesql
 ```
 
 Run it:
