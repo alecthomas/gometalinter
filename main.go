@@ -18,6 +18,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/google/shlex"
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
@@ -161,6 +162,7 @@ func init() {
 	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
 	kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
 	kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
+	kingpin.Flag("beautify", "Display report with colors.").Short('b').BoolVar(&config.Beautify)
 	kingpin.CommandLine.GetFlag("help").Short('h')
 }
 
@@ -314,17 +316,22 @@ Severity override map (default is "warning"):
 	linters := lintersFromFlags()
 	status := 0
 	issues, errch := runLinters(linters, paths, *pathsArg, config.Concurrency, exclude, include)
+
 	if config.JSON {
 		status |= outputToJSON(issues)
 	} else if config.Checkstyle {
 		status |= outputToCheckstyle(issues)
+	} else if config.Beautify {
+		status |= outputToConsoleBeautiful(issues)
 	} else {
 		status |= outputToConsole(issues)
 	}
+
 	for err := range errch {
 		warning("%s", err)
 		status |= 2
 	}
+
 	elapsed := time.Since(start)
 	debug("total elapsed time %s", elapsed)
 	os.Exit(status)
@@ -380,15 +387,64 @@ https://github.com/alecthomas/gometalinter/issues/new
 	return include, exclude
 }
 
-func outputToConsole(issues chan *Issue) int {
-	status := 0
+func outputToConsoleBeautiful(issues chan *Issue) int {
+
+	var (
+		styleSeverityWarning = color.New(color.FgYellow).FprintFunc()
+		styleSeverityError   = color.New(color.FgRed).FprintFunc()
+
+		styleLocation = color.New(color.FgCyan, color.Underline).FprintFunc()
+		styleMessage  = color.New(color.FgMagenta).FprintFunc()
+		styleLinter   = color.New(color.Faint).FprintFunc()
+
+		status = 0
+		w      = new(bytes.Buffer)
+
+		swarning = " warning "
+		serror   = "  error   "
+	)
+
 	for issue := range issues {
 		if config.Errors && issue.Severity != Error {
 			continue
 		}
-		fmt.Println(issue.String())
+
+		if issue.Severity == Warning {
+			styleSeverityWarning(w, swarning)
+		} else {
+			styleSeverityError(w, serror)
+		}
+
+		styleLocation(w, issue.Path, ":", issue.Line)
+		w.WriteString(": ")
+		styleMessage(w, issue.Message)
+		w.WriteString(": ")
+		styleLinter(w, " (@", issue.Linter.Name, ")")
+
+		w.WriteByte('\n')
+		w.WriteTo(os.Stdout)
+		w.Reset()
+
 		status = 1
 	}
+
+	return status
+
+}
+
+func outputToConsole(issues chan *Issue) int {
+	status := 0
+
+	for issue := range issues {
+		if config.Errors && issue.Severity != Error {
+			continue
+		}
+
+		fmt.Println(issue.String())
+
+		status = 1
+	}
+
 	return status
 }
 
