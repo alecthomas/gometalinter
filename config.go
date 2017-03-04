@@ -79,6 +79,7 @@ var (
 		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
 		"lll":         "github.com/walle/lll/cmd/lll",
 		"misspell":    "github.com/client9/misspell/cmd/misspell",
+		"safesql":     "github.com/stripe/safesql",
 		"staticcheck": "honnef.co/go/staticcheck/cmd/staticcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"unconvert":   "github.com/mdempsky/unconvert",
@@ -97,7 +98,7 @@ var (
 		"varcheck":    true,
 		"unconvert":   true,
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	// Linter definitions.
@@ -118,6 +119,7 @@ var (
 		"interfacer":  `interfacer {path}:PATH:LINE:COL:MESSAGE`,
 		"lll":         `lll -g -l {maxlinelength} {path}/*.go:PATH:LINE:MESSAGE`,
 		"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
+		"safesql":     `safesql {path}:^- (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+)$`,
 		"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
 		"structcheck": `structcheck {tests=-t} {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		"test":        `go test {path}:^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
@@ -145,6 +147,7 @@ var (
 			"gocyclo":     "cyclomatic complexity {cyclo} of function {function}() is high (> {mincyclo})",
 			"gofmt":       "file is not gofmted with -s",
 			"goimports":   "file is not goimported",
+			"safesql":     "potentially unsafe SQL statement",
 			"structcheck": "unused struct field {message}",
 			"varcheck":    "unused global variable {message}",
 		},
