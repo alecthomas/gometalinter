@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -825,16 +826,27 @@ func findVendoredLinters() string {
 
 }
 
+// Go 1.8 compatible GOPATH.
+func getGoPath() string {
+	path := os.Getenv("GOPATH")
+	if path == "" {
+		user, err := user.Current()
+		kingpin.FatalIfError(err, "")
+		path = filepath.Join(user.HomeDir, "go")
+	}
+	return path
+}
+
 // Add all "bin" directories from GOPATH to PATH, as well as GOBIN if set.
 func configureEnvironment() {
-	gopaths := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
+	gopaths := strings.Split(getGoPath(), string(os.PathListSeparator))
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
 	gobin := os.Getenv("GOBIN")
 
 	if config.VendoredLinters && config.Install {
 		vendorRoot := findVendoredLinters()
 		if vendorRoot == "" {
-			kingpin.Fatalf("could not find vendored linters in %s", os.Getenv("GOPATH"))
+			kingpin.Fatalf("could not find vendored linters in GOPATH=%q", getGoPath())
 		}
 		debug("found vendored linters at %s, updating environment", vendorRoot)
 		if gobin == "" {
