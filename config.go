@@ -1,6 +1,7 @@
 package main
 
 import (
+	"runtime"
 	"text/template"
 	"time"
 
@@ -171,7 +172,7 @@ var (
 			"vetshadow",
 		},
 		VendoredLinters: true,
-		Concurrency:     16,
+		Concurrency:     runtime.NumCPU(),
 		Cyclo:           10,
 		LineLength:      80,
 		MinConfidence:   0.8,
