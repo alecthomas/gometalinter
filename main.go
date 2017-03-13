@@ -812,7 +812,7 @@ func processOutput(state *linterState, out []byte) {
 }
 
 func findVendoredLinters() string {
-	gopaths := strings.Split(os.Getenv("GOPATH"), string(os.PathListSeparator))
+	gopaths := strings.Split(getGoPath(), string(os.PathListSeparator))
 	for _, home := range vendoredSearchPaths {
 		for _, p := range gopaths {
 			joined := append([]string{p, "src"}, home...)
