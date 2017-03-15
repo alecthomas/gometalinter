@@ -99,7 +99,7 @@ var (
 		"varcheck":    true,
 		"unconvert":   true,
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unused", "gosimple"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	// Linter definitions.
