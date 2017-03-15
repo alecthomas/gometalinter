@@ -9,7 +9,7 @@ func TestVarcheck(t *testing.T) {
 var v int
 `
 	expected := Issues{
-		{Linter: "varcheck", Severity: "warning", Path: "test.go", Line: 3, Col: 5, Message: "unused global variable v"},
+		{Linter: "varcheck", Severity: "warning", Path: "test.go", Line: 3, Col: 5, Message: "unused variable or constant v"},
 	}
 	ExpectIssues(t, "varcheck", source, expected)
 }

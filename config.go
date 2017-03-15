@@ -150,7 +150,7 @@ var (
 			"goimports":   "file is not goimported",
 			"safesql":     "potentially unsafe SQL statement",
 			"structcheck": "unused struct field {message}",
-			"varcheck":    "unused global variable {message}",
+			"varcheck":    "unused variable or constant {message}",
 		},
 		Enable: []string{
 			"aligncheck",
