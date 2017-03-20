@@ -5,7 +5,7 @@
 
 - [Editor integration](#editor-integration)
 - [Supported linters](#supported-linters)
-  - [Configuration file](#configuration-file)
+- [Configuration file](#configuration-file)
 - [Installing](#installing)
 - [Comment directives](#comment-directives)
 - [Quickstart](#quickstart)
