@@ -83,7 +83,7 @@ Disabled by default (enable with `--enable=<linter>`):
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
-### Configuration file
+## Configuration file
 
 gometalinter now supports a JSON configuration file which can be loaded via
 `--config=<file>`. The format of this file is determined by the Config struct
