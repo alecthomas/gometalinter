@@ -77,6 +77,7 @@ Disabled by default (enable with `--enable=<linter>`):
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
+- [unparam](https://github.com/mvdan/unparam) - Find unused function parameters.
 - [unused](https://github.com/dominikh/go-tools/tree/master/cmd/unused) - Find unused variables.
 - [safesql](https://github.com/stripe/safesql) - Finds potential SQL injection vulnerabilities.
 
@@ -179,6 +180,7 @@ Installing:
   goconst
   gosimple
   staticcheck
+  unparam
   unused
   misspell
   lll
