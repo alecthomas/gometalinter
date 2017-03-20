@@ -84,6 +84,7 @@ var (
 		"staticcheck": "honnef.co/go/tools/cmd/staticcheck",
 		"structcheck": "github.com/opennota/check/cmd/structcheck",
 		"unconvert":   "github.com/mdempsky/unconvert",
+		"unparam":     "github.com/mvdan/unparam",
 		"unused":      "honnef.co/go/tools/cmd/unused",
 		"varcheck":    "github.com/opennota/check/cmd/varcheck",
 	}
@@ -99,7 +100,7 @@ var (
 		"varcheck":    true,
 		"unconvert":   true,
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unused", "gosimple"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unparam", "unused", "gosimple"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	// Linter definitions.
@@ -126,6 +127,7 @@ var (
 		"test":        `go test {path}:^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
 		"testify":     `go test {path}:Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		"unconvert":   "unconvert {path}:PATH:LINE:COL:MESSAGE",
+		"unparam":     `unparam {path}:PATH:LINE:COL:MESSAGE`,
 		"unused":      `unused {path}:PATH:LINE:COL:MESSAGE`,
 		"varcheck":    `varcheck {path}:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		"vet":         `go tool vet {path}/*.go:` + vetRe,
@@ -150,6 +152,7 @@ var (
 			"goimports":   "file is not goimported",
 			"safesql":     "potentially unsafe SQL statement",
 			"structcheck": "unused struct field {message}",
+			"unparam":     "parameter {message}",
 			"varcheck":    "unused variable or constant {message}",
 		},
 		Enable: []string{

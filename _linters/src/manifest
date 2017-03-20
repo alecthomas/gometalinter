@@ -90,6 +90,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/mvdan/unparam",
+			"repository": "https://github.com/mvdan/unparam",
+			"vcs": "git",
+			"revision": "d2adb036915004d06ad1ffc8edbae3d762110cd6",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/opennota/check",
 			"repository": "https://github.com/opennota/check",
 			"vcs": "git",
