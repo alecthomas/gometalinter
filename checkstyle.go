@@ -42,6 +42,13 @@ func outputToCheckstyle(issues chan *Issue) int {
 				Name: issue.Path,
 			}
 		}
+
+		if !config.Errors {
+		} else if issue.Severity == Error {
+		} else {
+			continue
+		}
+
 		lastFile.Errors = append(lastFile.Errors, &checkstyleError{
 			Column:   issue.Col,
 			Line:     issue.Line,
