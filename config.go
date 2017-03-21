@@ -183,6 +183,6 @@ var (
 		MinConstLength:  3,
 		DuplThreshold:   50,
 		Sort:            []string{"none"},
-		Deadline:        time.Second * 5,
+		Deadline:        time.Second * 30,
 	}
 )

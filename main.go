@@ -155,7 +155,7 @@ func init() {
 	kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").PlaceHolder("50").IntVar(&config.DuplThreshold)
 	kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).PlaceHolder("none").EnumsVar(&config.Sort, sortKeys...)
 	kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').BoolVar(&config.Test)
-	kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("5s").DurationVar(&config.Deadline)
+	kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("30s").DurationVar(&config.Deadline)
 	kingpin.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
 	kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
 	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
