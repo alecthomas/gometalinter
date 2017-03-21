@@ -189,11 +189,13 @@ func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *ki
 }
 
 func disableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	for i, linter := range config.Enable {
-		if linter == *element.Value {
-			config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
+	out := []string{}
+	for _, linter := range config.Enable {
+		if linter != *element.Value {
+			out = append(out, linter)
 		}
 	}
+	config.Enable = out
 	return nil
 }
 
@@ -738,6 +740,9 @@ func lintersFromFlags() map[string]*Linter {
 	out := map[string]*Linter{}
 	for _, linter := range config.Enable {
 		out[linter] = LinterFromName(linter)
+	}
+	for _, linter := range config.Disable {
+		delete(out, linter)
 	}
 	if config.Fast {
 		for _, linter := range slowLinters {
