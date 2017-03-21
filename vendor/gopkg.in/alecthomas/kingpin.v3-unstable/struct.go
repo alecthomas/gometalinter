@@ -8,35 +8,23 @@ import (
 	"unicode/utf8"
 )
 
-// Struct allows applications to define flags with struct tags.
-//
-// Supported struct tags are: help, default, placeholder, required, hidden, long and short.
-//
-// A field MUST have at least the "help" tag present to be converted to a flag.
-//
-// The name of the flag will default to the CamelCase name transformed to camel-case. This can
-// be overridden with the "long" tag.
-//
-// All basic Go types are supported including floats, ints, strings, time.Duration,
-// and slices of same.
-//
-// For compatibility, also supports the tags used by https://github.com/jessevdk/go-flags
-func (c *cmdMixin) Struct(v interface{}) error {
+func (c *cmdMixin) fromStruct(clause *CmdClause, v interface{}) error { // nolint: gocyclo
+	urv := reflect.ValueOf(v)
 	rv := reflect.Indirect(reflect.ValueOf(v))
 	if rv.Kind() != reflect.Struct {
-		return fmt.Errorf("expected a struct but received %s", reflect.TypeOf(v).String())
+		return fmt.Errorf("expected a struct but received " + reflect.TypeOf(v).String())
 	}
 	for i := 0; i < rv.NumField(); i++ {
 		// Parse out tags
 		field := rv.Field(i)
 		ft := rv.Type().Field(i)
+		if strings.ToLower(ft.Name[0:1]) == ft.Name[0:1] {
+			continue
+		}
 		tag := ft.Tag
 		help := tag.Get("help")
 		if help == "" {
 			help = tag.Get("description")
-		}
-		if help == "" {
-			continue
 		}
 		placeholder := tag.Get("placeholder")
 		if placeholder == "" {
@@ -46,11 +34,37 @@ func (c *cmdMixin) Struct(v interface{}) error {
 		short := tag.Get("short")
 		required := tag.Get("required")
 		hidden := tag.Get("hidden")
+		env := tag.Get("env")
+		enum := tag.Get("enum")
 		name := strings.ToLower(strings.Join(camelCase(ft.Name), "-"))
 		if tag.Get("long") != "" {
 			name = tag.Get("long")
 		}
 		arg := tag.Get("arg")
+
+		var action Action
+		onMethodName := "On" + strings.ToUpper(ft.Name[0:1]) + ft.Name[1:]
+		if actionMethod := urv.MethodByName(onMethodName); actionMethod.IsValid() {
+			action, _ = actionMethod.Interface().(func(*Application, *ParseElement, *ParseContext) error)
+		}
+
+		if field.Kind() == reflect.Struct {
+			if ft.Anonymous {
+				if err := c.fromStruct(clause, field.Addr().Interface()); err != nil {
+					return err
+				}
+			} else {
+				cmd := c.addCommand(name, help)
+				cmd.parent = clause
+				if hidden != "" {
+					cmd = cmd.Hidden()
+				}
+				if err := cmd.Struct(field.Addr().Interface()); err != nil {
+					return err
+				}
+			}
+			continue
+		}
 
 		// Define flag using extracted tags
 		var clause *Clause
@@ -58,6 +72,9 @@ func (c *cmdMixin) Struct(v interface{}) error {
 			clause = c.Arg(name, help)
 		} else {
 			clause = c.Flag(name, help)
+		}
+		if action != nil {
+			clause.Action(action)
 		}
 		if dflt != "" {
 			clause = clause.Default(dflt)
@@ -78,13 +95,20 @@ func (c *cmdMixin) Struct(v interface{}) error {
 		if placeholder != "" {
 			clause = clause.PlaceHolder(placeholder)
 		}
+		if env != "" {
+			clause = clause.Envar(env)
+		}
 		ptr := field.Addr().Interface()
 		if ft.Type == reflect.TypeOf(time.Duration(0)) {
 			clause.DurationVar(ptr.(*time.Duration))
 		} else {
 			switch ft.Type.Kind() {
 			case reflect.String:
-				clause.StringVar(ptr.(*string))
+				if enum != "" {
+					clause.EnumVar(ptr.(*string), strings.Split(enum, ",")...)
+				} else {
+					clause.StringVar(ptr.(*string))
+				}
 
 			case reflect.Bool:
 				clause.BoolVar(ptr.(*bool))
@@ -122,7 +146,11 @@ func (c *cmdMixin) Struct(v interface{}) error {
 				} else {
 					switch ft.Type.Elem().Kind() {
 					case reflect.String:
-						clause.StringsVar(field.Addr().Interface().(*[]string))
+						if enum != "" {
+							clause.EnumsVar(field.Addr().Interface().(*[]string), strings.Split(enum, ",")...)
+						} else {
+							clause.StringsVar(field.Addr().Interface().(*[]string))
+						}
 
 					case reflect.Bool:
 						clause.BoolListVar(field.Addr().Interface().(*[]bool))

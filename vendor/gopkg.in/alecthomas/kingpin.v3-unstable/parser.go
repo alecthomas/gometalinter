@@ -239,17 +239,6 @@ func (p *ParseContext) Next() *Token {
 			p.args = append([]string{"-" + arg[1+size:]}, p.args...)
 		}
 		return &Token{p.argi, TokenShort, short}
-	} else if strings.HasPrefix(arg, "@") {
-		expanded, err := ExpandArgsFromFile(arg[1:])
-		if err != nil {
-			return &Token{p.argi, TokenError, err.Error()}
-		}
-		if p.argi >= len(p.args) {
-			p.args = append(p.args[:p.argi-1], expanded...)
-		} else {
-			p.args = append(p.args[:p.argi-1], append(expanded, p.args[p.argi+1:]...)...)
-		}
-		return p.Next()
 	}
 
 	return &Token{p.argi, TokenArg, arg}
@@ -275,6 +264,9 @@ func (p *ParseContext) pop() *Token {
 }
 
 func (p *ParseContext) String() string {
+	if p.SelectedCommand == nil {
+		return ""
+	}
 	return p.SelectedCommand.FullCommand()
 }
 
@@ -312,7 +304,7 @@ func ExpandArgsFromFile(filename string) (out []string, err error) {
 	return
 }
 
-func parse(context *ParseContext, app *Application) (err error) {
+func parse(context *ParseContext, app *Application) (err error) { // nolint: gocyclo
 	context.mergeFlags(app.flagGroup)
 	context.mergeArgs(app.argGroup)
 
@@ -340,6 +332,19 @@ loop:
 			}
 
 		case TokenArg:
+			if context.arguments.have() {
+				if app.noInterspersed {
+					// no more flags
+					context.argsOnly = true
+				}
+				arg := context.nextArg()
+				if arg != nil {
+					context.matchedArg(arg, token.String())
+					context.Next()
+					continue
+				}
+			}
+
 			if cmds.have() {
 				selectedDefault := false
 				cmd, ok := cmds.commands[token.String()]
@@ -363,20 +368,10 @@ loop:
 				if !selectedDefault {
 					context.Next()
 				}
-			} else if context.arguments.have() {
-				if app.noInterspersed {
-					// no more flags
-					context.argsOnly = true
-				}
-				arg := context.nextArg()
-				if arg == nil {
-					break loop
-				}
-				context.matchedArg(arg, token.String())
-				context.Next()
-			} else {
-				break loop
+				continue
 			}
+
+			break loop
 
 		case TokenEOL:
 			break loop
@@ -395,7 +390,7 @@ loop:
 	}
 
 	if !context.EOL() {
-		return TError("unexpected {{.Arg0}}", V{"Arg0": context.Peek()})
+		return TError("unexpected '{{.Arg0}}'", V{"Arg0": context.Peek()})
 	}
 
 	// Set defaults for all remaining args.

@@ -1,6 +1,9 @@
 package kingpin
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type cmdMixin struct {
 	actionMixin
@@ -206,6 +209,22 @@ func newCommand(app *Application, name, help string) *CmdClause {
 	return c
 }
 
+// Struct allows applications to define flags with struct tags.
+//
+// Supported struct tags are: help, placeholder, default, short, long, required, hidden, env,
+// enum, and arg.
+//
+// The name of the flag will default to the CamelCase name transformed to camel-case. This can
+// be overridden with the "long" tag.
+//
+// All basic Go types are supported including floats, ints, strings, time.Duration,
+// and slices of same.
+//
+// For compatibility, also supports the tags used by https://github.com/jessevdk/go-flags
+func (c *CmdClause) Struct(v interface{}) error {
+	return c.fromStruct(c, v)
+}
+
 // Add an Alias for this command.
 func (c *CmdClause) Alias(name string) *CmdClause {
 	c.aliases = append(c.aliases, name)
@@ -218,12 +237,31 @@ func (c *CmdClause) Validate(validator CmdClauseValidator) *CmdClause {
 	return c
 }
 
+// FullCommand returns the fully qualified "path" to this command,
+// including interspersed argument placeholders. Does not include trailing
+// argument placeholders.
+//
+// eg. "signup <username> <email>"
 func (c *CmdClause) FullCommand() string {
-	out := []string{c.name}
-	for p := c.parent; p != nil; p = p.parent {
-		out = append([]string{p.name}, out...)
+	return strings.Join(c.fullCommand(), " ")
+}
+
+func (c *CmdClause) fullCommand() (out []string) {
+	out = append(out, c.name)
+	for _, arg := range c.args {
+		text := "<" + arg.name + ">"
+		if _, ok := arg.value.(cumulativeValue); ok {
+			text += " ..."
+		}
+		if !arg.required {
+			text = "[" + text + "]"
+		}
+		out = append(out, text)
 	}
-	return strings.Join(out, " ")
+	if c.parent != nil {
+		out = append(c.parent.fullCommand(), out...)
+	}
+	return
 }
 
 // Command adds a new sub-command.
@@ -249,12 +287,26 @@ func (c *CmdClause) PreAction(action Action) *CmdClause {
 	return c
 }
 
+func (c *cmdMixin) checkArgCommandMixing() error {
+	if c.argGroup.have() && c.cmdGroup.have() {
+		for _, arg := range c.args {
+			if arg.consumesRemainder() {
+				return errors.New("cannot mix cumulative Arg() with Command()s")
+			}
+			if !arg.required {
+				return errors.New("Arg()s mixed with Command()s MUST be required")
+			}
+		}
+	}
+	return nil
+}
+
 func (c *CmdClause) init() error {
 	if err := c.flagGroup.init(c.app.defaultEnvarPrefix()); err != nil {
 		return err
 	}
-	if c.argGroup.have() && c.cmdGroup.have() {
-		return TError("can't mix Arg()s with Command()s")
+	if err := c.checkArgCommandMixing(); err != nil {
+		return err
 	}
 	if err := c.argGroup.init(); err != nil {
 		return err

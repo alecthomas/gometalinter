@@ -164,7 +164,7 @@ func init() {
 	kingpin.CommandLine.GetFlag("help").Short('h')
 }
 
-func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
 	r, err := os.Open(*element.Value)
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func loadConfig(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error 
 	return err
 }
 
-func disableAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+func disableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
 	for i, linter := range config.Enable {
 		if linter == *element.Value {
 			config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
@@ -197,17 +197,17 @@ func disableAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) err
 	return nil
 }
 
-func enableAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+func enableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
 	config.Enable = append(config.Enable, *element.Value)
 	return nil
 }
 
-func disableAllAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+func disableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
 	config.Enable = []string{}
 	return nil
 }
 
-func enableAllAction(element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
 	for linter := range linterDefinitions {
 		config.Enable = append(config.Enable, linter)
 	}

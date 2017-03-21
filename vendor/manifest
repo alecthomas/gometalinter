@@ -30,7 +30,7 @@
 			"importpath": "gopkg.in/alecthomas/kingpin.v3-unstable",
 			"repository": "https://gopkg.in/alecthomas/kingpin.v3-unstable",
 			"vcs": "git",
-			"revision": "cf3c3c40a98621504e3ca4b45af0c037d3e971cb",
+			"revision": "9670b87a702e049784340892f0d31a46473041c7",
 			"branch": "v3-unstable",
 			"notests": true
 		},

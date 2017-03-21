@@ -1,22 +1,20 @@
 package kingpin
 
-// Default usage template.
-var DefaultUsageTemplate = `{{define "FormatCommand" -}}
-{{if .FlagSummary}} {{.FlagSummary}}{{end -}}
-{{range .Args}} {{if not .Required}}[{{end}}<{{.Name}}>{{if .Value|IsCumulative}}...{{end}}{{if not .Required}}]{{end}}{{end -}}
-{{end -}}
-
-{{define "FormatCommands" -}}
+// DefaultUsageTemplate is the default usage template.
+var DefaultUsageTemplate = `{{define "FormatCommands" -}}
 {{range .FlattenedCommands -}}
-{{if not .Hidden -}}
-  {{.FullCommand}}{{if .Default}}*{{end}}{{template "FormatCommand" .}}
+{{if not .Hidden}}
+  {{.CmdSummary}}
 {{.Help|Wrap 4}}
+{{if .Flags -}}
+{{with .Flags|FlagsToTwoColumns}}{{FormatTwoColumnsWithIndent . 4 2}}{{end}}
+{{end -}}
 {{end -}}
 {{end -}}
 {{end -}}
 
 {{define "FormatUsage" -}}
-{{template "FormatCommand" .}}{{if .Commands}} <command> [<args> ...]{{end}}
+{{.AppSummary}}
 {{if .Help}}
 {{.Help|Wrap 0 -}}
 {{end -}}
@@ -24,10 +22,10 @@ var DefaultUsageTemplate = `{{define "FormatCommand" -}}
 {{end -}}
 
 {{if .Context.SelectedCommand -}}
-{{T "usage:"}} {{.App.Name}} {{.Context.SelectedCommand}}{{template "FormatUsage" .Context.SelectedCommand}}
-{{else -}}
-{{T "usage:"}} {{.App.Name}}{{template "FormatUsage" .App}}
-{{end -}}
+{{T "usage:"}} {{.App.Name}} {{.App.FlagSummary}} {{.Context.SelectedCommand.CmdSummary}}
+{{else}}
+{{T "usage:"}} {{template "FormatUsage" .App}}
+{{end}}
 {{if .Context.Flags -}}
 {{T "Flags:"}}
 {{.Context.Flags|FlagsToTwoColumns|FormatTwoColumns}}
@@ -42,66 +40,15 @@ var DefaultUsageTemplate = `{{define "FormatCommand" -}}
 {{template "FormatCommands" .Context.SelectedCommand}}
 {{end -}}
 {{else if .App.Commands -}}
-{{T "Commands:"}}
+{{T "Commands:" -}}
 {{template "FormatCommands" .App}}
 {{end -}}
 `
 
-// Usage template where command's optional flags are listed separately
-var SeparateOptionalFlagsUsageTemplate = `{{define "FormatCommand" -}}
-{{if .FlagSummary}} {{.FlagSummary}}{{end -}}
-{{range .Args}} {{if not .Required}}[{{end}}<{{.Name}}>{{if .Value|IsCumulative}}...{{end}}{{if not .Required}}]{{end}}{{end -}}
-{{end -}}
-
-{{define "FormatCommands" -}}
-{{range .FlattenedCommands -}}
-{{if not .Hidden -}}
-  {{.FullCommand}}{{if .Default}}*{{end}}{{template "FormatCommand" .}}
-{{.Help|Wrap 4}}
-{{end -}}
-{{end -}}
-{{end -}}
-
-{{define "FormatUsage" -}}
-{{template "FormatCommand" .}}{{if .Commands}} <command> [<args> ...]{{end}}
-{{if .Help}}
-{{.Help|Wrap 0 -}}
-{{end -}}
-
-{{end -}}
-{{if .Context.SelectedCommand -}}
-{{T "usage:"}} {{.App.Name}} {{.Context.SelectedCommand}}{{template "FormatUsage" .Context.SelectedCommand}}
-{{else -}}
-{{T "usage:"}} {{.App.Name}}{{template "FormatUsage" .App}}
-{{end -}}
-
-{{if .Context.Flags|RequiredFlags -}}
-Required flags:
-{{.Context.Flags|RequiredFlags|FlagsToTwoColumns|FormatTwoColumns}}
-{{end -}}
-{{if  .Context.Flags|OptionalFlags -}}
-Optional flags:
-{{.Context.Flags|OptionalFlags|FlagsToTwoColumns|FormatTwoColumns}}
-{{end -}}
-{{if .Context.Args -}}
-{{T "Args:"}}
-{{.Context.Args|ArgsToTwoColumns|FormatTwoColumns}}
-{{end -}}
-{{if .Context.SelectedCommand -}}
-{{T "Subcommands:"}}
-{{if .Context.SelectedCommand.Commands -}}
-{{template "FormatCommands" .Context.SelectedCommand}}
-{{end -}}
-{{else if .App.Commands -}}
-{{T "Commands:"}}
-{{template "FormatCommands" .App}}
-{{end -}}
-`
-
-// Usage template with compactly formatted commands.
+// CompactUsageTemplate is a template with compactly formatted commands for large command structures.
 var CompactUsageTemplate = `{{define "FormatCommand" -}}
 {{if .FlagSummary}} {{.FlagSummary}}{{end -}}
-{{range .Args}} {{if not .Required}}[{{end}}<{{.Name}}>{{if .Value|IsCumulative}}...{{end}}{{if not .Required}}]{{end}}{{end -}}
+{{range .Args}} {{if not .Required}}[{{end}}<{{.Name}}>{{if .Value|IsCumulative}} ...{{end}}{{if not .Required}}]{{end}}{{end -}}
 {{end -}}
 
 {{define "FormatCommandList" -}}
@@ -122,7 +69,7 @@ var CompactUsageTemplate = `{{define "FormatCommand" -}}
 {{end -}}
 
 {{if .Context.SelectedCommand -}}
-{{T "usage:"}} {{.App.Name}} {{.Context.SelectedCommand}}{{template "FormatUsage" .Context.SelectedCommand}}
+{{T "usage:"}} {{.App.Name}} {{template "FormatUsage" .Context.SelectedCommand}}
 {{else -}}
 {{T "usage:"}} {{.App.Name}}{{template "FormatUsage" .App}}
 {{end -}}
@@ -138,11 +85,11 @@ var CompactUsageTemplate = `{{define "FormatCommand" -}}
 {{if .Context.SelectedCommand.Commands -}}
 {{T "Commands:"}}
   {{.Context.SelectedCommand}}
-{{template "FormatCommandList" .Context.SelectedCommand.Commands}}
+{{.Context.SelectedCommand.Commands|CommandsToTwoColumns|FormatTwoColumns}}
 {{end -}}
 {{else if .App.Commands -}}
 {{T "Commands:"}}
-{{template "FormatCommandList" .App.Commands}}
+{{.App.Commands|CommandsToTwoColumns|FormatTwoColumns}}
 {{end -}}
 `
 
@@ -157,15 +104,13 @@ var ManPageTemplate = `{{define "FormatFlags" -}}
 {{end -}}
 
 {{define "FormatCommand" -}}
-{{if .FlagSummary}} {{.FlagSummary}}{{end -}}
-{{range .Args}} {{if not .Required}}[{{end}}<{{.Name}}{{if .Default}}*{{end}}>{{if .Value|IsCumulative}}...{{end}}{{if not .Required}}]{{end}}{{end -}}
 {{end -}}
 
 {{define "FormatCommands" -}}
 {{range .FlattenedCommands -}}
 {{if not .Hidden -}}
 .SS
-\fB{{.FullCommand}}{{template "FormatCommand" .}}\fR
+\fB{{.CmdSummary}}\fR
 .PP
 {{.Help}}
 {{template "FormatFlags" . -}}
@@ -174,7 +119,8 @@ var ManPageTemplate = `{{define "FormatFlags" -}}
 {{end -}}
 
 {{define "FormatUsage" -}}
-{{template "FormatCommand" .}}{{if .Commands}} <command> [<args> ...]{{end}}\fR
+{{if .FlagSummary}} {{.FlagSummary}}{{end -}}
+{{if .Commands}} <command> [<args> ...]{{end}}\fR
 {{end -}}
 
 .TH {{.App.Name}} 1 {{.App.Version}} "{{.App.Author}}"
@@ -190,45 +136,6 @@ var ManPageTemplate = `{{define "FormatFlags" -}}
 {{if .App.Commands -}}
 .SH "COMMANDS"
 {{template "FormatCommands" .App -}}
-{{end -}}
-`
-
-// Default usage template.
-var LongHelpTemplate = `{{define "FormatCommand" -}}
-{{if .FlagSummary}} {{.FlagSummary}}{{end -}}
-{{range .Args}} {{if not .Required}}[{{end}}<{{.Name}}>{{if .Value|IsCumulative}}...{{end}}{{if not .Required}}]{{end}}{{end -}}
-{{end -}}
-
-{{define "FormatCommands" -}}
-{{range .FlattenedCommands -}}
-{{if not .Hidden -}}
-  {{.FullCommand}}{{template "FormatCommand" .}}
-{{.Help|Wrap 4}}
-{{with .Flags|FlagsToTwoColumns}}{{FormatTwoColumnsWithIndent . 4 2}}{{end}}
-{{end -}}
-{{end -}}
-{{end -}}
-
-{{define "FormatUsage" -}}
-{{template "FormatCommand" .}}{{if .Commands}} <command> [<args> ...]{{end}}
-{{if .Help}}
-{{.Help|Wrap 0 -}}
-{{end -}}
-
-{{end -}}
-
-{{T "usage:"}} {{.App.Name}}{{template "FormatUsage" .App}}
-{{if .Context.Flags -}}
-{{T "Flags:"}}
-{{.Context.Flags|FlagsToTwoColumns|FormatTwoColumns}}
-{{end -}}
-{{if .Context.Args -}}
-{{T "Args:"}}
-{{.Context.Args|ArgsToTwoColumns|FormatTwoColumns}}
-{{end -}}
-{{if .App.Commands -}}
-{{T "Commands:"}}
-{{template "FormatCommands" .App}}
 {{end -}}
 `
 
@@ -256,6 +163,8 @@ _{{.App.Name}}_bash_autocomplete() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     opts=$( ${COMP_WORDS[0]} --completion-bash ${COMP_WORDS[@]:1:$COMP_CWORD} )
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    [[ $COMPREPLY ]] && return
+    compgen -f
     return 0
 }
 complete -F _{{.App.Name}}_bash_autocomplete {{.App.Name}}
