@@ -43,9 +43,7 @@ func outputToCheckstyle(issues chan *Issue) int {
 			}
 		}
 
-		if !config.Errors {
-		} else if issue.Severity == Error {
-		} else {
+		if config.Errors && issue.Severity != Error {
 			continue
 		}
 
