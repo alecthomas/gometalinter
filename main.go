@@ -842,7 +842,23 @@ func getGoPath() string {
 	return path
 }
 
-// Add all "bin" directories from GOPATH to PATH, as well as GOBIN if set.
+// addPath appends p to paths and returns it if:
+// 1. p is not a blank string
+// 2. p doesn't already exist in paths
+// Otherwise paths is returned unchanged.
+func addPath(p string, paths []string) []string {
+	if p == "" {
+		return paths
+	}
+	for _, path := range paths {
+		if p == path {
+			return paths
+		}
+	}
+	return append(paths, p)
+}
+
+// Ensure all "bin" directories from GOPATH exists in PATH, as well as GOBIN if set.
 func configureEnvironment() {
 	gopaths := strings.Split(getGoPath(), string(os.PathListSeparator))
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
@@ -863,11 +879,9 @@ func configureEnvironment() {
 	}
 
 	for _, p := range gopaths {
-		paths = append(paths, filepath.Join(p, "bin"))
+		paths = addPath(filepath.Join(p, "bin"), paths)
 	}
-	if gobin != "" {
-		paths = append([]string{gobin}, paths...)
-	}
+	paths = addPath(gobin, paths)
 
 	path := strings.Join(paths, string(os.PathListSeparator))
 	gopath := strings.Join(gopaths, string(os.PathListSeparator))
