@@ -727,6 +727,11 @@ func executeLinter(state *linterState) error {
 func (l *linterState) fixPath(path string) string {
 	lpath := strings.TrimSuffix(l.path, "...")
 	labspath, _ := filepath.Abs(lpath)
+
+	if !l.ShouldChdir() {
+		path = strings.TrimPrefix(path, lpath)
+	}
+
 	if !filepath.IsAbs(path) {
 		path, _ = filepath.Abs(filepath.Join(labspath, path))
 	}
