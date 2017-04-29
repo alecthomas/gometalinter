@@ -48,6 +48,7 @@ It is intended for use with editor/IDE integration.
 - Vim/Neovim
     - [Neomake](https://github.com/neomake/neomake).
     - [Syntastic](https://github.com/scrooloose/syntastic/wiki/Go:---gometalinter) `let g:syntastic_go_checkers = ['gometalinter']`.
+    - [ale](https://github.com/w0rp/ale) `let g:ale_linters = {'go': ['gometalinter']}`
     - [vim-go](https://github.com/fatih/vim-go) with the `:GoMetaLinter` command.
 
 ## Supported linters
