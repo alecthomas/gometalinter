@@ -27,8 +27,7 @@ type Severity string
 
 // Linter message severity levels.
 const ( // nolint
-	Warning Severity = "warning"
-	Error   Severity = "error"
+	Error Severity = "error"
 )
 
 var (
@@ -415,7 +414,7 @@ func outputToJSON(issues chan *Issue) int {
 
 func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
-	concurrencych := make(chan bool, config.Concurrency)
+	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
 	directives := newDirectiveParser(paths)
 	processedIssues := filterIssuesViaDirectives(directives, maybeSortIssues(maybeAggregateIssues(incomingIssues)))
