@@ -97,27 +97,27 @@ func (s *sortedIssues) Less(i, j int) bool {
 	for _, key := range s.order {
 		switch key {
 		case "path":
-			if l.Path >= r.Path {
+			if l.Path > r.Path {
 				return false
 			}
 		case "line":
-			if l.Line >= r.Line {
+			if l.Line > r.Line {
 				return false
 			}
 		case "column":
-			if l.Col >= r.Col {
+			if l.Col > r.Col {
 				return false
 			}
 		case "severity":
-			if l.Severity >= r.Severity {
+			if l.Severity > r.Severity {
 				return false
 			}
 		case "message":
-			if l.Message >= r.Message {
+			if l.Message > r.Message {
 				return false
 			}
 		case "linter":
-			if l.Linter.Name >= r.Linter.Name {
+			if l.Linter.Name > r.Linter.Name {
 				return false
 			}
 		}
