@@ -135,6 +135,7 @@ func init() {
 	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
 	kingpin.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
 	kingpin.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
+	kingpin.Flag("color", "Color output.").BoolVar(&config.Color)
 	kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
 	kingpin.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
 	kingpin.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
@@ -216,6 +217,12 @@ func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ct
 	return nil
 }
 
+const (
+	errorColor   = "\x1b[31m"
+	warningColor = "\x1b[33m"
+	resetColor   = "\x1b[0m"
+)
+
 type Issue struct {
 	Linter   *Linter  `json:"linter"`
 	Severity Severity `json:"severity"`
@@ -227,8 +234,23 @@ type Issue struct {
 
 func (i *Issue) String() string {
 	buf := new(bytes.Buffer)
+
+	if config.Color {
+		switch i.Severity {
+		case Warning:
+			buf.WriteString(warningColor)
+		case Error:
+			buf.WriteString(errorColor)
+		}
+	}
+
 	err := formatTemplate.Execute(buf, i)
 	kingpin.FatalIfError(err, "Invalid output format")
+
+	if config.Color {
+		buf.WriteString(resetColor)
+	}
+
 	return buf.String()
 }
 
