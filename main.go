@@ -681,6 +681,13 @@ func executeLinter(state *linterState) error {
 	if err != nil {
 		return err
 	}
+	if state.Name == "gotype" && state.vars["tests"] == "-t" {
+		debug("executing 'go test -i %s'", state.path)
+		err := exec.Command("go", "test", "-i").Run()
+		if err != nil {
+			return err
+		}
+	}
 	debug("executing %s %q", exe, args)
 	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(exe, args...) // nolint: gas
