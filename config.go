@@ -79,6 +79,7 @@ var (
 		"ineffassign": "github.com/gordonklaus/ineffassign",
 		"interfacer":  "github.com/mvdan/interfacer/cmd/interfacer",
 		"lll":         "github.com/walle/lll/cmd/lll",
+		"megacheck":   "honnef.co/go/tools/cmd/megacheck",
 		"misspell":    "github.com/client9/misspell/cmd/misspell",
 		"safesql":     "github.com/stripe/safesql",
 		"staticcheck": "honnef.co/go/tools/cmd/staticcheck",
@@ -94,13 +95,14 @@ var (
 		"golint":      true,
 		"gosimple":    true,
 		"interfacer":  true,
+		"megacheck":   true,
 		"staticcheck": true,
 		"structcheck": true,
 		"test":        true,
 		"varcheck":    true,
 		"unconvert":   true,
 	}
-	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unparam", "unused", "gosimple"}
+	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unparam", "unused", "gosimple", "megacheck"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 	// Linter definitions.
@@ -120,6 +122,7 @@ var (
 		"ineffassign": `ineffassign -n {path}:PATH:LINE:COL:MESSAGE`,
 		"interfacer":  `interfacer {path}:PATH:LINE:COL:MESSAGE`,
 		"lll":         `lll -g -l {maxlinelength} {path}/*.go:PATH:LINE:MESSAGE`,
+		"megacheck":   "megacheck {path}:PATH:LINE:COL:MESSAGE",
 		"misspell":    "misspell -j 1 {path}/*.go:PATH:LINE:COL:MESSAGE",
 		"safesql":     `safesql {path}:^- (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+)$`,
 		"staticcheck": "staticcheck {path}:PATH:LINE:COL:MESSAGE",
@@ -163,11 +166,10 @@ var (
 			"goconst",
 			"gocyclo",
 			"golint",
-			"gosimple",
 			"gotype",
 			"ineffassign",
 			"interfacer",
-			"staticcheck",
+			"megacheck",
 			"structcheck",
 			"unconvert",
 			"varcheck",

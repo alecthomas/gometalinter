@@ -63,13 +63,12 @@ It is intended for use with editor/IDE integration.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [aligncheck](https://github.com/opennota/check) - Warn about un-optimally aligned structures.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
+- [megacheck](https://github.com/dominikh/go-tools/tree/master/cmd/megacheck) - Run staticcheck, gosimple and unused, sharing work.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
-- [gosimple](https://github.com/dominikh/go-tools/tree/master/cmd/gosimple) - Report simplifications in code.
-- [staticcheck](https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck) - Statically detect bugs, both obvious and subtle ones.
 - [gas](https://github.com/GoASTScanner/gas) - Inspects source code for security problems by scanning the Go AST.
 
 Disabled by default (enable with `--enable=<linter>`):
@@ -78,11 +77,13 @@ Disabled by default (enable with `--enable=<linter>`):
 - [test](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module.
 - [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
+- [gosimple](https://github.com/dominikh/go-tools/tree/master/cmd/gosimple) - Report simplifications in code.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
 - [unparam](https://github.com/mvdan/unparam) - Find unused function parameters.
 - [unused](https://github.com/dominikh/go-tools/tree/master/cmd/unused) - Find unused variables.
 - [safesql](https://github.com/stripe/safesql) - Finds potential SQL injection vulnerabilities.
+- [staticcheck](https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck) - Statically detect bugs, both obvious and subtle ones.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
