@@ -742,6 +742,7 @@ func (l *linterState) fixPath(path string) string {
 
 func lintersFromFlags() map[string]*Linter {
 	out := map[string]*Linter{}
+	config.Enable = replaceWithMegacheck(config.Enable)
 	for _, linter := range config.Enable {
 		out[linter] = LinterFromName(linter)
 	}
@@ -754,6 +755,38 @@ func lintersFromFlags() map[string]*Linter {
 		}
 	}
 	return out
+}
+
+// replaceWithMegacheck checks enabled linters if they duplicate megacheck and
+// returns a either a revised list removing those and adding megacheck or an
+// unchanged slice. Emits a warning if linters were removed and swapped with
+// megacheck.
+func replaceWithMegacheck(enabled []string) []string {
+	var (
+		staticcheck,
+		gosimple,
+		unused bool
+		revised []string
+	)
+	for _, linter := range enabled {
+		switch linter {
+		case "staticcheck":
+			staticcheck = true
+		case "gosimple":
+			gosimple = true
+		case "unused":
+			unused = true
+		case "megacheck":
+			// Don't add to revised slice, we'll add it later
+		default:
+			revised = append(revised, linter)
+		}
+	}
+	if staticcheck && gosimple && unused {
+		warning("staticcheck, gosimple, and unused are all set, using megacheck instead")
+		return append(revised, "megacheck")
+	}
+	return enabled
 }
 
 // nolint: gocyclo
