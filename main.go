@@ -264,14 +264,6 @@ func formatSeverity() string {
 
 type Vars map[string]string
 
-func (v Vars) Copy() Vars {
-	out := Vars{}
-	for k, v := range v {
-		out[k] = v
-	}
-	return out
-}
-
 func (v Vars) Replace(s string) string {
 	for k, v := range v {
 		prefix := regexp.MustCompile(fmt.Sprintf("{%s=([^}]*)}", k))
@@ -312,7 +304,7 @@ Severity override map (default is "warning"):
 
 	linters := lintersFromFlags()
 	status := 0
-	issues, errch := runLinters(linters, paths, *pathsArg, exclude, include)
+	issues, errch := runLinters(linters, paths, config.Concurrency, exclude, include)
 	if config.JSON {
 		status |= outputToJSON(issues)
 	} else if config.Checkstyle {
@@ -413,54 +405,48 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
-	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
+func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
+	errch := make(chan error, len(linters))
 	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
 	directives := newDirectiveParser()
 	processedIssues := filterIssuesViaDirectives(directives, maybeSortIssues(maybeAggregateIssues(incomingIssues)))
+
+	vars := Vars{
+		"duplthreshold":    fmt.Sprintf("%d", config.DuplThreshold),
+		"mincyclo":         fmt.Sprintf("%d", config.Cyclo),
+		"maxlinelength":    fmt.Sprintf("%d", config.LineLength),
+		"min_confidence":   fmt.Sprintf("%f", config.MinConfidence),
+		"min_occurrences":  fmt.Sprintf("%d", config.MinOccurrences),
+		"min_const_length": fmt.Sprintf("%d", config.MinConstLength),
+		"tests":            "",
+	}
+	if config.Test {
+		vars["tests"] = "-t"
+	}
+
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
-		// Recreated in each loop because it is mutated by executeLinter().
-		vars := Vars{
-			"duplthreshold":    fmt.Sprintf("%d", config.DuplThreshold),
-			"mincyclo":         fmt.Sprintf("%d", config.Cyclo),
-			"maxlinelength":    fmt.Sprintf("%d", config.LineLength),
-			"min_confidence":   fmt.Sprintf("%f", config.MinConfidence),
-			"min_occurrences":  fmt.Sprintf("%d", config.MinOccurrences),
-			"min_const_length": fmt.Sprintf("%d", config.MinConstLength),
-			"tests":            "",
+		wg.Add(1)
+		deadline := time.After(config.Deadline)
+		state := &linterState{
+			Linter:   linter,
+			issues:   incomingIssues,
+			paths:    paths,
+			vars:     vars,
+			exclude:  exclude,
+			include:  include,
+			deadline: deadline,
 		}
-		if config.Test {
-			vars["tests"] = "-t"
-		}
-		linterPaths := paths
-		// Most linters don't exclude vendor paths when recursing, so we don't use ... paths.
-		if acceptsEllipsis[linter.Name] && !config.Vendor && len(ellipsisPaths) > 0 {
-			linterPaths = ellipsisPaths
-		}
-		for _, path := range linterPaths {
-			wg.Add(1)
-			deadline := time.After(config.Deadline)
-			state := &linterState{
-				Linter:   linter,
-				issues:   incomingIssues,
-				path:     path,
-				vars:     vars.Copy(),
-				exclude:  exclude,
-				include:  include,
-				deadline: deadline,
+		go func() {
+			concurrencych <- true
+			err := executeLinter(state)
+			if err != nil {
+				errch <- err
 			}
-			go func() {
-				concurrencych <- true
-				err := executeLinter(state)
-				if err != nil {
-					errch <- err
-				}
-				<-concurrencych
-				wg.Done()
-			}()
-		}
+			<-concurrencych
+			wg.Done()
+		}()
 	}
 
 	go func() {
@@ -617,7 +603,7 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 
 type linterState struct {
 	*Linter
-	path     string
+	paths    []string
 	issues   chan *Issue
 	vars     Vars
 	exclude  *regexp.Regexp
@@ -626,20 +612,10 @@ type linterState struct {
 }
 
 func (l *linterState) InterpolatedCommand() string {
-	vars := l.vars.Copy()
-	if l.ShouldChdir() {
-		vars["path"] = "."
-	} else {
-		vars["path"] = l.path
-	}
-	return vars.Replace(l.Command)
+	return l.vars.Replace(l.Command)
 }
 
-func (l *linterState) ShouldChdir() bool {
-	return config.Vendor || !strings.HasSuffix(l.path, "/...") || !strings.Contains(l.Command, "{path}")
-}
-
-func parseCommand(dir, command string) (string, []string, error) {
+func parseCommand(command string, paths []string) (string, []string, error) {
 	args, err := shlex.Split(command)
 	if err != nil {
 		return "", nil, err
@@ -651,42 +627,21 @@ func parseCommand(dir, command string) (string, []string, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	out := []string{}
-	for _, arg := range args[1:] {
-		if strings.Contains(arg, "*") {
-			pattern := filepath.Join(dir, arg)
-			globbed, err := filepath.Glob(pattern)
-			if err != nil {
-				return "", nil, err
-			}
-			for i, g := range globbed {
-				if strings.HasPrefix(g, dir+string(filepath.Separator)) {
-					globbed[i] = g[len(dir)+1:]
-				}
-			}
-			out = append(out, globbed...)
-		} else {
-			out = append(out, arg)
-		}
-	}
-	return exe, out, nil
+	return exe, append(args[1:], paths...), nil
 }
 
 func executeLinter(state *linterState) error {
-	debug("linting with %s: %s (on %s)", state.Name, state.Command, state.path)
+	debug("linting with %s: %s", state.Name, state.Command)
 
 	start := time.Now()
 	command := state.InterpolatedCommand()
-	exe, args, err := parseCommand(state.path, command)
+	exe, args, err := parseCommand(command, state.paths)
 	if err != nil {
 		return err
 	}
 	debug("executing %s %q", exe, args)
 	buf := bytes.NewBuffer(nil)
 	cmd := exec.Command(exe, args...) // nolint: gas
-	if state.ShouldChdir() {
-		cmd.Dir = state.path
-	}
 	cmd.Stdout = buf
 	cmd.Stderr = buf
 	err = cmd.Start()
@@ -705,8 +660,8 @@ func executeLinter(state *linterState) error {
 	case <-done:
 
 	case <-state.deadline:
-		err = fmt.Errorf("deadline exceeded by linter %s on %s (try increasing --deadline)",
-			state.Name, state.path)
+		err = fmt.Errorf("deadline exceeded by linter %s (try increasing --deadline)",
+			state.Name)
 		kerr := cmd.Process.Kill()
 		if kerr != nil {
 			warning("failed to kill %s: %s", state.Name, kerr)
@@ -722,23 +677,6 @@ func executeLinter(state *linterState) error {
 	elapsed := time.Since(start)
 	debug("%s linter took %s", state.Name, elapsed)
 	return nil
-}
-
-func (l *linterState) fixPath(path string) string {
-	lpath := strings.TrimSuffix(l.path, "...")
-	labspath, _ := filepath.Abs(lpath)
-
-	if !l.ShouldChdir() {
-		path = strings.TrimPrefix(path, lpath)
-	}
-
-	if !filepath.IsAbs(path) {
-		path, _ = filepath.Abs(filepath.Join(labspath, path))
-	}
-	if strings.HasPrefix(path, labspath) {
-		return filepath.Join(lpath, strings.TrimPrefix(path, labspath))
-	}
-	return path
 }
 
 func lintersFromFlags() map[string]*Linter {
@@ -817,7 +755,7 @@ func processOutput(state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				issue.Path = state.fixPath(part)
+				issue.Path = part
 
 			case "line":
 				n, err := strconv.ParseInt(part, 10, 32)
