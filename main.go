@@ -286,8 +286,6 @@ func (v Vars) Replace(s string) string {
 }
 
 func main() {
-	// Linters are by their very nature, short lived, so disable GC.
-	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 PlaceHolder linters:
@@ -314,7 +312,7 @@ Severity override map (default is "warning"):
 
 	linters := lintersFromFlags()
 	status := 0
-	issues, errch := runLinters(linters, paths, *pathsArg, config.Concurrency, exclude, include)
+	issues, errch := runLinters(linters, paths, *pathsArg, exclude, include)
 	if config.JSON {
 		status |= outputToJSON(issues)
 	} else if config.Checkstyle {
@@ -341,7 +339,10 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	formatTemplate = tmpl
+
 	if !config.EnableGC {
+		// Linters are by their very nature, short lived, so disable GC.
+		// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 		_ = os.Setenv("GOGC", "off")
 	}
 	if config.VendoredLinters && config.Install && config.Update {
@@ -412,7 +413,7 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
+func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
 	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
