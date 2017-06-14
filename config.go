@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"runtime"
 	"text/template"
 	"time"
@@ -46,29 +45,14 @@ type Config struct { // nolint: aligncheck
 	DuplThreshold   int
 	Sort            []string
 	Test            bool
-	Deadline        jsonDuration
+	Deadline        time.Duration `json:"-"`
 	Errors          bool
 	JSON            bool
 	Checkstyle      bool
 	EnableGC        bool
 	Aggregate       bool
-}
 
-type jsonDuration time.Duration
-
-func (td *jsonDuration) UnmarshalJSON(raw []byte) error {
-	var durationAsString string
-	if err := json.Unmarshal(raw, &durationAsString); err != nil {
-		return err
-	}
-	duration, err := time.ParseDuration(durationAsString)
-	*td = jsonDuration(duration)
-	return err
-}
-
-// Duration returns the value as a time.Duration
-func (td *jsonDuration) Duration() time.Duration {
-	return time.Duration(*td)
+	DeadlineJSONCrutch string `json:"Deadline"`
 }
 
 // Configuration defaults.
@@ -199,6 +183,6 @@ var (
 		MinConstLength:  3,
 		DuplThreshold:   50,
 		Sort:            []string{"none"},
-		Deadline:        jsonDuration(time.Second * 30),
+		Deadline:        time.Second * 30,
 	}
 )
