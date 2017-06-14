@@ -48,7 +48,7 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	defer os.RemoveAll(dir)
 
 	testFile := filepath.Join(dir, "test.go")
-	err = ioutil.WriteFile(testFile, []byte(source), 0x644)
+	err = ioutil.WriteFile(testFile, []byte(source), 0644)
 	require.NoError(t, err)
 
 	// Run gometalinter.
