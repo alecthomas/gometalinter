@@ -147,3 +147,11 @@ func TestLoadConfigWithDeadline(t *testing.T) {
 
 	require.Equal(t, 3*time.Minute, config.Deadline.Duration())
 }
+
+func TestDeadlineFlag(t *testing.T) {
+	app := kingpin.New("test-app", "")
+	setupFlags(app)
+	_, err := app.Parse([]string{"--deadline", "2m"})
+	require.NoError(t, err)
+	require.Equal(t, 2*time.Minute, config.Deadline.Duration())
+}
