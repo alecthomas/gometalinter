@@ -460,8 +460,9 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 // nolint: gocyclo
 func expandPaths(paths, skip []string) []string {
 	if len(paths) == 0 {
-		paths = []string{"."}
+		return []string{"."}
 	}
+
 	skipMap := map[string]bool{}
 	for _, name := range skip {
 		skipMap[name] = true
@@ -493,6 +494,10 @@ func expandPaths(paths, skip []string) []string {
 	}
 	out := make([]string, 0, len(dirs))
 	for d := range dirs {
+		if !filepath.IsAbs(d) {
+			// package names must start with a ./
+			d = "./" + d
+		}
 		out = append(out, d)
 	}
 	sort.Strings(out)
@@ -733,6 +738,12 @@ func processOutput(state *linterState, out []byte) {
 	re := state.regex
 	all := re.FindAllSubmatchIndex(out, -1)
 	debug("%s hits %d: %s", state.Name, len(all), state.Pattern)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		warning("failed to get working directory %s", err)
+	}
+
 	for _, indices := range all {
 		group := [][]byte{}
 		for i := 0; i < len(indices); i += 2 {
@@ -755,7 +766,7 @@ func processOutput(state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				issue.Path = part
+				issue.Path = relativePath(cwd, part)
 
 			case "line":
 				n, err := strconv.ParseInt(part, 10, 32)
@@ -790,6 +801,18 @@ func processOutput(state *linterState, out []byte) {
 		state.issues <- issue
 	}
 	return
+}
+
+func relativePath(root, path string) string {
+	if !filepath.IsAbs(path) {
+		return path
+	}
+	relative, err := filepath.Rel(root, path)
+	if err != nil {
+		warning("failed to make %s a relative path: %s", path, err)
+		return path
+	}
+	return relative
 }
 
 func findVendoredLinters() string {

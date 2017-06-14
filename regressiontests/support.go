@@ -1,6 +1,7 @@
 package regressiontests
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Issue struct {
@@ -42,32 +44,26 @@ func (e Issues) Less(i, j int) bool { return e[i].String() < e[j].String() }
 func ExpectIssues(t *testing.T, linter string, source string, expected Issues, extraFlags ...string) {
 	// Write source to temporary directory.
 	dir, err := ioutil.TempDir(".", "gometalinter-")
-	if !assert.NoError(t, err) {
-		return
-	}
+	require.NoError(t, err)
 	defer os.RemoveAll(dir)
-	w, err := os.Create(filepath.Join(dir, "test.go"))
-	if !assert.NoError(t, err) {
-		return
-	}
-	defer os.Remove(w.Name())
-	_, err = w.WriteString(source)
-	_ = w.Close()
-	if !assert.NoError(t, err) {
-		return
-	}
+
+	testFile := filepath.Join(dir, "test.go")
+	err = ioutil.WriteFile(testFile, []byte(source), 0x644)
+	require.NoError(t, err)
 
 	// Run gometalinter.
-	args := []string{"go", "run", "../main.go", "../directives.go", "../config.go", "../checkstyle.go", "../aggregate.go", "--disable-all", "--enable", linter, "--json", dir}
+	args := []string{"go", "run", "../main.go", "../directives.go", "../config.go", "../checkstyle.go", "../aggregate.go", "-d", "--disable-all", "--enable", linter, "--json", dir}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(args[0], args[1:]...)
-	if !assert.NoError(t, err) {
-		return
-	}
+	errBuffer := new(bytes.Buffer)
+	cmd.Stderr = errBuffer
+	require.NoError(t, err)
+
 	output, _ := cmd.Output()
 	var actual Issues
 	err = json.Unmarshal(output, &actual)
 	if !assert.NoError(t, err) {
+		fmt.Printf("Stderr: %s\n", errBuffer)
 		fmt.Printf("Output: %s\n", output)
 		return
 	}
@@ -78,7 +74,7 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 		if issue.Linter == linter || linter == "" {
 			// Normalise path.
 			issue.Path = "test.go"
-			issue.Message = strings.Replace(issue.Message, w.Name(), "test.go", -1)
+			issue.Message = strings.Replace(issue.Message, testFile, "test.go", -1)
 			issue.Message = strings.Replace(issue.Message, dir, "", -1)
 			actualForLinter = append(actualForLinter, issue)
 		}
@@ -86,5 +82,8 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	sort.Sort(expected)
 	sort.Sort(actualForLinter)
 
-	assert.Equal(t, expected, actualForLinter)
+	if !assert.Equal(t, expected, actualForLinter) {
+		fmt.Printf("Stderr: %s\n", errBuffer)
+		fmt.Printf("Output: %s\n", output)
+	}
 }
