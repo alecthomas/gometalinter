@@ -112,7 +112,7 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
-		deadline := time.After(config.Deadline)
+		deadline := time.After(config.Deadline.Duration())
 		state := &linterState{
 			Linter:   linter,
 			issues:   incomingIssues,

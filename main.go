@@ -26,6 +26,7 @@ var (
 )
 
 func init() {
+	deadline := time.Duration(config.Deadline)
 	kingpin.Flag("config", "Load JSON configuration from file.").Action(loadConfig).String()
 	kingpin.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
 	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
@@ -55,7 +56,7 @@ func init() {
 	kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").PlaceHolder("50").IntVar(&config.DuplThreshold)
 	kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).PlaceHolder("none").EnumsVar(&config.Sort, sortKeys...)
 	kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').BoolVar(&config.Test)
-	kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("30s").DurationVar(&config.Deadline)
+	kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("30s").DurationVar(&deadline)
 	kingpin.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
 	kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
 	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
@@ -73,9 +74,6 @@ func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *ki
 	err = json.NewDecoder(r).Decode(config)
 	if err != nil {
 		return err
-	}
-	if config.DeadlineJSONCrutch != "" {
-		config.Deadline, err = time.ParseDuration(config.DeadlineJSONCrutch)
 	}
 	for _, disable := range config.Disable {
 		for i, enable := range config.Enable {
