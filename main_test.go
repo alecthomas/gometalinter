@@ -4,8 +4,37 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRelativePackagePath(t *testing.T) {
+	var testcases = []struct{
+		dir string
+		expected string
+	}{
+		{
+			dir: "/abs/path",
+			expected: "/abs/path",
+		},
+		{
+			dir: ".",
+			expected: ".",
+		},
+		{
+			dir: "./foo",
+			expected: "./foo",
+		},
+		{
+			dir: "relative/path",
+			expected: "./relative/path",
+		},
+	}
+
+	for _, testcase := range testcases {
+		assert.Equal(t, testcase.expected, relativePackagePath(testcase.dir))
+	}
+}
 
 func TestSortedIssues(t *testing.T) {
 	actual := []*Issue{

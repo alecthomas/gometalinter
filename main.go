@@ -494,17 +494,21 @@ func expandPaths(paths, skip []string) []string {
 	}
 	out := make([]string, 0, len(dirs))
 	for d := range dirs {
-		if !filepath.IsAbs(d) {
-			// package names must start with a ./
-			d = "./" + d
-		}
-		out = append(out, d)
+		out = append(out, relativePackagePath(d))
 	}
 	sort.Strings(out)
 	for _, d := range out {
 		debug("linting path %s", d)
 	}
 	return out
+}
+
+func relativePackagePath(dir string) string {
+	if filepath.IsAbs(dir) || strings.HasPrefix(dir, ".") {
+		return dir
+	}
+	// package names must start with a ./
+	return "./" + dir
 }
 
 func makeInstallCommand(linters ...string) []string {
