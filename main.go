@@ -406,11 +406,12 @@ func outputToJSON(issues chan *Issue) int {
 }
 
 func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
-	errch := make(chan error, len(linters))
+	errch := make(chan error)
 	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
-	directives := newDirectiveParser()
-	processedIssues := filterIssuesViaDirectives(directives, maybeSortIssues(maybeAggregateIssues(incomingIssues)))
+	processedIssues := filterIssuesViaDirectives(
+		newDirectiveParser(),
+		maybeSortIssues(maybeAggregateIssues(incomingIssues)))
 
 	vars := Vars{
 		"duplthreshold":    fmt.Sprintf("%d", config.DuplThreshold),
@@ -427,7 +428,6 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
-		wg.Add(1)
 		deadline := time.After(config.Deadline)
 		state := &linterState{
 			Linter:   linter,
@@ -438,15 +438,24 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 			include:  include,
 			deadline: deadline,
 		}
-		go func() {
-			concurrencych <- true
-			err := executeLinter(state)
-			if err != nil {
-				errch <- err
-			}
-			<-concurrencych
-			wg.Done()
-		}()
+
+		partitions, err := state.Partitions()
+		if err != nil {
+			errch <- err
+			continue
+		}
+		for _, args := range partitions {
+			wg.Add(1)
+			go func() {
+				concurrencych <- true
+				err := executeLinter(state, args)
+				if err != nil {
+					errch <- err
+				}
+				<-concurrencych
+				wg.Done()
+			}()
+		}
 	}
 
 	go func() {
@@ -620,6 +629,9 @@ func maybeSortIssues(issues chan *Issue) chan *Issue {
 	return out
 }
 
+// MaxCommandBytes is the maximum number of bytes used when executing a command
+const MaxCommandBytes = 32000
+
 type linterState struct {
 	*Linter
 	paths    []string
@@ -628,10 +640,6 @@ type linterState struct {
 	exclude  *regexp.Regexp
 	include  *regexp.Regexp
 	deadline <-chan time.Time
-}
-
-func (l *linterState) InterpolatedCommand() string {
-	return l.vars.Replace(l.Command)
 }
 
 func (l *linterState) Paths() []string {
@@ -645,6 +653,29 @@ func (l *linterState) Paths() []string {
 		filePaths = append(filePaths, paths...)
 	}
 	return filePaths
+}
+
+func (l *linterState) Partitions() ([][]string, error) {
+	command := l.vars.Replace(l.Command)
+	cmd, args, err := parseCommand(command, l.Paths())
+	if err != nil {
+		return nil, err
+	}
+
+	partitions := [][]string{}
+	current := []string{cmd}
+	size := len(cmd)
+	for _, arg := range args {
+		if size+len(arg)+1 >= MaxCommandBytes {
+			partitions = append(partitions, current)
+			current = []string{cmd, arg}
+			size = len(cmd) + len(arg) + 1
+			continue
+		}
+		current = append(current, arg)
+		size += len(arg)
+	}
+	return append(partitions, current), nil
 }
 
 func parseCommand(command string, paths []string) (string, []string, error) {
@@ -662,21 +693,20 @@ func parseCommand(command string, paths []string) (string, []string, error) {
 	return exe, append(args[1:], paths...), nil
 }
 
-func executeLinter(state *linterState) error {
+func executeLinter(state *linterState, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("missing linter command")
+	}
 	debug("linting with %s: %s", state.Name, state.Command)
 
 	start := time.Now()
-	command := state.InterpolatedCommand()
-	exe, args, err := parseCommand(command, state.Paths())
-	if err != nil {
-		return err
-	}
-	debug("executing %s %q", exe, args)
+	debug("executing %s", strings.Join(args, " "))
 	buf := bytes.NewBuffer(nil)
-	cmd := exec.Command(exe, args...) // nolint: gas
+	command := args[0]
+	cmd := exec.Command(command, args[1:]...) // nolint: gas
 	cmd.Stdout = buf
 	cmd.Stderr = buf
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		return fmt.Errorf("failed to execute linter %s: %s", command, err)
 	}

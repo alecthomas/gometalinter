@@ -52,9 +52,11 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	require.NoError(t, err)
 
 	// Run gometalinter.
-	args := []string{"go", "run", "../main.go", "../directives.go", "../config.go", "../checkstyle.go", "../aggregate.go", "-d", "--disable-all", "--enable", linter, "--json", dir}
+	binary, cleanup := buildBinary(t)
+	defer cleanup()
+	args := []string{"-d", "--disable-all", "--enable", linter, "--json", dir}
 	args = append(args, extraFlags...)
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command(binary, args...)
 	errBuffer := new(bytes.Buffer)
 	cmd.Stderr = errBuffer
 	require.NoError(t, err)
@@ -86,4 +88,13 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 		fmt.Printf("Stderr: %s\n", errBuffer)
 		fmt.Printf("Output: %s\n", output)
 	}
+}
+
+func buildBinary(t *testing.T) (string, func()) {
+	tmpdir, err := ioutil.TempDir("", "regression-test")
+	require.NoError(t, err)
+	path := filepath.Join(tmpdir, "binary")
+	cmd := exec.Command("go", "build", "-o", path, "..")
+	require.NoError(t, cmd.Run())
+	return path, func() { os.RemoveAll(tmpdir) }
 }

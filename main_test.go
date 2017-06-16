@@ -12,24 +12,24 @@ import (
 )
 
 func TestRelativePackagePath(t *testing.T) {
-	var testcases = []struct{
-		dir string
+	var testcases = []struct {
+		dir      string
 		expected string
 	}{
 		{
-			dir: "/abs/path",
+			dir:      "/abs/path",
 			expected: "/abs/path",
 		},
 		{
-			dir: ".",
+			dir:      ".",
 			expected: ".",
 		},
 		{
-			dir: "./foo",
+			dir:      "./foo",
 			expected: "./foo",
 		},
 		{
-			dir: "relative/path",
+			dir:      "relative/path",
 			expected: "./relative/path",
 		},
 	}
@@ -115,7 +115,7 @@ func TestLinterStatePaths(t *testing.T) {
 
 	state := linterState{
 		Linter: &Linter{Name: "gofmt"},
-		paths: []string{".", "./two", "./two/three"},
+		paths:  []string{".", "./two", "./two/three"},
 	}
 	expected := []string{"file.go", "two/file.go", "two/three/file.go"}
 	assert.Equal(t, expected, state.Paths())
