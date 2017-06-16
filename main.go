@@ -457,16 +457,12 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 	return processedIssues, errch
 }
 
-// nolint: gocyclo
 func expandPaths(paths, skip []string) []string {
 	if len(paths) == 0 {
 		return []string{"."}
 	}
 
-	skipMap := map[string]bool{}
-	for _, name := range skip {
-		skipMap[name] = true
-	}
+	skipPath := newPathFilter(skip)
 	dirs := map[string]bool{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
@@ -477,8 +473,7 @@ func expandPaths(paths, skip []string) []string {
 					return err
 				}
 
-				base := filepath.Base(p)
-				skip := skipMap[base] || skipMap[p] || (strings.ContainsAny(base[0:1], "_.") && base != "." && base != "..")
+				skip := skipPath(p)
 				if i.IsDir() {
 					if skip {
 						return filepath.SkipDir
@@ -501,6 +496,21 @@ func expandPaths(paths, skip []string) []string {
 		debug("linting path %s", d)
 	}
 	return out
+}
+
+func newPathFilter(skip []string) func(string) bool {
+	filter := map[string]bool{}
+	for _, name := range skip {
+		filter[name] = true
+	}
+
+	return func(path string) bool {
+		base := filepath.Base(path)
+		if filter[base] || filter[path] {
+			return true
+		}
+		return base != "." && base != ".." && strings.ContainsAny(base[0:1], "_.")
+	}
 }
 
 func relativePackagePath(dir string) string {

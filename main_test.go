@@ -1,6 +1,9 @@
 package main
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 
@@ -34,6 +37,63 @@ func TestRelativePackagePath(t *testing.T) {
 	for _, testcase := range testcases {
 		assert.Equal(t, testcase.expected, relativePackagePath(testcase.dir))
 	}
+}
+
+func TestExpandPathsNoPaths(t *testing.T) {
+	paths := expandPaths(nil, nil)
+	assert.Equal(t, []string{"."}, paths)
+}
+
+func TestExpandPathsNoExpands(t *testing.T) {
+	// Non-expanded paths should not be filtered by the skip path list
+	paths := expandPaths([]string{".", "foo", "foo/bar"}, []string{"foo/bar"})
+	expected := []string{".", "./foo", "./foo/bar"}
+	assert.Equal(t, expected, paths)
+}
+
+func TestExpandPathsWithExpands(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
+	require.NoError(t, err)
+
+	oldwd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tmpdir))
+	defer func() { require.NoError(t, os.Chdir(oldwd)) }()
+
+	mkGoFile(t, tmpdir)
+	mkDir(t, tmpdir, "exclude")
+	mkDir(t, tmpdir, "other", "exclude")
+	mkDir(t, tmpdir, "include")
+	mkDir(t, tmpdir, "include", "foo")
+	mkDir(t, tmpdir, "duplicate")
+	mkDir(t, tmpdir, ".exclude")
+	mkDir(t, tmpdir, "include", ".exclude")
+	mkDir(t, tmpdir, "_exclude")
+	mkDir(t, tmpdir, "include", "_exclude")
+
+	filterPaths := []string{"exclude", "other/exclude"}
+	paths := expandPaths([]string{"./...", "foo", "duplicate"}, filterPaths)
+
+	expected := []string{
+		".",
+		"./duplicate",
+		"./foo",
+		"./include",
+		"./include/foo",
+	}
+	assert.Equal(t, expected, paths)
+}
+
+func mkDir(t *testing.T, paths ...string) {
+	fullPath := filepath.Join(paths...)
+	require.NoError(t, os.MkdirAll(fullPath, 0755))
+	mkGoFile(t, fullPath)
+}
+
+func mkGoFile(t *testing.T, path string) {
+	content := []byte("package foo")
+	err := ioutil.WriteFile(filepath.Join(path, "file.go"), content, 0644)
+	require.NoError(t, err)
 }
 
 func TestSortedIssues(t *testing.T) {
