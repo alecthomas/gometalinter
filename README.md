@@ -95,13 +95,13 @@ in `config.go`.
 The configuration file mostly corresponds to command-line flags, with the following exceptions:
 
 - Linters defined in the configuration file will overlay existing definitions, not replace them.
-- "Enable" defines the exact set of linters that will be enabled.
+- "Enable" defines the exact set of linters that will be enabled (default
+  linters are disabled).
 
 Here is an example configuration file:
 
 ```json
 {
-  "DisableAll": true,
   "Enable": ["deadcode", "unconvert"]
 }
 ```
