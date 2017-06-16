@@ -26,9 +26,9 @@ import (
 type Severity string
 
 // Linter message severity levels.
-const ( // nolint
-	Warning Severity = "warning"
+const ( // nolint: deadcode
 	Error   Severity = "error"
+	Warning Severity = "warning"
 )
 
 var (
@@ -42,7 +42,6 @@ var (
 type Linter struct {
 	Name             string   `json:"name"`
 	Command          string   `json:"command"`
-	CompositeCommand string   `json:"composite_command,omitempty"`
 	Pattern          string   `json:"pattern"`
 	InstallFrom      string   `json:"install_from"`
 	SeverityOverride Severity `json:"severity,omitempty"`
@@ -415,9 +414,9 @@ func outputToJSON(issues chan *Issue) int {
 
 func runLinters(linters map[string]*Linter, paths, ellipsisPaths []string, concurrency int, exclude *regexp.Regexp, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters)*(len(paths)+len(ellipsisPaths)))
-	concurrencych := make(chan bool, config.Concurrency)
+	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
-	directives := newDirectiveParser(paths)
+	directives := newDirectiveParser()
 	processedIssues := filterIssuesViaDirectives(directives, maybeSortIssues(maybeAggregateIssues(incomingIssues)))
 	wg := &sync.WaitGroup{}
 	for _, linter := range linters {
