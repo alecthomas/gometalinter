@@ -634,6 +634,19 @@ func (l *linterState) InterpolatedCommand() string {
 	return l.vars.Replace(l.Command)
 }
 
+func (l *linterState) Paths() []string {
+	if !linterTakesFiles.contains(l.Name) {
+		return l.paths
+	}
+	filePaths := []string{}
+	for _, dir := range l.paths {
+		// ignore error because the glob pattern is hardcoded
+		paths, _ := filepath.Glob(filepath.Join(dir, "*.go"))
+		filePaths = append(filePaths, paths...)
+	}
+	return filePaths
+}
+
 func parseCommand(command string, paths []string) (string, []string, error) {
 	args, err := shlex.Split(command)
 	if err != nil {
@@ -654,7 +667,7 @@ func executeLinter(state *linterState) error {
 
 	start := time.Now()
 	command := state.InterpolatedCommand()
-	exe, args, err := parseCommand(command, state.paths)
+	exe, args, err := parseCommand(command, state.Paths())
 	if err != nil {
 		return err
 	}
@@ -912,4 +925,34 @@ func configureEnvironment() {
 		warning("setenv GOBIN: %s", err)
 	}
 	debug("GOBIN=%s", os.Getenv("GOBIN"))
+}
+
+// TODO: replace dirs in expandPaths() and addPath() with a set (others?)
+type stringSet struct {
+	items map[string]struct{}
+}
+
+func newStringSet(items ...string) *stringSet {
+	setItems := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		setItems[item] = struct{}{}
+	}
+	return &stringSet{items: setItems}
+}
+
+func (s *stringSet) add(item string) {
+	s.items[item] = struct{}{}
+}
+
+func (s *stringSet) contains(item string) bool {
+	_, exists := s.items[item]
+	return exists
+}
+
+func (s *stringSet) asSlice() []string {
+	items := []string{}
+	for item := range s.items {
+		items = append(items, item)
+	}
+	return items
 }

@@ -92,6 +92,16 @@ var (
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unparam", "unused", "gosimple", "megacheck"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
+	linterTakesFiles = newStringSet([]string{
+		"dupl",
+		"gofmt",
+		"goimports",
+		"lll",
+		"misspell",
+		"vet",
+		"vetshadow",
+	}...)
+
 	// Linter definitions.
 	linterDefinitions = map[string]string{
 		"aligncheck":  `aligncheck:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,

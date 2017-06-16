@@ -52,13 +52,8 @@ func TestExpandPathsNoExpands(t *testing.T) {
 }
 
 func TestExpandPathsWithExpands(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
-	require.NoError(t, err)
-
-	oldwd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(tmpdir))
-	defer func() { require.NoError(t, os.Chdir(oldwd)) }()
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
 
 	mkGoFile(t, tmpdir)
 	mkDir(t, tmpdir, "exclude")
@@ -84,6 +79,20 @@ func TestExpandPathsWithExpands(t *testing.T) {
 	assert.Equal(t, expected, paths)
 }
 
+func setupTempDir(t *testing.T) (string, func()) {
+	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
+	require.NoError(t, err)
+
+	oldwd, err := os.Getwd()
+	require.NoError(t, err)
+	require.NoError(t, os.Chdir(tmpdir))
+
+	return tmpdir, func() {
+		os.RemoveAll(tmpdir)
+		require.NoError(t, os.Chdir(oldwd))
+	}
+}
+
 func mkDir(t *testing.T, paths ...string) {
 	fullPath := filepath.Join(paths...)
 	require.NoError(t, os.MkdirAll(fullPath, 0755))
@@ -94,6 +103,22 @@ func mkGoFile(t *testing.T, path string) {
 	content := []byte("package foo")
 	err := ioutil.WriteFile(filepath.Join(path, "file.go"), content, 0644)
 	require.NoError(t, err)
+}
+
+func TestLinterStatePaths(t *testing.T) {
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkGoFile(t, tmpdir)
+	mkDir(t, tmpdir, "two")
+	mkDir(t, tmpdir, "two", "three")
+
+	state := linterState{
+		Linter: &Linter{Name: "gofmt"},
+		paths: []string{".", "./two", "./two/three"},
+	}
+	expected := []string{"file.go", "two/file.go", "two/three/file.go"}
+	assert.Equal(t, expected, state.Paths())
 }
 
 func TestSortedIssues(t *testing.T) {
