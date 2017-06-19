@@ -54,7 +54,7 @@ It is intended for use with editor/IDE integration.
 ## Supported linters
 
 - [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
-- [go vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
+- [go tool vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
 - [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
 - [deadcode](https://github.com/tsenart/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
