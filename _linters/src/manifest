@@ -376,7 +376,7 @@
 			"importpath": "honnef.co/go/tools/ssa",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "ssa",
 			"notests": true
