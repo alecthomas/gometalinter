@@ -10,7 +10,6 @@ import (
 	"go/types"
 	htmltemplate "html/template"
 	"net/http"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,6 +17,7 @@ import (
 
 	"honnef.co/go/tools/functions"
 	"honnef.co/go/tools/gcsizes"
+	"honnef.co/go/tools/internal/sharedcheck"
 	"honnef.co/go/tools/lint"
 	"honnef.co/go/tools/ssa"
 	"honnef.co/go/tools/staticcheck/vrp"
@@ -33,10 +33,23 @@ func validRegexp(call *Call) {
 	}
 }
 
+type runeSlice []rune
+
+func (rs runeSlice) Len() int               { return len(rs) }
+func (rs runeSlice) Less(i int, j int) bool { return rs[i] < rs[j] }
+func (rs runeSlice) Swap(i int, j int)      { rs[i], rs[j] = rs[j], rs[i] }
+
 func utf8Cutset(call *Call) {
 	arg := call.Args[1]
 	if InvalidUTF8(arg.Value) {
 		arg.Invalid(MsgInvalidUTF8)
+	}
+}
+
+func uniqueCutset(call *Call) {
+	arg := call.Args[1]
+	if !UniqueStringCutset(arg.Value) {
+		arg.Invalid(MsgNonUniqueCutset)
 	}
 }
 
@@ -97,7 +110,7 @@ var (
 		},
 	}
 
-	checkDubiousSyncPoolSizeRules = map[string]CallCheck{
+	checkSyncPoolSizeRules = map[string]CallCheck{
 		"(*sync.Pool).Put": func(call *Call) {
 			// TODO(dh): allow users to pass in a custom build environment
 			sizes := gcsizes.ForArch(build.Default.GOARCH)
@@ -127,6 +140,12 @@ var (
 		"strings.Trim":         utf8Cutset,
 		"strings.TrimLeft":     utf8Cutset,
 		"strings.TrimRight":    utf8Cutset,
+	}
+
+	checkUniqueCutsetRules = map[string]CallCheck{
+		"strings.Trim":      uniqueCutset,
+		"strings.TrimLeft":  uniqueCutset,
+		"strings.TrimRight": uniqueCutset,
 	}
 
 	checkUnmarshalPointerRules = map[string]CallCheck{
@@ -215,6 +234,7 @@ func (c *Checker) Funcs() map[string]lint.Func {
 		"SA1021": c.callChecker(checkBytesEqualIPRules),
 		"SA1022": c.CheckFlagUsage,
 		"SA1023": c.CheckWriterBufferModified,
+		"SA1024": c.callChecker(checkUniqueCutsetRules),
 
 		"SA2000": c.CheckWaitgroupAdd,
 		"SA2001": c.CheckEmptyCriticalSection,
@@ -235,7 +255,7 @@ func (c *Checker) Funcs() map[string]lint.Func {
 		"SA4007": nil,
 		"SA4008": c.CheckLoopCondition,
 		"SA4009": c.CheckArgOverwritten,
-		"SA4010": nil,
+		"SA4010": c.CheckIneffectiveAppend,
 		"SA4011": c.CheckScopedBreak,
 		"SA4012": c.CheckNaNComparison,
 		"SA4013": c.CheckDoubleNegation,
@@ -254,8 +274,11 @@ func (c *Checker) Funcs() map[string]lint.Func {
 		"SA5007": c.CheckInfiniteRecursion,
 
 		"SA6000": c.callChecker(checkRegexpMatchLoopRules),
+		"SA6001": c.CheckMapBytesKey,
+		"SA6002": c.callChecker(checkSyncPoolSizeRules),
+		"SA6003": c.CheckRangeStringRunes,
 
-		"SA9000": c.callChecker(checkDubiousSyncPoolSizeRules),
+		"SA9000": nil,
 		"SA9001": c.CheckDubiousDeferInChannelRangeLoop,
 		"SA9002": c.CheckNonOctalFileMode,
 		"SA9003": c.CheckEmptyBranch,
@@ -280,44 +303,32 @@ func (c *Checker) Init(prog *lint.Program) {
 	c.deprecatedObjs = map[types.Object]string{}
 	c.nodeFns = map[ast.Node]*ssa.Function{}
 
-	fns := prog.AllFunctions
-
-	var pwg sync.WaitGroup
-	var processFn func(*ssa.Function)
-	processFn = func(fn *ssa.Function) {
+	for _, fn := range prog.AllFunctions {
 		if fn.Blocks != nil {
 			applyStdlibKnowledge(fn)
 			ssa.OptimizeBlocks(fn)
 		}
-		pwg.Done()
 	}
-	for _, fn := range fns {
-		pwg.Add(1)
-		go processFn(fn)
-	}
-	pwg.Wait()
 
 	c.nodeFns = lint.NodeFns(prog.Packages)
 
-	chDeprecated := make(chan struct {
-		obj types.Object
-		msg string
-	}, runtime.NumCPU()*2)
+	deprecated := []map[types.Object]string{}
 	wg := &sync.WaitGroup{}
 	for _, pkginfo := range prog.Prog.AllPackages {
 		pkginfo := pkginfo
 		scope := pkginfo.Pkg.Scope()
 		names := scope.Names()
-		for _, name := range names {
-			name := name
-			wg.Add(1)
-			go func() {
+		wg.Add(1)
+
+		m := map[types.Object]string{}
+		deprecated = append(deprecated, m)
+		go func(m map[types.Object]string) {
+			for _, name := range names {
 				obj := scope.Lookup(name)
 				msg := c.deprecationMessage(pkginfo.Files, prog.SSA.Fset, obj)
-				chDeprecated <- struct {
-					obj types.Object
-					msg string
-				}{obj, msg}
+				if msg != "" {
+					m[obj] = msg
+				}
 				if typ, ok := obj.Type().Underlying().(*types.Struct); ok {
 					n := typ.NumFields()
 					for i := 0; i < n; i++ {
@@ -325,22 +336,20 @@ func (c *Checker) Init(prog *lint.Program) {
 						// fields in anonymous structs.
 						field := typ.Field(i)
 						msg := c.deprecationMessage(pkginfo.Files, prog.SSA.Fset, field)
-						chDeprecated <- struct {
-							obj types.Object
-							msg string
-						}{field, msg}
+						if msg != "" {
+							m[field] = msg
+						}
 					}
 				}
-				wg.Done()
-			}()
-		}
+			}
+			wg.Done()
+		}(m)
 	}
-	go func() {
-		wg.Wait()
-		close(chDeprecated)
-	}()
-	for dep := range chDeprecated {
-		c.deprecatedObjs[dep.obj] = dep.msg
+	wg.Wait()
+	for _, m := range deprecated {
+		for k, v := range m {
+			c.deprecatedObjs[k] = v
+		}
 	}
 }
 
@@ -489,7 +498,7 @@ func (c *Checker) CheckUntrappableSignal(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallNameAny(call,
+		if !j.IsCallToAnyAST(call,
 			"os/signal.Ignore", "os/signal.Notify", "os/signal.Reset") {
 			return true
 		}
@@ -519,16 +528,16 @@ func (c *Checker) CheckTemplate(j *lint.Job) {
 			return true
 		}
 		var kind string
-		if j.IsFunctionCallName(call, "(*text/template.Template).Parse") {
+		if j.IsCallToAST(call, "(*text/template.Template).Parse") {
 			kind = "text"
-		} else if j.IsFunctionCallName(call, "(*html/template.Template).Parse") {
+		} else if j.IsCallToAST(call, "(*html/template.Template).Parse") {
 			kind = "html"
 		} else {
 			return true
 		}
 		sel := call.Fun.(*ast.SelectorExpr)
-		if !j.IsFunctionCallName(sel.X, "text/template.New") &&
-			!j.IsFunctionCallName(sel.X, "html/template.New") {
+		if !j.IsCallToAST(sel.X, "text/template.New") &&
+			!j.IsCallToAST(sel.X, "html/template.New") {
 			// TODO(dh): this is a cheap workaround for templates with
 			// different delims. A better solution with less false
 			// negatives would use data flow analysis to see where the
@@ -565,7 +574,7 @@ func (c *Checker) CheckTimeSleepConstant(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(call, "time.Sleep") {
+		if !j.IsCallToAST(call, "time.Sleep") {
 			return true
 		}
 		lit, ok := call.Args[0].(*ast.BasicLit)
@@ -637,10 +646,36 @@ func (c *Checker) CheckWaitgroupAdd(j *lint.Job) {
 func (c *Checker) CheckInfiniteEmptyLoop(j *lint.Job) {
 	fn := func(node ast.Node) bool {
 		loop, ok := node.(*ast.ForStmt)
-		if !ok || len(loop.Body.List) != 0 || loop.Cond != nil || loop.Init != nil {
+		if !ok || len(loop.Body.List) != 0 || loop.Post != nil {
 			return true
 		}
-		j.Errorf(loop, "should not use an infinite empty loop. It will spin. Consider select{} instead.")
+
+		if loop.Init != nil {
+			// TODO(dh): this isn't strictly necessary, it just makes
+			// the check easier.
+			return true
+		}
+		// An empty loop is bad news in two cases: 1) The loop has no
+		// condition. In that case, it's just a loop that spins
+		// forever and as fast as it can, keeping a core busy. 2) The
+		// loop condition only consists of variable or field reads and
+		// operators on those. The only way those could change their
+		// value is with unsynchronised access, which constitutes a
+		// data race.
+		//
+		// If the condition contains any function calls, its behaviour
+		// is dynamic and the loop might terminate. Similarly for
+		// channel receives.
+
+		if loop.Cond != nil && hasSideEffects(loop.Cond) {
+			return true
+		}
+
+		j.Errorf(loop, "this loop will spin, using 100%% CPU")
+		if loop.Cond != nil {
+			j.Errorf(loop, "loop condition never changes or has a race condition")
+		}
+
 		return true
 	}
 	for _, f := range j.Program.Files {
@@ -753,7 +788,7 @@ func (c *Checker) CheckTestMainExit(j *lint.Job) {
 
 		callsExit := false
 		fn3 := func(node ast.Node) bool {
-			if j.IsFunctionCallName(node, "os.Exit") {
+			if j.IsCallToAST(node, "os.Exit") {
 				callsExit = true
 				return false
 			}
@@ -795,14 +830,14 @@ func (c *Checker) CheckExec(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(call, "os/exec.Command") {
+		if !j.IsCallToAST(call, "os/exec.Command") {
 			return true
 		}
 		val, ok := j.ExprToString(call.Args[0])
 		if !ok {
 			return true
 		}
-		if !strings.Contains(val, " ") || strings.Contains(val, `\`) {
+		if !strings.Contains(val, " ") || strings.Contains(val, `\`) || strings.Contains(val, "/") {
 			return true
 		}
 		j.Errorf(call.Args[0], "first argument to exec.Command looks like a shell command, but a program name or path are expected")
@@ -870,11 +905,16 @@ func (c *Checker) CheckLhsRhsIdentical(j *lint.Job) {
 
 func (c *Checker) CheckScopedBreak(j *lint.Job) {
 	fn := func(node ast.Node) bool {
-		loop, ok := node.(*ast.ForStmt)
-		if !ok {
+		var body *ast.BlockStmt
+		switch node := node.(type) {
+		case *ast.ForStmt:
+			body = node.Body
+		case *ast.RangeStmt:
+			body = node.Body
+		default:
 			return true
 		}
-		for _, stmt := range loop.Body.List {
+		for _, stmt := range body.List {
 			var blocks [][]ast.Stmt
 			switch stmt := stmt.(type) {
 			case *ast.SwitchStmt:
@@ -930,7 +970,7 @@ func (c *Checker) CheckUnsafePrintf(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallNameAny(call, "fmt.Printf", "fmt.Sprintf", "log.Printf") {
+		if !j.IsCallToAnyAST(call, "fmt.Printf", "fmt.Sprintf", "log.Printf") {
 			return true
 		}
 		if len(call.Args) != 1 {
@@ -1033,6 +1073,17 @@ func selectorX(sel *ast.SelectorExpr) ast.Node {
 }
 
 func (c *Checker) CheckEmptyCriticalSection(j *lint.Job) {
+	// Initially it might seem like this check would be easier to
+	// implement in SSA. After all, we're only checking for two
+	// consecutive method calls. In reality, however, there may be any
+	// number of other instructions between the lock and unlock, while
+	// still constituting an empty critical section. For example,
+	// given `m.x().Lock(); m.x().Unlock()`, there will be a call to
+	// x(). In the AST-based approach, this has a tiny potential for a
+	// false positive (the second call to x might be doing work that
+	// is protected by the mutex). In an SSA-based approach, however,
+	// it would miss a lot of real bugs.
+
 	mutexParams := func(s ast.Stmt) (x ast.Expr, funcName string, ok bool) {
 		expr, ok := s.(*ast.ExprStmt)
 		if !ok {
@@ -1313,15 +1364,20 @@ func (c *Checker) CheckIneffecitiveFieldAssignments(j *lint.Job) {
 
 func (c *Checker) CheckUnreadVariableValues(j *lint.Job) {
 	fn := func(node ast.Node) bool {
-		fn, ok := node.(*ast.FuncDecl)
-		if !ok {
+		switch node.(type) {
+		case *ast.FuncDecl, *ast.FuncLit:
+		default:
 			return true
 		}
-		ssafn := c.nodeFns[fn]
+
+		ssafn := c.nodeFns[node]
 		if ssafn == nil {
 			return true
 		}
-		ast.Inspect(fn, func(node ast.Node) bool {
+		if lint.IsExample(ssafn) {
+			return true
+		}
+		ast.Inspect(node, func(node ast.Node) bool {
 			assign, ok := node.(*ast.AssignStmt)
 			if !ok {
 				return true
@@ -1554,7 +1610,7 @@ func (c *Checker) CheckLoopCondition(j *lint.Job) {
 			return true
 		}
 
-		ssafn := j.EnclosingSSAFunction(cond)
+		ssafn := c.nodeFns[cond]
 		if ssafn == nil {
 			return true
 		}
@@ -1593,21 +1649,27 @@ func (c *Checker) CheckLoopCondition(j *lint.Job) {
 
 func (c *Checker) CheckArgOverwritten(j *lint.Job) {
 	fn := func(node ast.Node) bool {
-		fn, ok := node.(*ast.FuncDecl)
-		if !ok {
+		var typ *ast.FuncType
+		var body *ast.BlockStmt
+		switch fn := node.(type) {
+		case *ast.FuncDecl:
+			typ = fn.Type
+			body = fn.Body
+		case *ast.FuncLit:
+			typ = fn.Type
+			body = fn.Body
+		}
+		if body == nil {
 			return true
 		}
-		if fn.Body == nil {
-			return true
-		}
-		ssafn := c.nodeFns[fn]
+		ssafn := c.nodeFns[node]
 		if ssafn == nil {
 			return true
 		}
-		if len(fn.Type.Params.List) == 0 {
+		if len(typ.Params.List) == 0 {
 			return true
 		}
-		for _, field := range fn.Type.Params.List {
+		for _, field := range typ.Params.List {
 			for _, arg := range field.Names {
 				obj := j.Program.Info.ObjectOf(arg)
 				var ssaobj *ssa.Parameter
@@ -1629,7 +1691,7 @@ func (c *Checker) CheckArgOverwritten(j *lint.Job) {
 				}
 
 				assigned := false
-				ast.Inspect(fn.Body, func(node ast.Node) bool {
+				ast.Inspect(body, func(node ast.Node) bool {
 					assign, ok := node.(*ast.AssignStmt)
 					if !ok {
 						return true
@@ -1668,15 +1730,20 @@ func (c *Checker) CheckIneffectiveLoop(j *lint.Job) {
 	// - any nested, unlabelled continue, even if it is in another
 	// loop or closure.
 	fn := func(node ast.Node) bool {
-		fn, ok := node.(*ast.FuncDecl)
-		if !ok {
+		var body *ast.BlockStmt
+		switch fn := node.(type) {
+		case *ast.FuncDecl:
+			body = fn.Body
+		case *ast.FuncLit:
+			body = fn.Body
+		default:
 			return true
 		}
-		if fn.Body == nil {
+		if body == nil {
 			return true
 		}
 		labels := map[*ast.Object]ast.Stmt{}
-		ast.Inspect(fn.Body, func(node ast.Node) bool {
+		ast.Inspect(body, func(node ast.Node) bool {
 			label, ok := node.(*ast.LabeledStmt)
 			if !ok {
 				return true
@@ -1685,7 +1752,7 @@ func (c *Checker) CheckIneffectiveLoop(j *lint.Job) {
 			return true
 		})
 
-		ast.Inspect(fn.Body, func(node ast.Node) bool {
+		ast.Inspect(body, func(node ast.Node) bool {
 			var loop ast.Node
 			var body *ast.BlockStmt
 			switch node := node.(type) {
@@ -1835,6 +1902,72 @@ func (c *Checker) CheckSeeker(j *lint.Job) {
 	}
 }
 
+func (c *Checker) CheckIneffectiveAppend(j *lint.Job) {
+	isAppend := func(ins ssa.Value) bool {
+		call, ok := ins.(*ssa.Call)
+		if !ok {
+			return false
+		}
+		if call.Call.IsInvoke() {
+			return false
+		}
+		if builtin, ok := call.Call.Value.(*ssa.Builtin); !ok || builtin.Name() != "append" {
+			return false
+		}
+		return true
+	}
+
+	for _, ssafn := range j.Program.InitialFunctions {
+		for _, block := range ssafn.Blocks {
+			for _, ins := range block.Instrs {
+				val, ok := ins.(ssa.Value)
+				if !ok || !isAppend(val) {
+					continue
+				}
+
+				isUsed := false
+				visited := map[ssa.Instruction]bool{}
+				var walkRefs func(refs []ssa.Instruction)
+				walkRefs = func(refs []ssa.Instruction) {
+				loop:
+					for _, ref := range refs {
+						if visited[ref] {
+							continue
+						}
+						visited[ref] = true
+						if _, ok := ref.(*ssa.DebugRef); ok {
+							continue
+						}
+						switch ref := ref.(type) {
+						case *ssa.Phi:
+							walkRefs(*ref.Referrers())
+						case *ssa.Sigma:
+							walkRefs(*ref.Referrers())
+						case ssa.Value:
+							if !isAppend(ref) {
+								isUsed = true
+							} else {
+								walkRefs(*ref.Referrers())
+							}
+						case ssa.Instruction:
+							isUsed = true
+							break loop
+						}
+					}
+				}
+				refs := val.Referrers()
+				if refs == nil {
+					continue
+				}
+				walkRefs(*refs)
+				if !isUsed {
+					j.Errorf(ins, "this result of append is never used, except maybe in other appends")
+				}
+			}
+		}
+	}
+}
+
 func (c *Checker) CheckConcurrentTesting(j *lint.Job) {
 	for _, ssafn := range j.Program.InitialFunctions {
 		for _, block := range ssafn.Blocks {
@@ -1957,10 +2090,10 @@ func (c *Checker) CheckSliceOutOfBounds(j *lint.Job) {
 func (c *Checker) CheckDeferLock(j *lint.Job) {
 	for _, ssafn := range j.Program.InitialFunctions {
 		for _, block := range ssafn.Blocks {
-			if len(block.Instrs) < 2 {
+			instrs := lint.FilterDebug(block.Instrs)
+			if len(instrs) < 2 {
 				continue
 			}
-			instrs := lint.FilterDebug(block.Instrs)
 			for i, ins := range instrs[:len(instrs)-1] {
 				call, ok := ins.(*ssa.Call)
 				if !ok {
@@ -2114,6 +2247,24 @@ func (c *Checker) CheckDoubleNegation(j *lint.Job) {
 	}
 }
 
+func hasSideEffects(node ast.Node) bool {
+	dynamic := false
+	ast.Inspect(node, func(node ast.Node) bool {
+		switch node := node.(type) {
+		case *ast.CallExpr:
+			dynamic = true
+			return false
+		case *ast.UnaryExpr:
+			if node.Op == token.ARROW {
+				dynamic = true
+				return false
+			}
+		}
+		return true
+	})
+	return dynamic
+}
+
 func (c *Checker) CheckRepeatedIfElse(j *lint.Job) {
 	seen := map[ast.Node]bool{}
 
@@ -2129,23 +2280,6 @@ func (c *Checker) CheckRepeatedIfElse(j *lint.Job) {
 		}
 		return inits, conds
 	}
-	isDynamic := func(node ast.Node) bool {
-		dynamic := false
-		ast.Inspect(node, func(node ast.Node) bool {
-			switch node := node.(type) {
-			case *ast.CallExpr:
-				dynamic = true
-				return false
-			case *ast.UnaryExpr:
-				if node.Op == token.ARROW {
-					dynamic = true
-					return false
-				}
-			}
-			return true
-		})
-		return dynamic
-	}
 	fn := func(node ast.Node) bool {
 		ifstmt, ok := node.(*ast.IfStmt)
 		if !ok {
@@ -2159,7 +2293,7 @@ func (c *Checker) CheckRepeatedIfElse(j *lint.Job) {
 			return true
 		}
 		for _, cond := range conds {
-			if isDynamic(cond) {
+			if hasSideEffects(cond) {
 				return true
 			}
 		}
@@ -2581,6 +2715,10 @@ func (c *Checker) CheckEmptyBranch(j *lint.Job) {
 		if !ok {
 			return true
 		}
+		ssafn := c.nodeFns[node]
+		if lint.IsExample(ssafn) {
+			return true
+		}
 		if ifstmt.Else != nil {
 			b, ok := ifstmt.Else.(*ast.BlockStmt)
 			if !ok || len(b.List) != 0 {
@@ -2597,4 +2735,59 @@ func (c *Checker) CheckEmptyBranch(j *lint.Job) {
 	for _, f := range c.filterGenerated(j.Program.Files) {
 		ast.Inspect(f, fn)
 	}
+}
+
+func (c *Checker) CheckMapBytesKey(j *lint.Job) {
+	for _, fn := range j.Program.InitialFunctions {
+		for _, b := range fn.Blocks {
+		insLoop:
+			for _, ins := range b.Instrs {
+				// find []byte -> string conversions
+				conv, ok := ins.(*ssa.Convert)
+				if !ok || conv.Type() != types.Universe.Lookup("string").Type() {
+					continue
+				}
+				if s, ok := conv.X.Type().(*types.Slice); !ok || s.Elem() != types.Universe.Lookup("byte").Type() {
+					continue
+				}
+				refs := conv.Referrers()
+				// need at least two (DebugRef) references: the
+				// conversion and the *ast.Ident
+				if refs == nil || len(*refs) < 2 {
+					continue
+				}
+				ident := false
+				// skip first reference, that's the conversion itself
+				for _, ref := range (*refs)[1:] {
+					switch ref := ref.(type) {
+					case *ssa.DebugRef:
+						if _, ok := ref.Expr.(*ast.Ident); !ok {
+							// the string seems to be used somewhere
+							// unexpected; the default branch should
+							// catch this already, but be safe
+							continue insLoop
+						} else {
+							ident = true
+						}
+					case *ssa.Lookup:
+					default:
+						// the string is used somewhere else than a
+						// map lookup
+						continue insLoop
+					}
+				}
+
+				// the result of the conversion wasn't assigned to an
+				// identifier
+				if !ident {
+					continue
+				}
+				j.Errorf(conv, "m[string(key)] would be more efficient than k := string(key); m[k]")
+			}
+		}
+	}
+}
+
+func (c *Checker) CheckRangeStringRunes(j *lint.Job) {
+	sharedcheck.CheckRangeStringRunes(c.nodeFns, j)
 }

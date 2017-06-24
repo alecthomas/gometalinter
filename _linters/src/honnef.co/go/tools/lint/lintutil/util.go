@@ -14,7 +14,6 @@ import (
 	"go/build"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,8 +42,6 @@ type runner struct {
 	tags    []string
 	ignores []lint.Ignore
 	version int
-
-	unclean bool
 }
 
 func (runner runner) resolveRelative(importPaths []string) (goFiles bool, err error) {
@@ -132,28 +129,60 @@ func FlagSet(name string) *flag.FlagSet {
 	return flags
 }
 
-func ProcessFlagSet(name string, c lint.Checker, fs *flag.FlagSet) {
+func ProcessFlagSet(c lint.Checker, fs *flag.FlagSet) {
 	tags := fs.Lookup("tags").Value.(flag.Getter).Get().(string)
 	ignore := fs.Lookup("ignore").Value.(flag.Getter).Get().(string)
 	tests := fs.Lookup("tests").Value.(flag.Getter).Get().(bool)
 	version := fs.Lookup("go").Value.(flag.Getter).Get().(int)
 
-	ignores, err := parseIgnore(ignore)
+	ps, lprog, err := Lint(c, fs.Args(), &Options{
+		Tags:      strings.Fields(tags),
+		LintTests: tests,
+		Ignores:   ignore,
+		GoVersion: version,
+	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	unclean := false
+	for _, p := range ps {
+		unclean = true
+		pos := lprog.Fset.Position(p.Position)
+		fmt.Printf("%v: %s\n", relativePositionString(pos), p.Text)
+	}
+	if unclean {
+		os.Exit(1)
+	}
+}
+
+type Options struct {
+	Tags      []string
+	LintTests bool
+	Ignores   string
+	GoVersion int
+}
+
+func Lint(c lint.Checker, pkgs []string, opt *Options) ([]lint.Problem, *loader.Program, error) {
+	// TODO(dh): Instead of returning the loader.Program, we should
+	// store token.Position instead of token.Pos in lint.Problem.
+	if opt == nil {
+		opt = &Options{}
+	}
+	ignores, err := parseIgnore(opt.Ignores)
+	if err != nil {
+		return nil, nil, err
+	}
 	runner := &runner{
 		checker: c,
-		tags:    strings.Fields(tags),
+		tags:    opt.Tags,
 		ignores: ignores,
-		version: version,
+		version: opt.GoVersion,
 	}
-	paths := gotool.ImportPaths(fs.Args())
+	paths := gotool.ImportPaths(pkgs)
 	goFiles, err := runner.resolveRelative(paths)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		runner.unclean = true
+		return nil, nil, err
 	}
 	ctx := build.Default
 	ctx.BuildTags = runner.tags
@@ -164,34 +193,16 @@ func ProcessFlagSet(name string, c lint.Checker, fs *flag.FlagSet) {
 	}
 	if goFiles {
 		conf.CreateFromFilenames("adhoc", paths...)
-		lprog, err := conf.Load()
-		if err != nil {
-			log.Fatal(err)
-		}
-		ps := runner.lint(lprog)
-		for _, p := range ps {
-			runner.unclean = true
-			pos := lprog.Fset.Position(p.Position)
-			fmt.Printf("%v: %s\n", relativePositionString(pos), p.Text)
-		}
 	} else {
 		for _, path := range paths {
-			conf.ImportPkgs[path] = tests
-		}
-		lprog, err := conf.Load()
-		if err != nil {
-			log.Fatal(err)
-		}
-		ps := runner.lint(lprog)
-		for _, p := range ps {
-			runner.unclean = true
-			pos := lprog.Fset.Position(p.Position)
-			fmt.Printf("%v: %s\n", relativePositionString(pos), p.Text)
+			conf.ImportPkgs[path] = opt.LintTests
 		}
 	}
-	if runner.unclean {
-		os.Exit(1)
+	lprog, err := conf.Load()
+	if err != nil {
+		return nil, nil, err
 	}
+	return runner.lint(lprog), lprog, nil
 }
 
 func shortPath(path string) string {
@@ -223,7 +234,7 @@ func ProcessArgs(name string, c lint.Checker, args []string) {
 	flags := FlagSet(name)
 	flags.Parse(args)
 
-	ProcessFlagSet(name, c, flags)
+	ProcessFlagSet(c, flags)
 }
 
 func (runner *runner) lint(lprog *loader.Program) []lint.Problem {

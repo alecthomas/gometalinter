@@ -40,8 +40,9 @@ type Ignore struct {
 }
 
 type Program struct {
-	SSA              *ssa.Program
-	Prog             *loader.Program
+	SSA  *ssa.Program
+	Prog *loader.Program
+	// TODO(dh): Rename to InitialPackages?
 	Packages         []*Pkg
 	InitialFunctions []*ssa.Function
 	AllFunctions     []*ssa.Function
@@ -50,7 +51,7 @@ type Program struct {
 	GoVersion        int
 
 	tokenFileMap map[*token.File]*ast.File
-	astFileMap   map[*ast.File]*ssa.Package
+	astFileMap   map[*ast.File]*Pkg
 }
 
 type Func func(*Job)
@@ -137,6 +138,7 @@ func (ps byPosition) Swap(i int, j int) {
 func (l *Linter) Lint(lprog *loader.Program) []Problem {
 	ssaprog := ssautil.CreateProgram(lprog, ssa.GlobalDebug)
 	ssaprog.Build()
+	pkgMap := map[*ssa.Package]*Pkg{}
 	var pkgs []*Pkg
 	for _, pkginfo := range lprog.InitialPackages() {
 		ssapkg := ssaprog.Package(pkginfo.Pkg)
@@ -144,64 +146,81 @@ func (l *Linter) Lint(lprog *loader.Program) []Problem {
 			Package: ssapkg,
 			Info:    pkginfo,
 		}
+		pkgMap[ssapkg] = pkg
 		pkgs = append(pkgs, pkg)
 	}
 	prog := &Program{
-		SSA:      ssaprog,
-		Prog:     lprog,
-		Packages: pkgs,
-		Info: &types.Info{
-			Types:      map[ast.Expr]types.TypeAndValue{},
-			Defs:       map[*ast.Ident]types.Object{},
-			Uses:       map[*ast.Ident]types.Object{},
-			Implicits:  map[ast.Node]types.Object{},
-			Selections: map[*ast.SelectorExpr]*types.Selection{},
-			Scopes:     map[ast.Node]*types.Scope{},
-		},
+		SSA:          ssaprog,
+		Prog:         lprog,
+		Packages:     pkgs,
+		Info:         &types.Info{},
 		GoVersion:    l.GoVersion,
 		tokenFileMap: map[*token.File]*ast.File{},
-		astFileMap:   map[*ast.File]*ssa.Package{},
+		astFileMap:   map[*ast.File]*Pkg{},
+	}
+	initial := map[*types.Package]struct{}{}
+	for _, pkg := range pkgs {
+		initial[pkg.Info.Pkg] = struct{}{}
 	}
 	for fn := range ssautil.AllFunctions(ssaprog) {
+		if fn.Pkg == nil {
+			continue
+		}
 		prog.AllFunctions = append(prog.AllFunctions, fn)
-		// TODO(dh): optimize this function
-		for _, pkg := range lprog.InitialPackages() {
-			if fn.Pkg == nil {
-				continue
-			}
-			if fn.Pkg.Pkg == pkg.Pkg {
-				prog.InitialFunctions = append(prog.InitialFunctions, fn)
-				break
-			}
+		if _, ok := initial[fn.Pkg.Pkg]; ok {
+			prog.InitialFunctions = append(prog.InitialFunctions, fn)
 		}
 	}
-	for _, pkginfo := range lprog.InitialPackages() {
-		prog.Files = append(prog.Files, pkginfo.Files...)
+	for _, pkg := range pkgs {
+		prog.Files = append(prog.Files, pkg.Info.Files...)
 
-		ssapkg := ssaprog.Package(pkginfo.Pkg)
-		for _, f := range pkginfo.Files {
+		ssapkg := ssaprog.Package(pkg.Info.Pkg)
+		for _, f := range pkg.Info.Files {
 			tf := lprog.Fset.File(f.Pos())
 			prog.tokenFileMap[tf] = f
-			prog.astFileMap[f] = ssapkg
+			prog.astFileMap[f] = pkgMap[ssapkg]
 		}
 	}
-	for _, pkginfo := range lprog.InitialPackages() {
-		for k, v := range pkginfo.Info.Types {
+
+	sizes := struct {
+		types      int
+		defs       int
+		uses       int
+		implicits  int
+		selections int
+		scopes     int
+	}{}
+	for _, pkg := range pkgs {
+		sizes.types += len(pkg.Info.Info.Types)
+		sizes.defs += len(pkg.Info.Info.Defs)
+		sizes.uses += len(pkg.Info.Info.Uses)
+		sizes.implicits += len(pkg.Info.Info.Implicits)
+		sizes.selections += len(pkg.Info.Info.Selections)
+		sizes.scopes += len(pkg.Info.Info.Scopes)
+	}
+	prog.Info.Types = make(map[ast.Expr]types.TypeAndValue, sizes.types)
+	prog.Info.Defs = make(map[*ast.Ident]types.Object, sizes.defs)
+	prog.Info.Uses = make(map[*ast.Ident]types.Object, sizes.uses)
+	prog.Info.Implicits = make(map[ast.Node]types.Object, sizes.implicits)
+	prog.Info.Selections = make(map[*ast.SelectorExpr]*types.Selection, sizes.selections)
+	prog.Info.Scopes = make(map[ast.Node]*types.Scope, sizes.scopes)
+	for _, pkg := range pkgs {
+		for k, v := range pkg.Info.Info.Types {
 			prog.Info.Types[k] = v
 		}
-		for k, v := range pkginfo.Info.Defs {
+		for k, v := range pkg.Info.Info.Defs {
 			prog.Info.Defs[k] = v
 		}
-		for k, v := range pkginfo.Info.Uses {
+		for k, v := range pkg.Info.Info.Uses {
 			prog.Info.Uses[k] = v
 		}
-		for k, v := range pkginfo.Info.Implicits {
+		for k, v := range pkg.Info.Info.Implicits {
 			prog.Info.Implicits[k] = v
 		}
-		for k, v := range pkginfo.Info.Selections {
+		for k, v := range pkg.Info.Info.Selections {
 			prog.Info.Selections[k] = v
 		}
-		for k, v := range pkginfo.Info.Scopes {
+		for k, v := range pkg.Info.Info.Scopes {
 			prog.Info.Scopes[k] = v
 		}
 	}
@@ -257,6 +276,17 @@ type Pkg struct {
 
 type packager interface {
 	Package() *ssa.Package
+}
+
+func IsExample(fn *ssa.Function) bool {
+	if !strings.HasPrefix(fn.Name(), "Example") {
+		return false
+	}
+	f := fn.Prog.Fset.File(fn.Pos())
+	if f == nil {
+		return false
+	}
+	return strings.HasSuffix(f.Name(), "_test.go")
 }
 
 func (j *Job) IsInTest(node Positioner) bool {
@@ -377,16 +407,9 @@ func (j *Job) ExprToString(expr ast.Expr) (string, bool) {
 	return constant.StringVal(val), true
 }
 
-func (j *Job) NodePackage(node Positioner) *ssa.Package {
+func (j *Job) NodePackage(node Positioner) *Pkg {
 	f := j.File(node)
 	return j.Program.astFileMap[f]
-}
-
-func (j *Job) EnclosingSSAFunction(node Positioner) *ssa.Function {
-	f := j.File(node)
-	path, _ := astutil.PathEnclosingInterval(f, node.Pos(), node.Pos())
-	pkg := j.Program.astFileMap[f]
-	return ssa.EnclosingFunction(pkg, path)
 }
 
 func IsGenerated(f *ast.File) bool {
@@ -403,7 +426,7 @@ func (j *Job) IsGoVersion(minor int) bool {
 	return j.Program.GoVersion >= minor
 }
 
-func (j *Job) IsFunctionCallName(node ast.Node, name string) bool {
+func (j *Job) IsCallToAST(node ast.Node, name string) bool {
 	call, ok := node.(*ast.CallExpr)
 	if !ok {
 		return false
@@ -416,9 +439,9 @@ func (j *Job) IsFunctionCallName(node ast.Node, name string) bool {
 	return ok && fn.FullName() == name
 }
 
-func (j *Job) IsFunctionCallNameAny(node ast.Node, names ...string) bool {
+func (j *Job) IsCallToAnyAST(node ast.Node, names ...string) bool {
 	for _, name := range names {
-		if j.IsFunctionCallName(node, name) {
+		if j.IsCallToAST(node, name) {
 			return true
 		}
 	}
@@ -463,16 +486,15 @@ func NodeFns(pkgs []*Pkg) map[ast.Node]*ssa.Function {
 	chNodeFns := make(chan map[ast.Node]*ssa.Function, runtime.NumCPU()*2)
 	for _, pkg := range pkgs {
 		pkg := pkg
-		for _, f := range pkg.Info.Files {
-			f := f
-			wg.Add(1)
-			go func() {
-				m := map[ast.Node]*ssa.Function{}
+		wg.Add(1)
+		go func() {
+			m := map[ast.Node]*ssa.Function{}
+			for _, f := range pkg.Info.Files {
 				ast.Walk(&globalVisitor{m, pkg, f}, f)
-				chNodeFns <- m
-				wg.Done()
-			}()
-		}
+			}
+			chNodeFns <- m
+			wg.Done()
+		}()
 	}
 	go func() {
 		wg.Wait()
@@ -499,7 +521,7 @@ func (v *globalVisitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.CallExpr:
 		v.m[node] = v.pkg.Func("init")
 		return v
-	case *ast.FuncDecl:
+	case *ast.FuncDecl, *ast.FuncLit:
 		nv := &fnVisitor{v.m, v.f, v.pkg, nil}
 		return nv.Visit(node)
 	default:

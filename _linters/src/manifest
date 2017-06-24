@@ -304,7 +304,7 @@
 			"importpath": "honnef.co/go/tools/callgraph",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "callgraph",
 			"notests": true
@@ -313,7 +313,7 @@
 			"importpath": "honnef.co/go/tools/cmd/gosimple",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "/cmd/gosimple",
 			"notests": true
@@ -331,7 +331,7 @@
 			"importpath": "honnef.co/go/tools/cmd/staticcheck",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "/cmd/staticcheck",
 			"notests": true
@@ -340,7 +340,7 @@
 			"importpath": "honnef.co/go/tools/cmd/unused",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "/cmd/unused",
 			"notests": true
@@ -349,7 +349,7 @@
 			"importpath": "honnef.co/go/tools/functions",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "functions",
 			"notests": true
@@ -358,16 +358,25 @@
 			"importpath": "honnef.co/go/tools/gcsizes",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "gcsizes",
+			"notests": true
+		},
+		{
+			"importpath": "honnef.co/go/tools/internal/sharedcheck",
+			"repository": "https://github.com/dominikh/go-tools",
+			"vcs": "git",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
+			"branch": "master",
+			"path": "/internal/sharedcheck",
 			"notests": true
 		},
 		{
 			"importpath": "honnef.co/go/tools/lint",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "lint",
 			"notests": true
@@ -376,7 +385,7 @@
 			"importpath": "honnef.co/go/tools/simple",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "simple",
 			"notests": true
@@ -385,7 +394,7 @@
 			"importpath": "honnef.co/go/tools/ssa",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "ssa",
 			"notests": true
@@ -394,7 +403,7 @@
 			"importpath": "honnef.co/go/tools/staticcheck",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "staticcheck",
 			"notests": true
@@ -403,7 +412,7 @@
 			"importpath": "honnef.co/go/tools/unused",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "89a8bf9d32d7bf42e8a6e83c21177a2a029a2f0c",
+			"revision": "e94d1c1a34c6b61d8d06c7793b8f22cd0dfcdd90",
 			"branch": "master",
 			"path": "unused",
 			"notests": true

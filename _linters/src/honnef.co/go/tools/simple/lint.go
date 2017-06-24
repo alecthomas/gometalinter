@@ -11,15 +11,29 @@ import (
 	"strconv"
 	"strings"
 
+	"honnef.co/go/tools/internal/sharedcheck"
 	"honnef.co/go/tools/lint"
+	"honnef.co/go/tools/ssa"
+
+	"golang.org/x/tools/go/types/typeutil"
 )
 
 type Checker struct {
 	CheckGenerated bool
+	MS             *typeutil.MethodSetCache
+
+	nodeFns map[ast.Node]*ssa.Function
 }
 
-func NewChecker() *Checker            { return &Checker{} }
-func (c *Checker) Init(*lint.Program) {}
+func NewChecker() *Checker {
+	return &Checker{
+		MS: &typeutil.MethodSetCache{},
+	}
+}
+
+func (c *Checker) Init(prog *lint.Program) {
+	c.nodeFns = lint.NodeFns(prog.Packages)
+}
 
 func (c *Checker) Funcs() map[string]lint.Func {
 	return map[string]lint.Func{
@@ -48,6 +62,11 @@ func (c *Checker) Funcs() map[string]lint.Func {
 		"S1022": c.LintBlankOK,
 		"S1023": c.LintRedundantBreak,
 		"S1024": c.LintTimeUntil,
+		"S1025": c.LintRedundantSprintf,
+		"S1026": c.LintStringCopy,
+		"S1027": c.LintRedundantReturn,
+		"S1028": c.LintErrorsNewSprintf,
+		"S1029": c.LintRangeStringRunes,
 	}
 }
 
@@ -313,7 +332,7 @@ func (c *Checker) LintBytesCompare(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(call, "bytes.Compare") {
+		if !j.IsCallToAST(call, "bytes.Compare") {
 			return true
 		}
 		value, ok := j.ExprToInt(expr.Y)
@@ -376,8 +395,8 @@ func (c *Checker) LintRegexpRaw(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(call, "regexp.MustCompile") &&
-			!j.IsFunctionCallName(call, "regexp.Compile") {
+		if !j.IsCallToAST(call, "regexp.MustCompile") &&
+			!j.IsCallToAST(call, "regexp.Compile") {
 			return true
 		}
 		sel, ok := call.Fun.(*ast.SelectorExpr)
@@ -766,7 +785,7 @@ func (c *Checker) LintTimeSince(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(sel.X, "time.Now") {
+		if !j.IsCallToAST(sel.X, "time.Now") {
 			return true
 		}
 		if sel.Sel.Name != "Sub" {
@@ -789,10 +808,10 @@ func (c *Checker) LintTimeUntil(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(call, "(time.Time).Sub") {
+		if !j.IsCallToAST(call, "(time.Time).Sub") {
 			return true
 		}
-		if !j.IsFunctionCallName(call.Args[0], "time.Now") {
+		if !j.IsCallToAST(call.Args[0], "time.Now") {
 			return true
 		}
 		j.Errorf(call, "should use time.Until instead of t.Sub(time.Now())")
@@ -899,7 +918,7 @@ func (c *Checker) LintSimplerReturn(j *lint.Job) {
 					continue
 				}
 				_, idIface := id1Obj.Type().Underlying().(*types.Interface)
-				_, retIface := j.Program.Info.TypeOf(ret.List[ret.NumFields()-1].Type).Underlying().(*types.Interface)
+				_, retIface := j.Program.Info.TypeOf(ret.List[len(ret.List)-1].Type).Underlying().(*types.Interface)
 
 				if retIface && !idIface {
 					// When the return value is an interface, but the
@@ -958,11 +977,7 @@ func (c *Checker) LintFormatInt(j *lint.Job) {
 		if !ok {
 			return false
 		}
-		switch typ.Kind() {
-		case types.Int, types.Int32:
-			return true
-		}
-		return false
+		return typ.Kind() == types.Int
 	}
 	checkConst := func(v *ast.Ident) bool {
 		c, ok := j.Program.Info.ObjectOf(v).(*types.Const)
@@ -988,7 +1003,7 @@ func (c *Checker) LintFormatInt(j *lint.Job) {
 		if !ok {
 			return true
 		}
-		if !j.IsFunctionCallName(call, "strconv.FormatInt") {
+		if !j.IsCallToAST(call, "strconv.FormatInt") {
 			return true
 		}
 		if len(call.Args) != 2 {
@@ -1638,4 +1653,201 @@ func (c *Checker) LintRedundantBreak(j *lint.Job) {
 	for _, f := range c.filterGenerated(j.Program.Files) {
 		ast.Inspect(f, fn)
 	}
+}
+
+func (c *Checker) Implements(j *lint.Job, typ types.Type, iface string) bool {
+	// OPT(dh): we can cache the type lookup
+	idx := strings.IndexRune(iface, '.')
+	var scope *types.Scope
+	var ifaceName string
+	if idx == -1 {
+		scope = types.Universe
+		ifaceName = iface
+	} else {
+		pkgName := iface[:idx]
+		pkg := j.Program.Prog.Package(pkgName)
+		if pkg == nil {
+			return false
+		}
+		scope = pkg.Pkg.Scope()
+		ifaceName = iface[idx+1:]
+	}
+
+	obj := scope.Lookup(ifaceName)
+	if obj == nil {
+		return false
+	}
+	i, ok := obj.Type().Underlying().(*types.Interface)
+	if !ok {
+		return false
+	}
+	return types.Implements(typ, i)
+}
+
+func (c *Checker) LintRedundantSprintf(j *lint.Job) {
+	fn := func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if !j.IsCallToAST(call, "fmt.Sprintf") {
+			return true
+		}
+		if len(call.Args) != 2 {
+			return true
+		}
+		if s, ok := j.ExprToString(call.Args[0]); !ok || s != "%s" {
+			return true
+		}
+		pkg := j.NodePackage(call)
+		arg := call.Args[1]
+		typ := pkg.Info.TypeOf(arg)
+
+		if c.Implements(j, typ, "fmt.Stringer") {
+			j.Errorf(call, "should use String() instead of fmt.Sprintf")
+			return true
+		}
+
+		if typ.Underlying() == types.Universe.Lookup("string").Type() {
+			if typ == types.Universe.Lookup("string").Type() {
+				j.Errorf(call, "the argument is already a string, there's no need to use fmt.Sprintf")
+			} else {
+				j.Errorf(call, "the argument's underlying type is a string, should use a simple conversion instead of fmt.Sprintf")
+			}
+		}
+		return true
+	}
+	for _, f := range c.filterGenerated(j.Program.Files) {
+		ast.Inspect(f, fn)
+	}
+}
+
+func (c *Checker) LintStringCopy(j *lint.Job) {
+	emptyStringLit := func(e ast.Expr) bool {
+		bl, ok := e.(*ast.BasicLit)
+		return ok && bl.Value == `""`
+	}
+	fn := func(node ast.Node) bool {
+		switch x := node.(type) {
+		case *ast.BinaryExpr: // "" + s, s + ""
+			if x.Op != token.ADD {
+				break
+			}
+			l1 := j.Program.Prog.Fset.Position(x.X.Pos()).Line
+			l2 := j.Program.Prog.Fset.Position(x.Y.Pos()).Line
+			if l1 != l2 {
+				break
+			}
+			var want ast.Expr
+			switch {
+			case emptyStringLit(x.X):
+				want = x.Y
+			case emptyStringLit(x.Y):
+				want = x.X
+			default:
+				return true
+			}
+			j.Errorf(x, "should use %s instead of %s",
+				j.Render(want), j.Render(x))
+		case *ast.CallExpr:
+			if j.IsCallToAST(x, "fmt.Sprint") && len(x.Args) == 1 {
+				// fmt.Sprint(x)
+
+				argT := j.Program.Info.TypeOf(x.Args[0])
+				bt, ok := argT.Underlying().(*types.Basic)
+				if !ok || bt.Kind() != types.String {
+					return true
+				}
+				if c.Implements(j, argT, "fmt.Stringer") || c.Implements(j, argT, "error") {
+					return true
+				}
+
+				j.Errorf(x, "should use %s instead of %s", j.Render(x.Args[0]), j.Render(x))
+				return true
+			}
+
+			// string([]byte(s))
+			bt, ok := j.Program.Info.TypeOf(x.Fun).(*types.Basic)
+			if !ok || bt.Kind() != types.String {
+				break
+			}
+			nested, ok := x.Args[0].(*ast.CallExpr)
+			if !ok {
+				break
+			}
+			st, ok := j.Program.Info.TypeOf(nested.Fun).(*types.Slice)
+			if !ok {
+				break
+			}
+			et, ok := st.Elem().(*types.Basic)
+			if !ok || et.Kind() != types.Byte {
+				break
+			}
+			xt, ok := j.Program.Info.TypeOf(nested.Args[0]).(*types.Basic)
+			if !ok || xt.Kind() != types.String {
+				break
+			}
+			j.Errorf(x, "should use %s instead of %s",
+				j.Render(nested.Args[0]), j.Render(x))
+		}
+		return true
+	}
+	for _, f := range c.filterGenerated(j.Program.Files) {
+		ast.Inspect(f, fn)
+	}
+}
+
+func (c *Checker) LintRedundantReturn(j *lint.Job) {
+	fn := func(node ast.Node) bool {
+		var ret *ast.FieldList
+		var body *ast.BlockStmt
+		switch x := node.(type) {
+		case *ast.FuncDecl:
+			ret = x.Type.Results
+			body = x.Body
+		case *ast.FuncLit:
+			ret = x.Type.Results
+			body = x.Body
+		default:
+			return true
+		}
+		// if the func has results, a return can't be redundant.
+		// similarly, if there are no statements, there can be
+		// no return.
+		if ret != nil || body == nil || len(body.List) < 1 {
+			return true
+		}
+		rst, ok := body.List[len(body.List)-1].(*ast.ReturnStmt)
+		if !ok {
+			return true
+		}
+		// we don't need to check rst.Results as we already
+		// checked x.Type.Results to be nil.
+		j.Errorf(rst, "redundant return statement")
+		return true
+	}
+	for _, f := range c.filterGenerated(j.Program.Files) {
+		ast.Inspect(f, fn)
+	}
+}
+
+func (c *Checker) LintErrorsNewSprintf(j *lint.Job) {
+	fn := func(node ast.Node) bool {
+		if !j.IsCallToAST(node, "errors.New") {
+			return true
+		}
+		call := node.(*ast.CallExpr)
+		if !j.IsCallToAST(call.Args[0], "fmt.Sprintf") {
+			return true
+		}
+		j.Errorf(node, "should use fmt.Errorf(...) instead of errors.New(fmt.Sprintf(...))")
+		return true
+	}
+	for _, f := range c.filterGenerated(j.Program.Files) {
+		ast.Inspect(f, fn)
+	}
+}
+
+func (c *Checker) LintRangeStringRunes(j *lint.Job) {
+	sharedcheck.CheckRangeStringRunes(c.nodeFns, j)
 }
