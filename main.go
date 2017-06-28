@@ -264,6 +264,14 @@ func formatSeverity() string {
 
 type Vars map[string]string
 
+func (v Vars) Copy() Vars {
+	out := Vars{}
+	for k, v := range v {
+		out[k] = v
+	}
+	return out
+}
+
 func (v Vars) Replace(s string) string {
 	for k, v := range v {
 		prefix := regexp.MustCompile(fmt.Sprintf("{%s=([^}]*)}", k))
@@ -433,7 +441,7 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 			Linter:   linter,
 			issues:   incomingIssues,
 			paths:    paths,
-			vars:     vars,
+			vars:     vars.Copy(),
 			exclude:  exclude,
 			include:  include,
 			deadline: deadline,
