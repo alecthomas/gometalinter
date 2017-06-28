@@ -98,8 +98,6 @@ var (
 		"goimports",
 		"lll",
 		"misspell",
-		"vet",
-		"vetshadow",
 	}...)
 
 	// Linter definitions.
