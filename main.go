@@ -768,8 +768,7 @@ func lintersFromFlags() map[string]*Linter {
 
 // replaceWithMegacheck checks enabled linters if they duplicate megacheck and
 // returns a either a revised list removing those and adding megacheck or an
-// unchanged slice. Emits a warning if linters were removed and swapped with
-// megacheck.
+// unchanged slice.
 func replaceWithMegacheck(enabled []string) []string {
 	var (
 		staticcheck,
@@ -792,7 +791,6 @@ func replaceWithMegacheck(enabled []string) []string {
 		}
 	}
 	if staticcheck && gosimple && unused {
-		warning("staticcheck, gosimple, and unused are all set, using megacheck instead")
 		return append(revised, "megacheck")
 	}
 	return enabled
