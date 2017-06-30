@@ -18,6 +18,13 @@ type (
 	}
 )
 
+func maybeAggregateIssues(issues chan *Issue) chan *Issue {
+	if !config.Aggregate {
+		return issues
+	}
+	return aggregateIssues(issues)
+}
+
 func aggregateIssues(issues chan *Issue) chan *Issue {
 	out := make(chan *Issue, 1000000)
 	issueMap := make(map[issueKey]*multiIssue)

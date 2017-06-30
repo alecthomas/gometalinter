@@ -148,8 +148,6 @@ func formatSeverity() string {
 }
 
 func main() {
-	// Linters are by their very nature, short lived, so disable GC.
-	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 PlaceHolder linters:
@@ -176,7 +174,7 @@ Severity override map (default is "warning"):
 
 	linters := lintersFromFlags()
 	status := 0
-	issues, errch := runLinters(linters, paths, *pathsArg, config.Concurrency, exclude, include)
+	issues, errch := runLinters(linters, paths, config.Concurrency, exclude, include)
 	if config.JSON {
 		status |= outputToJSON(issues)
 	} else if config.Checkstyle {
@@ -203,7 +201,10 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	formatTemplate = tmpl
+
 	if !config.EnableGC {
+		// Linters are by their very nature, short lived, so disable GC.
+		// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 		_ = os.Setenv("GOGC", "off")
 	}
 	if config.VendoredLinters && config.Install && config.Update {
@@ -274,15 +275,12 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-// nolint: gocyclo
 func expandPaths(paths, skip []string) []string {
 	if len(paths) == 0 {
-		paths = []string{"."}
+		return []string{"."}
 	}
-	skipMap := map[string]bool{}
-	for _, name := range skip {
-		skipMap[name] = true
-	}
+
+	skipPath := newPathFilter(skip)
 	dirs := map[string]bool{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
@@ -293,8 +291,7 @@ func expandPaths(paths, skip []string) []string {
 					return err
 				}
 
-				base := filepath.Base(p)
-				skip := skipMap[base] || skipMap[p] || (strings.ContainsAny(base[0:1], "_.") && base != "." && base != "..")
+				skip := skipPath(p)
 				if i.IsDir() {
 					if skip {
 						return filepath.SkipDir
@@ -310,13 +307,36 @@ func expandPaths(paths, skip []string) []string {
 	}
 	out := make([]string, 0, len(dirs))
 	for d := range dirs {
-		out = append(out, d)
+		out = append(out, relativePackagePath(d))
 	}
 	sort.Strings(out)
 	for _, d := range out {
 		debug("linting path %s", d)
 	}
 	return out
+}
+
+func newPathFilter(skip []string) func(string) bool {
+	filter := map[string]bool{}
+	for _, name := range skip {
+		filter[name] = true
+	}
+
+	return func(path string) bool {
+		base := filepath.Base(path)
+		if filter[base] || filter[path] {
+			return true
+		}
+		return base != "." && base != ".." && strings.ContainsAny(base[0:1], "_.")
+	}
+}
+
+func relativePackagePath(dir string) string {
+	if filepath.IsAbs(dir) || strings.HasPrefix(dir, ".") {
+		return dir
+	}
+	// package names must start with a ./
+	return "./" + dir
 }
 
 func lintersFromFlags() map[string]*Linter {
@@ -380,7 +400,6 @@ func findVendoredLinters() string {
 		}
 	}
 	return ""
-
 }
 
 // Go 1.8 compatible GOPATH.
