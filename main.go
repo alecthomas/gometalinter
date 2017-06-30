@@ -212,6 +212,7 @@ func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ct
 	for linter := range linterDefinitions {
 		config.Enable = append(config.Enable, linter)
 	}
+	config.EnableAll = true
 	return nil
 }
 
@@ -759,7 +760,8 @@ func lintersFromFlags() map[string]*Linter {
 
 // replaceWithMegacheck checks enabled linters if they duplicate megacheck and
 // returns a either a revised list removing those and adding megacheck or an
-// unchanged slice.
+// unchanged slice. Emits a warning if linters were removed and swapped with
+// megacheck.
 func replaceWithMegacheck(enabled []string) []string {
 	var (
 		staticcheck,
@@ -782,6 +784,9 @@ func replaceWithMegacheck(enabled []string) []string {
 		}
 	}
 	if staticcheck && gosimple && unused {
+		if !config.EnableAll {
+			warning("staticcheck, gosimple and unused are all set, using megacheck instead")
+		}
 		return append(revised, "megacheck")
 	}
 	return enabled

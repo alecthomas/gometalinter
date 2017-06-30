@@ -51,6 +51,7 @@ type Config struct { // nolint: aligncheck
 	Checkstyle      bool
 	EnableGC        bool
 	Aggregate       bool
+	EnableAll       bool
 
 	DeadlineJSONCrutch string `json:"Deadline"`
 }
