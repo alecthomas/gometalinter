@@ -19,7 +19,8 @@ type Linter struct {
 	SeverityOverride Severity `json:"severity,omitempty"`
 	MessageOverride  string   `json:"message_override,omitempty"`
 
-	regex *regexp.Regexp
+	regex             *regexp.Regexp
+	partitionStrategy partitionStrategy
 }
 
 func (l *Linter) MarshalJSON() ([]byte, error) {
@@ -28,6 +29,11 @@ func (l *Linter) MarshalJSON() ([]byte, error) {
 
 func (l *Linter) String() string {
 	return l.Name
+}
+
+var predefinedPatterns = map[string]string{
+	"PATH:LINE:COL:MESSAGE": `^(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+	"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 }
 
 func LinterFromName(name string) *Linter {
@@ -44,13 +50,14 @@ func LinterFromName(name string) *Linter {
 	re, err := regexp.Compile("(?m:" + pattern + ")")
 	kingpin.FatalIfError(err, "invalid regex for %q", name)
 	return &Linter{
-		Name:             name,
-		Command:          s[0:strings.Index(s, ":")],
-		Pattern:          pattern,
-		InstallFrom:      installMap[name],
-		SeverityOverride: Severity(config.Severity[name]),
-		MessageOverride:  config.MessageOverride[name],
-		regex:            re,
+		Name:              name,
+		Command:           s[0:strings.Index(s, ":")],
+		Pattern:           pattern,
+		InstallFrom:       installMap[name],
+		SeverityOverride:  Severity(config.Severity[name]),
+		MessageOverride:   config.MessageOverride[name],
+		regex:             re,
+		partitionStrategy: getParitionStrategy(name),
 	}
 }
 

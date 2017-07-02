@@ -4,8 +4,6 @@ import (
 	"runtime"
 	"text/template"
 	"time"
-
-	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
@@ -59,10 +57,7 @@ type Config struct { // nolint: aligncheck
 var (
 	vetRe = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
 
-	predefinedPatterns = map[string]string{
-		"PATH:LINE:COL:MESSAGE": `^(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
-	}
+	// TODO: should be a field on Config struct
 	formatTemplate = &template.Template{}
 	installMap     = map[string]string{
 		"aligncheck":  "github.com/opennota/check/cmd/aligncheck",
@@ -92,15 +87,9 @@ var (
 	slowLinters = []string{"structcheck", "varcheck", "errcheck", "aligncheck", "testify", "test", "interfacer", "unconvert", "deadcode", "safesql", "staticcheck", "unparam", "unused", "gosimple", "megacheck"}
 	sortKeys    = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
-	linterTakesFiles = newStringSet([]string{
-		"dupl",
-		"gofmt",
-		"goimports",
-		"lll",
-		"misspell",
-		"vet",
-		"vetshadow",
-	}...)
+	linterTakesFiles = newStringSet("dupl", "gofmt", "goimports", "lll", "misspell")
+
+	linterTakesFilesGroupedByPackage = newStringSet("vet", "vetshadow")
 
 	// Linter definitions.
 	linterDefinitions = map[string]string{
@@ -133,8 +122,6 @@ var (
 		"vet":         `go tool vet:` + vetRe,
 		"vetshadow":   `go tool vet --shadow:` + vetRe,
 	}
-
-	pathsArg = kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 
 	config = &Config{
 		Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",

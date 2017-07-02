@@ -39,23 +39,23 @@ func TestRelativePackagePath(t *testing.T) {
 	}
 }
 
-func TestExpandPathsNoPaths(t *testing.T) {
-	paths := expandPaths(nil, nil)
+func TestResolvePathsNoPaths(t *testing.T) {
+	paths := resolvePaths(nil, nil)
 	assert.Equal(t, []string{"."}, paths)
 }
 
-func TestExpandPathsNoExpands(t *testing.T) {
+func TestResolvePathsNoExpands(t *testing.T) {
 	// Non-expanded paths should not be filtered by the skip path list
-	paths := expandPaths([]string{".", "foo", "foo/bar"}, []string{"foo/bar"})
+	paths := resolvePaths([]string{".", "foo", "foo/bar"}, []string{"foo/bar"})
 	expected := []string{".", "./foo", "./foo/bar"}
 	assert.Equal(t, expected, paths)
 }
 
-func TestExpandPathsWithExpands(t *testing.T) {
+func TestResolvePathsWithExpands(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
 
-	mkGoFile(t, tmpdir)
+	mkGoFile(t, tmpdir, "file.go")
 	mkDir(t, tmpdir, "exclude")
 	mkDir(t, tmpdir, "other", "exclude")
 	mkDir(t, tmpdir, "include")
@@ -67,7 +67,7 @@ func TestExpandPathsWithExpands(t *testing.T) {
 	mkDir(t, tmpdir, "include", "_exclude")
 
 	filterPaths := []string{"exclude", "other/exclude"}
-	paths := expandPaths([]string{"./...", "foo", "duplicate"}, filterPaths)
+	paths := resolvePaths([]string{"./...", "foo", "duplicate"}, filterPaths)
 
 	expected := []string{
 		".",
@@ -96,29 +96,13 @@ func setupTempDir(t *testing.T) (string, func()) {
 func mkDir(t *testing.T, paths ...string) {
 	fullPath := filepath.Join(paths...)
 	require.NoError(t, os.MkdirAll(fullPath, 0755))
-	mkGoFile(t, fullPath)
+	mkGoFile(t, fullPath, "file.go")
 }
 
-func mkGoFile(t *testing.T, path string) {
+func mkGoFile(t *testing.T, path string, filename string) {
 	content := []byte("package foo")
-	err := ioutil.WriteFile(filepath.Join(path, "file.go"), content, 0644)
+	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
 	require.NoError(t, err)
-}
-
-func TestLinterStatePaths(t *testing.T) {
-	tmpdir, cleanup := setupTempDir(t)
-	defer cleanup()
-
-	mkGoFile(t, tmpdir)
-	mkDir(t, tmpdir, "two")
-	mkDir(t, tmpdir, "two", "three")
-
-	state := linterState{
-		Linter: &Linter{Name: "gofmt"},
-		paths:  []string{".", "./two", "./two/three"},
-	}
-	expected := []string{"file.go", "two/file.go", "two/three/file.go"}
-	assert.Equal(t, expected, state.Paths())
 }
 
 func TestSortedIssues(t *testing.T) {

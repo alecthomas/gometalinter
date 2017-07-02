@@ -148,6 +148,7 @@ func formatSeverity() string {
 }
 
 func main() {
+	var pathsArg = kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 PlaceHolder linters:
@@ -170,7 +171,7 @@ Severity override map (default is "warning"):
 	include, exclude := processConfig(config)
 
 	start := time.Now()
-	paths := expandPaths(*pathsArg, config.Skip)
+	paths := resolvePaths(*pathsArg, config.Skip)
 
 	linters := lintersFromFlags()
 	status := 0
@@ -275,7 +276,7 @@ func outputToJSON(issues chan *Issue) int {
 	return status
 }
 
-func expandPaths(paths, skip []string) []string {
+func resolvePaths(paths, skip []string) []string {
 	if len(paths) == 0 {
 		return []string{"."}
 	}

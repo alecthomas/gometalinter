@@ -66,9 +66,6 @@ func (i *Issue) String() string {
 	return buf.String()
 }
 
-// MaxCommandBytes is the maximum number of bytes used when executing a command
-const MaxCommandBytes = 32000
-
 type linterState struct {
 	*Linter
 	paths    []string
@@ -79,40 +76,13 @@ type linterState struct {
 	deadline <-chan time.Time
 }
 
-func (l *linterState) Paths() []string {
-	if !linterTakesFiles.contains(l.Name) {
-		return l.paths
-	}
-	filePaths := []string{}
-	for _, dir := range l.paths {
-		// ignore error because the glob pattern is hardcoded
-		paths, _ := filepath.Glob(filepath.Join(dir, "*.go"))
-		filePaths = append(filePaths, paths...)
-	}
-	return filePaths
-}
-
 func (l *linterState) Partitions() ([][]string, error) {
 	command := l.vars.Replace(l.Command)
-	cmd, args, err := parseCommand(command, l.Paths())
+	cmdArgs, err := parseCommand(command)
 	if err != nil {
 		return nil, err
 	}
-
-	partitions := [][]string{}
-	current := []string{cmd}
-	size := len(cmd)
-	for _, arg := range args {
-		if size+len(arg)+1 >= MaxCommandBytes {
-			partitions = append(partitions, current)
-			current = []string{cmd, arg}
-			size = len(cmd) + len(arg) + 1
-			continue
-		}
-		current = append(current, arg)
-		size += len(arg)
-	}
-	return append(partitions, current), nil
+	return l.Linter.partitionStrategy(cmdArgs, l.paths), nil
 }
 
 func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
@@ -143,7 +113,7 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 			Linter:   linter,
 			issues:   incomingIssues,
 			paths:    paths,
-			vars:     vars.Copy(),
+			vars:     vars,
 			exclude:  exclude,
 			include:  include,
 			deadline: deadline,
@@ -156,7 +126,10 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 		}
 		for _, args := range partitions {
 			wg.Add(1)
-			go func() {
+			// Call the goroutine with a copy of the args array so that the
+			// contents of the array are not modified by the next iteration of
+			// the above for loop
+			go func(args []string) {
 				concurrencych <- true
 				err := executeLinter(state, args)
 				if err != nil {
@@ -164,7 +137,7 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 				}
 				<-concurrencych
 				wg.Done()
-			}()
+			}(append(args))
 		}
 	}
 
@@ -180,7 +153,6 @@ func executeLinter(state *linterState, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing linter command")
 	}
-	debug("linting with %s: %s", state.Name, state.Command)
 
 	start := time.Now()
 	debug("executing %s", strings.Join(args, " "))
@@ -224,19 +196,19 @@ func executeLinter(state *linterState, args []string) error {
 	return nil
 }
 
-func parseCommand(command string, paths []string) (string, []string, error) {
+func parseCommand(command string) ([]string, error) {
 	args, err := shlex.Split(command)
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	if len(args) == 0 {
-		return "", nil, fmt.Errorf("invalid command %q", command)
+		return nil, fmt.Errorf("invalid command %q", command)
 	}
 	exe, err := exec.LookPath(args[0])
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
-	return exe, append(args[1:], paths...), nil
+	return append([]string{exe}, args[1:]...), nil
 }
 
 // nolint: gocyclo
@@ -250,6 +222,9 @@ func processOutput(state *linterState, out []byte) {
 		warning("failed to get working directory %s", err)
 	}
 
+	// Create a local copy of vars so they can be modified by the linter output
+	vars := state.vars.Copy()
+
 	for _, indices := range all {
 		group := [][]byte{}
 		for i := 0; i < len(indices); i += 2 {
@@ -260,15 +235,14 @@ func processOutput(state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue := &Issue{Line: 1}
-		issue.Linter = LinterFromName(state.Name)
+		issue := &Issue{Line: 1, Linter: state.Linter}
 		for i, name := range re.SubexpNames() {
 			if group[i] == nil {
 				continue
 			}
 			part := string(group[i])
 			if name != "" {
-				state.vars[name] = part
+				vars[name] = part
 			}
 			switch name {
 			case "path":
@@ -291,7 +265,7 @@ func processOutput(state *linterState, out []byte) {
 			}
 		}
 		if m, ok := config.MessageOverride[state.Name]; ok {
-			issue.Message = state.vars.Replace(m)
+			issue.Message = vars.Replace(m)
 		}
 		if sev, ok := config.Severity[state.Name]; ok {
 			issue.Severity = Severity(sev)

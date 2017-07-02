@@ -1,6 +1,6 @@
 package main
 
-// TODO: replace dirs in expandPaths() and addPath() with a set (others?)
+// TODO: replace dirs in resolvePaths() and addPath() with a set (others?)
 type stringSet struct {
 	items map[string]struct{}
 }
