@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,25 +102,4 @@ func mkGoFile(t *testing.T, path string, filename string) {
 	content := []byte("package foo")
 	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
 	require.NoError(t, err)
-}
-
-func TestSortedIssues(t *testing.T) {
-	actual := []*Issue{
-		{Path: "b.go", Line: 5},
-		{Path: "a.go", Line: 3},
-		{Path: "b.go", Line: 1},
-		{Path: "a.go", Line: 1},
-	}
-	issues := &sortedIssues{
-		issues: actual,
-		order:  []string{"path", "line"},
-	}
-	sort.Sort(issues)
-	expected := []*Issue{
-		{Path: "a.go", Line: 1},
-		{Path: "a.go", Line: 3},
-		{Path: "b.go", Line: 1},
-		{Path: "b.go", Line: 5},
-	}
-	require.Equal(t, expected, actual)
 }

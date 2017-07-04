@@ -53,3 +53,25 @@ func packagePaths(dir string, filenames ...string) []string {
 	}
 	return paths
 }
+
+func TestPartitionToPackageFileGlobsNoFiles(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	cmdArgs := []string{"/usr/bin/foo", "-c"}
+	paths := []string{filepath.Join(tmpdir, "one"), filepath.Join(tmpdir, "two")}
+	parts := partitionToPackageFileGlobs(cmdArgs, paths)
+	assert.Len(t, parts, 0)
+}
+
+func TestPartitionToMaxArgSizeWithFileGlobsNoFiles(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+
+	cmdArgs := []string{"/usr/bin/foo", "-c"}
+	paths := []string{filepath.Join(tmpdir, "one"), filepath.Join(tmpdir, "two")}
+	parts := partitionToMaxArgSizeWithFileGlobs(cmdArgs, paths)
+	assert.Len(t, parts, 0)
+}

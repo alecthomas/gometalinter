@@ -82,7 +82,11 @@ func (l *linterState) Partitions() ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return l.Linter.partitionStrategy(cmdArgs, l.paths), nil
+	parts := l.Linter.partitionStrategy(cmdArgs, l.paths)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("%s: no files to lint", l.Name)
+	}
+	return parts, nil
 }
 
 func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {

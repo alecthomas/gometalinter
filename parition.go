@@ -80,13 +80,20 @@ func (p *sizePartitioner) end() [][]string {
 }
 
 func partitionToMaxArgSizeWithFileGlobs(cmdArgs []string, paths []string) [][]string {
-	return partitionToMaxArgSize(cmdArgs, packagesToFileGlobs(paths))
+	filePaths := packagesToFileGlobs(paths)
+	if len(filePaths) == 0 {
+		return nil
+	}
+	return partitionToMaxArgSize(cmdArgs, filePaths)
 }
 
 func partitionToPackageFileGlobs(cmdArgs []string, paths []string) [][]string {
 	parts := [][]string{}
 	for _, path := range paths {
 		filePaths := packagesToFileGlobs([]string{path})
+		if len(filePaths) == 0 {
+			continue
+		}
 		parts = append(parts, append(cmdArgs, filePaths...))
 	}
 	return parts
