@@ -113,6 +113,7 @@ func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ct
 	for linter := range linterDefinitions {
 		config.Enable = append(config.Enable, linter)
 	}
+	config.EnableAll = true
 	return nil
 }
 
@@ -382,7 +383,9 @@ func replaceWithMegacheck(enabled []string) []string {
 		}
 	}
 	if staticcheck && gosimple && unused {
-		warning("staticcheck, gosimple, and unused are all set, using megacheck instead")
+		if !config.EnableAll {
+			warning("staticcheck, gosimple and unused are all set, using megacheck instead")
+		}
 		return append(revised, "megacheck")
 	}
 	return enabled
