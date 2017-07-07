@@ -45,7 +45,7 @@
 			"importpath": "github.com/jgautheron/goconst",
 			"repository": "https://github.com/jgautheron/goconst",
 			"vcs": "git",
-			"revision": "6a7633b712b6fb1d6821d33851d086a1d545dacd",
+			"revision": "9740945f5dcb78c2faa8eedcce78c2a04aa6e1e9",
 			"branch": "master",
 			"notests": true
 		},
