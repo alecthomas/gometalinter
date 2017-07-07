@@ -293,11 +293,10 @@ func resolvePaths(paths, skip []string) []string {
 				}
 
 				skip := skipPath(p)
-				if i.IsDir() {
-					if skip {
-						return filepath.SkipDir
-					}
-				} else if !skip && strings.HasSuffix(p, ".go") {
+				switch {
+				case i.IsDir() && skip:
+					return filepath.SkipDir
+				case !i.IsDir() && !skip && strings.HasSuffix(p, ".go"):
 					dirs[filepath.Clean(filepath.Dir(p))] = true
 				}
 				return nil

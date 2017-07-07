@@ -103,3 +103,26 @@ func mkGoFile(t *testing.T, path string, filename string) {
 	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
 	require.NoError(t, err)
 }
+
+func TestPathFilter(t *testing.T) {
+	skip := []string{"exclude", "skip.go"}
+	pathFilter := newPathFilter(skip)
+
+	var testcases = []struct {
+		path     string
+		expected bool
+	}{
+		{path: "exclude", expected: true},
+		{path: "something/skip.go", expected: true},
+		{path: "skip.go", expected: true},
+		{path: ".git", expected: true},
+		{path: "_ignore", expected: true},
+		{path: "include.go", expected: false},
+		{path: ".", expected: false},
+		{path: "..", expected: false},
+	}
+
+	for _, testcase := range testcases {
+		assert.Equal(t, testcase.expected, pathFilter(testcase.path), testcase.path)
+	}
+}
