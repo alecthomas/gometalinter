@@ -14,8 +14,9 @@ import (
 	"sync"
 	"time"
 
+	kingpin "gopkg.in/alecthomas/kingpin.v2"
+
 	"github.com/google/shlex"
-	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 type Vars map[string]string
@@ -90,7 +91,7 @@ func (l *linterState) Partitions() ([][]string, error) {
 }
 
 func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
-	errch := make(chan error)
+	errch := make(chan error, len(linters))
 	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := filterIssuesViaDirectives(
