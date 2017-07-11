@@ -29,7 +29,7 @@ func TestSortedIssues(t *testing.T) {
 	require.Equal(t, expected, actual)
 }
 
-func TestLinterStateParitions(t *testing.T) {
+func TestLinterStatePartitions(t *testing.T) {
 	noPartitions := func(_ []string, _ []string) [][]string {
 		return nil
 	}

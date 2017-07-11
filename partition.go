@@ -9,7 +9,7 @@ const MaxCommandBytes = 32000
 
 type partitionStrategy func([]string, []string) [][]string
 
-func getParitionStrategy(name string) partitionStrategy {
+func getPartitionStrategy(name string) partitionStrategy {
 	switch {
 	case linterTakesFiles.contains(name):
 		return partitionToMaxArgSizeWithFileGlobs
@@ -19,7 +19,7 @@ func getParitionStrategy(name string) partitionStrategy {
 	return partitionToMaxArgSize
 }
 
-func packagesToFileGlobs(paths []string) []string {
+func pathsToFileGlobs(paths []string) []string {
 	filePaths := []string{}
 	for _, dir := range paths {
 		// ignore error because the glob pattern is hardcoded
@@ -34,7 +34,7 @@ func partitionToMaxArgSize(cmdArgs []string, paths []string) [][]string {
 }
 
 func partitionToMaxSize(cmdArgs []string, paths []string, maxSize int) [][]string {
-	partitions := newSizeParitioner(cmdArgs, maxSize)
+	partitions := newSizePartitioner(cmdArgs, maxSize)
 	for _, path := range paths {
 		partitions.add(path)
 	}
@@ -49,7 +49,7 @@ type sizePartitioner struct {
 	max     int
 }
 
-func newSizeParitioner(base []string, max int) *sizePartitioner {
+func newSizePartitioner(base []string, max int) *sizePartitioner {
 	p := &sizePartitioner{base: base, max: max}
 	p.new()
 	return p
@@ -80,7 +80,7 @@ func (p *sizePartitioner) end() [][]string {
 }
 
 func partitionToMaxArgSizeWithFileGlobs(cmdArgs []string, paths []string) [][]string {
-	filePaths := packagesToFileGlobs(paths)
+	filePaths := pathsToFileGlobs(paths)
 	if len(filePaths) == 0 {
 		return nil
 	}
@@ -90,7 +90,7 @@ func partitionToMaxArgSizeWithFileGlobs(cmdArgs []string, paths []string) [][]st
 func partitionToPackageFileGlobs(cmdArgs []string, paths []string) [][]string {
 	parts := [][]string{}
 	for _, path := range paths {
-		filePaths := packagesToFileGlobs([]string{path})
+		filePaths := pathsToFileGlobs([]string{path})
 		if len(filePaths) == 0 {
 			continue
 		}

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParitionToMaxSize(t *testing.T) {
+func TestPartitionToMaxSize(t *testing.T) {
 	cmdArgs := []string{"/usr/bin/foo", "-c"}
 	paths := []string{"one", "two", "three", "four"}
 
