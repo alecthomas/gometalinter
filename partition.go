@@ -1,13 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 )
 
 // MaxCommandBytes is the maximum number of bytes used when executing a command
 const MaxCommandBytes = 32000
 
-type partitionStrategy func([]string, []string) [][]string
+type partitionStrategy func([]string, []string) ([][]string, error)
 
 func getPartitionStrategy(name string) partitionStrategy {
 	switch {
@@ -15,22 +16,26 @@ func getPartitionStrategy(name string) partitionStrategy {
 		return partitionToMaxArgSizeWithFileGlobs
 	case linterTakesFilesGroupedByPackage.contains(name):
 		return partitionToPackageFileGlobs
+	case linterTakesPackagePaths.contains(name):
+		return partitionToMaxArgSizeWithPackagePaths
 	}
 	return partitionToMaxArgSize
 }
 
-func pathsToFileGlobs(paths []string) []string {
+func pathsToFileGlobs(paths []string) ([]string, error) {
 	filePaths := []string{}
 	for _, dir := range paths {
-		// ignore error because the glob pattern is hardcoded
-		paths, _ := filepath.Glob(filepath.Join(dir, "*.go"))
+		paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
+		if err != nil {
+			return nil, err
+		}
 		filePaths = append(filePaths, paths...)
 	}
-	return filePaths
+	return filePaths, nil
 }
 
-func partitionToMaxArgSize(cmdArgs []string, paths []string) [][]string {
-	return partitionToMaxSize(cmdArgs, paths, MaxCommandBytes)
+func partitionToMaxArgSize(cmdArgs []string, paths []string) ([][]string, error) {
+	return partitionToMaxSize(cmdArgs, paths, MaxCommandBytes), nil
 }
 
 func partitionToMaxSize(cmdArgs []string, paths []string, maxSize int) [][]string {
@@ -79,22 +84,60 @@ func (p *sizePartitioner) end() [][]string {
 	return p.parts
 }
 
-func partitionToMaxArgSizeWithFileGlobs(cmdArgs []string, paths []string) [][]string {
-	filePaths := pathsToFileGlobs(paths)
-	if len(filePaths) == 0 {
-		return nil
+func partitionToMaxArgSizeWithFileGlobs(cmdArgs []string, paths []string) ([][]string, error) {
+	filePaths, err := pathsToFileGlobs(paths)
+	if err != nil || len(filePaths) == 0 {
+		return nil, err
 	}
 	return partitionToMaxArgSize(cmdArgs, filePaths)
 }
 
-func partitionToPackageFileGlobs(cmdArgs []string, paths []string) [][]string {
+func partitionToPackageFileGlobs(cmdArgs []string, paths []string) ([][]string, error) {
 	parts := [][]string{}
 	for _, path := range paths {
-		filePaths := pathsToFileGlobs([]string{path})
+		filePaths, err := pathsToFileGlobs([]string{path})
+		if err != nil {
+			return nil, err
+		}
 		if len(filePaths) == 0 {
 			continue
 		}
 		parts = append(parts, append(cmdArgs, filePaths...))
 	}
-	return parts
+	return parts, nil
+}
+
+func partitionToMaxArgSizeWithPackagePaths(cmdArgs []string, paths []string) ([][]string, error) {
+	packagePaths, err := pathsToPackagePaths(paths)
+	if err != nil || len(packagePaths) == 0 {
+		return nil, err
+	}
+	return partitionToMaxArgSize(cmdArgs, packagePaths)
+}
+
+func pathsToPackagePaths(paths []string) ([]string, error) {
+	packages := []string{}
+
+	for _, path := range paths {
+		pkg, err := packageNameFromPath(path)
+		if err != nil {
+			return nil, err
+		}
+		packages = append(packages, pkg)
+	}
+	return packages, nil
+}
+
+func packageNameFromPath(path string) (string, error) {
+	if !filepath.IsAbs(path) {
+		return path, nil
+	}
+	for _, gopath := range getGoPathList() {
+		rel, err := filepath.Rel(filepath.Join(gopath, "src"), path)
+		if err != nil {
+			continue
+		}
+		return rel, nil
+	}
+	return "", fmt.Errorf("%s not in GOPATH", path)
 }

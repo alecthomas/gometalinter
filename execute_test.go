@@ -30,8 +30,8 @@ func TestSortedIssues(t *testing.T) {
 }
 
 func TestLinterStatePartitions(t *testing.T) {
-	noPartitions := func(_ []string, _ []string) [][]string {
-		return nil
+	noPartitions := func(_ []string, _ []string) ([][]string, error) {
+		return nil, nil
 	}
 
 	state := &linterState{

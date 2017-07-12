@@ -392,7 +392,7 @@ func replaceWithMegacheck(enabled []string) []string {
 }
 
 func findVendoredLinters() string {
-	gopaths := strings.Split(getGoPath(), string(os.PathListSeparator))
+	gopaths := getGoPathList()
 	for _, home := range vendoredSearchPaths {
 		for _, p := range gopaths {
 			joined := append([]string{p, "src"}, home...)
@@ -416,6 +416,10 @@ func getGoPath() string {
 	return path
 }
 
+func getGoPathList() []string {
+	return strings.Split(getGoPath(), string(os.PathListSeparator))
+}
+
 // addPath appends p to paths and returns it if:
 // 1. p is not a blank string
 // 2. p doesn't already exist in paths
@@ -434,7 +438,7 @@ func addPath(p string, paths []string) []string {
 
 // Ensure all "bin" directories from GOPATH exists in PATH, as well as GOBIN if set.
 func configureEnvironment() {
-	gopaths := strings.Split(getGoPath(), string(os.PathListSeparator))
+	gopaths := getGoPathList()
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
 	gobin := os.Getenv("GOBIN")
 
