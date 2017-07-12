@@ -86,9 +86,6 @@ func (l *linterState) Partitions() ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(parts) == 0 {
-		return nil, fmt.Errorf("%s: no files to lint", l.Name)
-	}
 	return parts, nil
 }
 

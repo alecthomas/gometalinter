@@ -4,7 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,21 +26,4 @@ func TestSortedIssues(t *testing.T) {
 		{Path: "b.go", Line: 5},
 	}
 	require.Equal(t, expected, actual)
-}
-
-func TestLinterStatePartitions(t *testing.T) {
-	noPartitions := func(_ []string, _ []string) ([][]string, error) {
-		return nil, nil
-	}
-
-	state := &linterState{
-		Linter: &Linter{
-			Name:              "thelinter",
-			partitionStrategy: noPartitions,
-			Command:           "go",
-		},
-	}
-
-	_, err := state.Partitions()
-	assert.EqualError(t, err, "thelinter: no files to lint")
 }
