@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 func TestRelativePackagePath(t *testing.T) {
@@ -125,4 +127,31 @@ func TestPathFilter(t *testing.T) {
 	for _, testcase := range testcases {
 		assert.Equal(t, testcase.expected, pathFilter(testcase.path), testcase.path)
 	}
+}
+
+func TestLoadConfigWithDeadline(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpfile, err := ioutil.TempFile("", "test-config")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte(`{"Deadline": "3m"}`))
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	filename := tmpfile.Name()
+	err = loadConfig(nil, &kingpin.ParseElement{Value: &filename}, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, 3*time.Minute, config.Deadline.Duration())
+}
+
+func TestDeadlineFlag(t *testing.T) {
+	app := kingpin.New("test-app", "")
+	setupFlags(app)
+	_, err := app.Parse([]string{"--deadline", "2m"})
+	require.NoError(t, err)
+	require.Equal(t, 2*time.Minute, config.Deadline.Duration())
 }

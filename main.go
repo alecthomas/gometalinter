@@ -25,43 +25,43 @@ var (
 	}
 )
 
-func init() {
-	kingpin.Flag("config", "Load JSON configuration from file.").Action(loadConfig).String()
-	kingpin.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
-	kingpin.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
-	kingpin.Flag("linter", "Define a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
-	kingpin.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&config.MessageOverride)
-	kingpin.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
-	kingpin.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
-	kingpin.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
-	kingpin.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
-	kingpin.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
-	kingpin.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
-	kingpin.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
-	kingpin.Flag("update", "Pass -u to go tool when installing.").Short('u').BoolVar(&config.Update)
-	kingpin.Flag("force", "Pass -f to go tool when installing.").Short('f').BoolVar(&config.Force)
-	kingpin.Flag("download-only", "Pass -d to go tool when installing.").BoolVar(&config.DownloadOnly)
-	kingpin.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
-	kingpin.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder(fmt.Sprintf("%d", runtime.NumCPU())).Short('j').IntVar(&config.Concurrency)
-	kingpin.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
-	kingpin.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
-	kingpin.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
-	kingpin.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").BoolVar(&config.Vendor)
-	kingpin.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").PlaceHolder("10").IntVar(&config.Cyclo)
-	kingpin.Flag("line-length", "Report lines longer than N (using lll).").PlaceHolder("80").IntVar(&config.LineLength)
-	kingpin.Flag("min-confidence", "Minimum confidence interval to pass to golint.").PlaceHolder(".80").FloatVar(&config.MinConfidence)
-	kingpin.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").PlaceHolder("3").IntVar(&config.MinOccurrences)
-	kingpin.Flag("min-const-length", "Minimumum constant length.").PlaceHolder("3").IntVar(&config.MinConstLength)
-	kingpin.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").PlaceHolder("50").IntVar(&config.DuplThreshold)
-	kingpin.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).PlaceHolder("none").EnumsVar(&config.Sort, sortKeys...)
-	kingpin.Flag("tests", "Include test files for linters that support this option").Short('t').BoolVar(&config.Test)
-	kingpin.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("30s").DurationVar(&config.Deadline)
-	kingpin.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
-	kingpin.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
-	kingpin.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
-	kingpin.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
-	kingpin.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
-	kingpin.CommandLine.GetFlag("help").Short('h')
+func setupFlags(app *kingpin.Application) {
+	app.Flag("config", "Load JSON configuration from file.").Action(loadConfig).String()
+	app.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
+	app.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
+	app.Flag("linter", "Define a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
+	app.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&config.MessageOverride)
+	app.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
+	app.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
+	app.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
+	app.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
+	app.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
+	app.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
+	app.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
+	app.Flag("update", "Pass -u to go tool when installing.").Short('u').BoolVar(&config.Update)
+	app.Flag("force", "Pass -f to go tool when installing.").Short('f').BoolVar(&config.Force)
+	app.Flag("download-only", "Pass -d to go tool when installing.").BoolVar(&config.DownloadOnly)
+	app.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
+	app.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder(fmt.Sprintf("%d", runtime.NumCPU())).Short('j').IntVar(&config.Concurrency)
+	app.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
+	app.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
+	app.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
+	app.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").BoolVar(&config.Vendor)
+	app.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").PlaceHolder("10").IntVar(&config.Cyclo)
+	app.Flag("line-length", "Report lines longer than N (using lll).").PlaceHolder("80").IntVar(&config.LineLength)
+	app.Flag("min-confidence", "Minimum confidence interval to pass to golint.").PlaceHolder(".80").FloatVar(&config.MinConfidence)
+	app.Flag("min-occurrences", "Minimum occurrences to pass to goconst.").PlaceHolder("3").IntVar(&config.MinOccurrences)
+	app.Flag("min-const-length", "Minimumum constant length.").PlaceHolder("3").IntVar(&config.MinConstLength)
+	app.Flag("dupl-threshold", "Minimum token sequence as a clone for dupl.").PlaceHolder("50").IntVar(&config.DuplThreshold)
+	app.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).PlaceHolder("none").EnumsVar(&config.Sort, sortKeys...)
+	app.Flag("tests", "Include test files for linters that support this option").Short('t').BoolVar(&config.Test)
+	app.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("30s").DurationVar((*time.Duration)(&config.Deadline))
+	app.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
+	app.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
+	app.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
+	app.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
+	app.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
+	app.GetFlag("help").Short('h')
 }
 
 func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
@@ -73,9 +73,6 @@ func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *ki
 	err = json.NewDecoder(r).Decode(config)
 	if err != nil {
 		return err
-	}
-	if config.DeadlineJSONCrutch != "" {
-		config.Deadline, err = time.ParseDuration(config.DeadlineJSONCrutch)
 	}
 	for _, disable := range config.Disable {
 		for i, enable := range config.Enable {
@@ -149,8 +146,10 @@ func formatSeverity() string {
 }
 
 func main() {
-	var pathsArg = kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
-	kingpin.CommandLine.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
+	pathsArg := kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
+	app := kingpin.CommandLine
+	setupFlags(app)
+	app.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
 PlaceHolder linters:
 
@@ -204,9 +203,9 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	formatTemplate = tmpl
 
+	// Linters are by their very nature, short lived, so disable GC.
+	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 	if !config.EnableGC {
-		// Linters are by their very nature, short lived, so disable GC.
-		// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
 		_ = os.Setenv("GOGC", "off")
 	}
 	if config.VendoredLinters && config.Install && config.Update {
