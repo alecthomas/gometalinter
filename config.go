@@ -92,6 +92,24 @@ var (
 
 	linterTakesFilesGroupedByPackage = newStringSet("vet", "vetshadow")
 
+	linterTakesPackagePaths = newStringSet(
+		"errcheck",
+		"aligncheck",
+		"errcheck",
+		"gosimple",
+		"interfacer",
+		"megacheck",
+		"safesql",
+		"staticcheck",
+		"structcheck",
+		"test",
+		"testify",
+		"unconvert",
+		"unparam",
+		"unused",
+		"varcheck",
+	)
+
 	// Linter definitions.
 	linterDefinitions = map[string]string{
 		"aligncheck":  `aligncheck:^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,

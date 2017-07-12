@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParitionToMaxSize(t *testing.T) {
+func TestPartitionToMaxSize(t *testing.T) {
 	cmdArgs := []string{"/usr/bin/foo", "-c"}
 	paths := []string{"one", "two", "three", "four"}
 
@@ -38,7 +38,8 @@ func TestPartitionToPackageFileGlobs(t *testing.T) {
 		mkGoFile(t, dir, "other.go")
 	}
 
-	parts := partitionToPackageFileGlobs(cmdArgs, paths)
+	parts, err := partitionToPackageFileGlobs(cmdArgs, paths)
+	require.NoError(t, err)
 	expected := [][]string{
 		append(cmdArgs, packagePaths(paths[0], "file.go", "other.go")...),
 		append(cmdArgs, packagePaths(paths[1], "file.go", "other.go")...),
@@ -61,7 +62,8 @@ func TestPartitionToPackageFileGlobsNoFiles(t *testing.T) {
 
 	cmdArgs := []string{"/usr/bin/foo", "-c"}
 	paths := []string{filepath.Join(tmpdir, "one"), filepath.Join(tmpdir, "two")}
-	parts := partitionToPackageFileGlobs(cmdArgs, paths)
+	parts, err := partitionToPackageFileGlobs(cmdArgs, paths)
+	require.NoError(t, err)
 	assert.Len(t, parts, 0)
 }
 
@@ -72,6 +74,26 @@ func TestPartitionToMaxArgSizeWithFileGlobsNoFiles(t *testing.T) {
 
 	cmdArgs := []string{"/usr/bin/foo", "-c"}
 	paths := []string{filepath.Join(tmpdir, "one"), filepath.Join(tmpdir, "two")}
-	parts := partitionToMaxArgSizeWithFileGlobs(cmdArgs, paths)
+	parts, err := partitionToMaxArgSizeWithFileGlobs(cmdArgs, paths)
+	require.NoError(t, err)
 	assert.Len(t, parts, 0)
+}
+
+func TestPathsToPackagePaths(t *testing.T) {
+	root := "/fake/root"
+	defer fakeGoPath(t, root)()
+
+	packagePaths, err := pathsToPackagePaths([]string{
+		filepath.Join(root, "src", "example.com", "foo"),
+		"./relative/package",
+	})
+	require.NoError(t, err)
+	expected := []string{"example.com/foo", "./relative/package"}
+	assert.Equal(t, expected, packagePaths)
+}
+
+func fakeGoPath(t *testing.T, path string) func() {
+	oldpath := os.Getenv("GOPATH")
+	require.NoError(t, os.Setenv("GOPATH", path))
+	return func() { require.NoError(t, os.Setenv("GOPATH", oldpath)) }
 }

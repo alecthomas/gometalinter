@@ -14,9 +14,8 @@ import (
 	"sync"
 	"time"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
-
 	"github.com/google/shlex"
+	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 type Vars map[string]string
@@ -83,7 +82,10 @@ func (l *linterState) Partitions() ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	parts := l.Linter.partitionStrategy(cmdArgs, l.paths)
+	parts, err := l.Linter.partitionStrategy(cmdArgs, l.paths)
+	if err != nil {
+		return nil, err
+	}
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("%s: no files to lint", l.Name)
 	}

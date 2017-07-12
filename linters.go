@@ -57,7 +57,7 @@ func LinterFromName(name string) *Linter {
 		SeverityOverride:  Severity(config.Severity[name]),
 		MessageOverride:   config.MessageOverride[name],
 		regex:             re,
-		partitionStrategy: getParitionStrategy(name),
+		partitionStrategy: getPartitionStrategy(name),
 	}
 }
 
