@@ -274,7 +274,7 @@ func processOutput(state *linterState, out []byte) {
 		if sev, ok := config.Severity[state.Name]; ok {
 			issue.Severity = Severity(sev)
 		} else {
-			issue.Severity = "warning"
+			issue.Severity = Warning
 		}
 		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
 			continue
@@ -288,15 +288,34 @@ func processOutput(state *linterState, out []byte) {
 }
 
 func relativePath(root, path string) string {
-	if !filepath.IsAbs(path) {
-		return path
-	}
-	relative, err := filepath.Rel(root, path)
+	fallback := path
+	root = resolvePath(root)
+	path = resolvePath(path)
+	var err error
+	path, err = filepath.Rel(root, path)
 	if err != nil {
-		warning("failed to make %s a relative path: %s", path, err)
-		return path
+		warning("failed to make %s a relative path: %s", fallback, err)
+		return fallback
 	}
-	return relative
+	return path
+}
+
+func resolvePath(path string) string {
+	var err error
+	fallback := path
+	if !filepath.IsAbs(path) {
+		path, err = filepath.Abs(path)
+		if err != nil {
+			warning("failed to make %s an absolute path: %s", fallback, err)
+			return fallback
+		}
+	}
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		warning("failed to resolve symlinks in %s: %s", fallback, err)
+		return fallback
+	}
+	return path
 }
 
 type sortedIssues struct {
