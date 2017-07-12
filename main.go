@@ -282,7 +282,7 @@ func resolvePaths(paths, skip []string) []string {
 	}
 
 	skipPath := newPathFilter(skip)
-	dirs := map[string]bool{}
+	dirs := newStringSet()
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
 			root := filepath.Dir(path)
@@ -297,16 +297,16 @@ func resolvePaths(paths, skip []string) []string {
 				case i.IsDir() && skip:
 					return filepath.SkipDir
 				case !i.IsDir() && !skip && strings.HasSuffix(p, ".go"):
-					dirs[filepath.Clean(filepath.Dir(p))] = true
+					dirs.add(filepath.Clean(filepath.Dir(p)))
 				}
 				return nil
 			})
 		} else {
-			dirs[filepath.Clean(path)] = true
+			dirs.add(filepath.Clean(path))
 		}
 	}
-	out := make([]string, 0, len(dirs))
-	for d := range dirs {
+	out := make([]string, 0, dirs.size())
+	for _, d := range dirs.asSlice() {
 		out = append(out, relativePackagePath(d))
 	}
 	sort.Strings(out)

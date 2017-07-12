@@ -1,6 +1,5 @@
 package main
 
-// TODO: replace dirs in resolvePaths() and addPath() with a set (others?)
 type stringSet struct {
 	items map[string]struct{}
 }
@@ -28,4 +27,8 @@ func (s *stringSet) asSlice() []string {
 		items = append(items, item)
 	}
 	return items
+}
+
+func (s *stringSet) size() int {
+	return len(s.items)
 }
