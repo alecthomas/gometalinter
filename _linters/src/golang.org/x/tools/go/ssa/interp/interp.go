@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build go1.5
-
 // Package ssa/interp defines an interpreter for the SSA
 // representation of Go programs.
 //
@@ -314,9 +312,7 @@ func visitInstr(fr *frame, instr ssa.Instruction) continuation {
 		fr.env[instr] = fr.get(instr.Iter).(iter).next()
 
 	case *ssa.FieldAddr:
-		x := fr.get(instr.X)
-		// FIXME wrong!  &global.f must not change if we do *global = zero!
-		fr.env[instr] = &(*x.(*value)).(structure)[instr.Field]
+		fr.env[instr] = &(*fr.get(instr.X).(*value)).(structure)[instr.Field]
 
 	case *ssa.Field:
 		fr.env[instr] = fr.get(instr.X).(structure)[instr.Field]
@@ -604,6 +600,8 @@ func doRecover(caller *frame) value {
 		caller.caller.panicking = false
 		p := caller.caller.panic
 		caller.caller.panic = nil
+
+		// TODO(adonovan): support runtime.Goexit.
 		switch p := p.(type) {
 		case targetPanic:
 			// The target program explicitly called panic().
@@ -665,6 +663,11 @@ func deleteBodies(pkg *ssa.Package, except ...string) {
 // The SSA program must include the "runtime" package.
 //
 func Interpret(mainpkg *ssa.Package, mode Mode, sizes types.Sizes, filename string, args []string) (exitCode int) {
+	if syswrite == nil {
+		fmt.Fprintln(os.Stderr, "Interpret: unsupported platform.")
+		return 1
+	}
+
 	i := &interpreter{
 		prog:       mainpkg.Prog,
 		globals:    make(map[ssa.Value]*value),

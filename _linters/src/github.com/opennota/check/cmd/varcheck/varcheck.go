@@ -111,6 +111,13 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 			v.insideFunc = false
 		}
 
+		if node.Recv != nil {
+			ast.Walk(v, node.Recv)
+		}
+		if node.Type != nil {
+			ast.Walk(v, node.Type)
+		}
+
 		return nil
 	}
 

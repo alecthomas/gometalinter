@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build go1.5
-
 package interp
 
 import (
@@ -932,6 +930,8 @@ func write(fd int, b []byte) (int, error) {
 	}
 	return syswrite(fd, b)
 }
+
+var syswrite func(int, []byte) (int, error) // set on darwin/linux only
 
 // callBuiltin interprets a call to builtin fn with arguments args,
 // returning its result.

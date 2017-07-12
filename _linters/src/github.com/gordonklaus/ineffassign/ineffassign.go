@@ -279,7 +279,12 @@ func (bld *builder) Visit(n ast.Node) ast.Visitor {
 		}
 
 	case *ast.UnaryExpr:
-		if id, ok := ident(n.X); ok && n.Op == token.AND {
+		id, ok := ident(n.X)
+		if ix, isIx := n.X.(*ast.IndexExpr); isIx {
+			// We don't care about indexing into slices, but without type information we can do no better.
+			id, ok = ident(ix.X)
+		}
+		if ok && n.Op == token.AND {
 			if v, ok := bld.vars[id.Obj]; ok {
 				v.escapes = true
 			}
@@ -289,6 +294,14 @@ func (bld *builder) Visit(n ast.Node) ast.Visitor {
 		// A method call (possibly delayed via a method value) might implicitly take
 		// the address of its receiver, causing it to escape.
 		// We can't do any better here without knowing the variable's type.
+		if id, ok := ident(n.X); ok {
+			if v, ok := bld.vars[id.Obj]; ok {
+				v.escapes = true
+			}
+		}
+		return bld
+	case *ast.SliceExpr:
+		// We don't care about slicing into slices, but without type information we can do no better.
 		if id, ok := ident(n.X); ok {
 			if v, ok := bld.vars[id.Obj]; ok {
 				v.escapes = true

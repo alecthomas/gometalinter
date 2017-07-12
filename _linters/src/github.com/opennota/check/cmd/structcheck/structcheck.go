@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
-	"os"
-
 	"go/types"
+	"os"
+	"strings"
 
 	"github.com/kisielk/gotool"
 	"golang.org/x/tools/go/loader"
@@ -31,6 +31,7 @@ var (
 	assignmentsOnly = flag.Bool("a", false, "Count assignments only")
 	loadTestFiles   = flag.Bool("t", false, "Load test files too")
 	reportExported  = flag.Bool("e", false, "Report exported fields")
+	buildTags       = flag.String("tags", "", "Build tags")
 )
 
 type visitor struct {
@@ -151,6 +152,9 @@ func main() {
 		importPaths = []string{"."}
 	}
 	ctx := build.Default
+	if *buildTags != "" {
+		ctx.BuildTags = strings.Split(*buildTags, ",")
+	}
 	loadcfg := loader.Config{
 		Build: &ctx,
 	}
@@ -191,6 +195,11 @@ func main() {
 				}
 				if v == 0 {
 					field, _, _ := types.LookupFieldOrMethod(t, false, pkg.Pkg, fieldName)
+					if field == nil {
+						fmt.Printf("%s: unknown field or method: %s.%s\n", pkg.Pkg.Path(), t, fieldName)
+						exitStatus = 1
+						continue
+					}
 					if fieldName == "XMLName" {
 						if named, ok := field.Type().(*types.Named); ok && named.Obj().Pkg().Path() == "encoding/xml" {
 							continue

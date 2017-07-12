@@ -6,8 +6,11 @@ import (
 	"strings"
 )
 
-var reEmail = regexp.MustCompile(`[a-zA-Z0-9_.%+-]+@[a-zA-Z0-9-.]+\.[a-zA-Z]{2,6}[^a-zA-Z]`)
-var reHost = regexp.MustCompile(`[a-zA-Z0-9-.]+\.[a-zA-Z]+`)
+var (
+	reEmail     = regexp.MustCompile(`[a-zA-Z0-9_.%+-]+@[a-zA-Z0-9-.]+\.[a-zA-Z]{2,6}[^a-zA-Z]`)
+	reHost      = regexp.MustCompile(`[a-zA-Z0-9-.]+\.[a-zA-Z]+`)
+	reBackslash = regexp.MustCompile(`\\[a-z]`)
+)
 
 // RemovePath attempts to strip away embedded file system paths, e.g.
 //  /foo/bar or /static/myimg.png
@@ -69,8 +72,14 @@ func RemoveHost(s string) string {
 	return reHost.ReplaceAllStringFunc(s, replaceWithBlanks)
 }
 
+// RemoveBackslashEscapes removes characters that are preceeded by a backslash
+// commonly found in printf format stringd "\nto"
+func removeBackslashEscapes(s string) string {
+	return reBackslash.ReplaceAllStringFunc(s, replaceWithBlanks)
+}
+
 // RemoveNotWords blanks out all the not words
 func RemoveNotWords(s string) string {
 	// do most selective/specific first
-	return RemoveHost(RemoveEmail(RemovePath(StripURL(s))))
+	return removeBackslashEscapes(RemoveHost(RemoveEmail(RemovePath(StripURL(s)))))
 }

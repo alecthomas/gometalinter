@@ -9,8 +9,6 @@ import (
 	"go/types"
 	"sort"
 	"strings"
-
-	"github.com/mvdan/interfacer/internal/util"
 )
 
 type methoder interface {
@@ -22,15 +20,14 @@ func methoderFuncMap(m methoder, skip bool) map[string]string {
 	ifuncs := make(map[string]string, m.NumMethods())
 	for i := 0; i < m.NumMethods(); i++ {
 		f := m.Method(i)
-		fname := f.Name()
-		if !util.Exported(fname) {
+		if !f.Exported() {
 			if skip {
 				continue
 			}
 			return nil
 		}
 		sign := f.Type().(*types.Signature)
-		ifuncs[fname] = signString(sign)
+		ifuncs[f.Name()] = signString(sign)
 	}
 	return ifuncs
 }
@@ -57,7 +54,7 @@ func funcMapString(iface map[string]string) string {
 	for fname := range iface {
 		fnames = append(fnames, fname)
 	}
-	sort.Sort(util.ByAlph(fnames))
+	sort.Strings(fnames)
 	var b bytes.Buffer
 	for i, fname := range fnames {
 		if i > 0 {
@@ -68,25 +65,24 @@ func funcMapString(iface map[string]string) string {
 	return b.String()
 }
 
-func tupleStrs(t *types.Tuple) []string {
-	l := make([]string, 0, t.Len())
+func tupleJoin(buf *bytes.Buffer, t *types.Tuple) {
+	buf.WriteByte('(')
 	for i := 0; i < t.Len(); i++ {
-		v := t.At(i)
-		l = append(l, v.Type().String())
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(t.At(i).Type().String())
 	}
-	return l
+	buf.WriteByte(')')
 }
 
+// signString is similar to Signature.String(), but it ignores
+// param/result names.
 func signString(sign *types.Signature) string {
-	ps := tupleStrs(sign.Params())
-	rs := tupleStrs(sign.Results())
-	if len(rs) == 0 {
-		return fmt.Sprintf("(%s)", strings.Join(ps, ", "))
-	}
-	if len(rs) == 1 {
-		return fmt.Sprintf("(%s) %s", strings.Join(ps, ", "), rs[0])
-	}
-	return fmt.Sprintf("(%s) (%s)", strings.Join(ps, ", "), strings.Join(rs, ", "))
+	var buf bytes.Buffer
+	tupleJoin(&buf, sign.Params())
+	tupleJoin(&buf, sign.Results())
+	return buf.String()
 }
 
 func interesting(t types.Type) bool {
@@ -115,10 +111,9 @@ func anyInteresting(params *types.Tuple) bool {
 	return false
 }
 
-func FromScope(scope *types.Scope) (ifaces, funcs map[string]string) {
+func fromScope(scope *types.Scope) (ifaces map[string]string, funcs map[string]bool) {
 	ifaces = make(map[string]string)
-	funcs = make(map[string]string)
-	ifaceFuncs := make(map[string]string)
+	funcs = make(map[string]bool)
 	for _, name := range scope.Names() {
 		tn, ok := scope.Lookup(name).(*types.TypeName)
 		if !ok {
@@ -136,11 +131,7 @@ func FromScope(scope *types.Scope) (ifaces, funcs map[string]string) {
 				if !anyInteresting(sign.Params()) {
 					continue
 				}
-				s := signString(sign)
-				if _, e := ifaceFuncs[s]; e {
-					continue
-				}
-				ifaceFuncs[s] = tn.Name() + "." + f.Name()
+				funcs[signString(sign)] = true
 			}
 			s := funcMapString(iface)
 			if _, e := ifaces[s]; !e {
@@ -150,15 +141,7 @@ func FromScope(scope *types.Scope) (ifaces, funcs map[string]string) {
 			if !anyInteresting(x.Params()) {
 				continue
 			}
-			s := signString(x)
-			if _, e := funcs[s]; !e {
-				funcs[s] = tn.Name()
-			}
-		}
-	}
-	for s, name := range ifaceFuncs {
-		if _, e := funcs[s]; !e {
-			funcs[s] = name
+			funcs[signString(x)] = true
 		}
 	}
 	return ifaces, funcs

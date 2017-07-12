@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,6 +23,8 @@ var (
 
 	stdout *log.Logger
 	debug  *log.Logger
+
+	version = "dev"
 )
 
 const (
@@ -54,7 +57,14 @@ func worker(writeit bool, r *misspell.Replacer, mode string, files <-chan string
 
 		debug.Printf("Processing %s", filename)
 
-		updated, changes := r.Replace(orig)
+		var updated string
+		var changes []misspell.Diff
+
+		if mode == "go" {
+			updated, changes = r.ReplaceGo(orig)
+		} else {
+			updated, changes = r.Replace(orig)
+		}
 
 		if len(changes) == 0 {
 			continue
@@ -89,19 +99,30 @@ func worker(writeit bool, r *misspell.Replacer, mode string, files <-chan string
 func main() {
 	t := time.Now()
 	var (
-		workers   = flag.Int("j", 0, "Number of workers, 0 = number of CPUs")
-		writeit   = flag.Bool("w", false, "Overwrite file with corrections (default is just to display)")
-		quietFlag = flag.Bool("q", false, "Do not emit misspelling output")
-		outFlag   = flag.String("o", "stdout", "output file or [stderr|stdout|]")
-		format    = flag.String("f", "", "'csv', 'sqlite3' or custom Golang template for output")
-		ignores   = flag.String("i", "", "ignore the following corrections, comma separated")
-		locale    = flag.String("locale", "", "Correct spellings using locale perferances for US or UK.  Default is to use a neutral variety of English.  Setting locale to US will correct the British spelling of 'colour' to 'color'")
-		mode      = flag.String("source", "auto", "Source mode: auto=guess, go=golang source, text=plain or markdown-like text")
-		debugFlag = flag.Bool("debug", false, "Debug matching, very slow")
-		exitError = flag.Bool("error", false, "Exit with 2 if misspelling found")
+		workers     = flag.Int("j", 0, "Number of workers, 0 = number of CPUs")
+		writeit     = flag.Bool("w", false, "Overwrite file with corrections (default is just to display)")
+		quietFlag   = flag.Bool("q", false, "Do not emit misspelling output")
+		outFlag     = flag.String("o", "stdout", "output file or [stderr|stdout|]")
+		format      = flag.String("f", "", "'csv', 'sqlite3' or custom Golang template for output")
+		ignores     = flag.String("i", "", "ignore the following corrections, comma separated")
+		locale      = flag.String("locale", "", "Correct spellings using locale perferances for US or UK.  Default is to use a neutral variety of English.  Setting locale to US will correct the British spelling of 'colour' to 'color'")
+		mode        = flag.String("source", "auto", "Source mode: auto=guess, go=golang source, text=plain or markdown-like text")
+		debugFlag   = flag.Bool("debug", false, "Debug matching, very slow")
+		exitError   = flag.Bool("error", false, "Exit with 2 if misspelling found")
+		showVersion = flag.Bool("v", false, "Show version and exit")
+
+		showLegal = flag.Bool("legal", false, "Show legal information and exit")
 	)
 	flag.Parse()
 
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
+	if *showLegal {
+		fmt.Println(misspell.Legal)
+		return
+	}
 	if *debugFlag {
 		debug = log.New(os.Stderr, "DEBUG ", 0)
 	} else {
@@ -125,7 +146,7 @@ func main() {
 	case "NZ", "AU", "CA":
 		log.Fatalf("Help wanted.  https://github.com/client9/misspell/issues/6")
 	default:
-		log.Fatalf("Unknow locale: %q", *locale)
+		log.Fatalf("Unknown locale: %q", *locale)
 	}
 
 	//
@@ -225,7 +246,7 @@ func main() {
 		switch *writeit {
 		case true:
 			// if we ARE writing the corrected stream
-			// the the corrected stream goes to stdout
+			// the corrected stream goes to stdout
 			// and the misspelling errors goes to stderr
 			// so we can do something like this:
 			// curl something | misspell -w | gzip > afile.gz

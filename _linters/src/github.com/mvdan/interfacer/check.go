@@ -8,18 +8,15 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"io"
 	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strconv"
 	"strings"
 
-	"github.com/kisielk/gotool"
 	"golang.org/x/tools/go/loader"
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
 
-	"github.com/mvdan/interfacer/internal/util"
+	"github.com/kisielk/gotool"
+	"github.com/mvdan/lint"
 )
 
 func toDiscard(usage *varUsage) bool {
@@ -43,7 +40,7 @@ func allCalls(usage *varUsage, all, ftypes map[string]string) {
 	}
 }
 
-func (v *visitor) interfaceMatching(param *types.Var, usage *varUsage) (string, string) {
+func (c *Checker) interfaceMatching(param *types.Var, usage *varUsage) (string, string) {
 	if toDiscard(usage) {
 		return "", ""
 	}
@@ -51,41 +48,7 @@ func (v *visitor) interfaceMatching(param *types.Var, usage *varUsage) (string, 
 	called := make(map[string]string, len(usage.calls))
 	allCalls(usage, called, ftypes)
 	s := funcMapString(called)
-	return v.ifaceOf(s), s
-}
-
-func progPackages(prog *loader.Program) ([]*types.Package, error) {
-	// InitialPackages() is not in the order that we passed to it
-	// via Import() calls.
-	// For now, make it deterministic by sorting import paths
-	// alphabetically.
-	unordered := prog.InitialPackages()
-	paths := make([]string, 0, len(unordered))
-	for _, info := range unordered {
-		if info.Errors != nil {
-			return nil, info.Errors[0]
-		}
-		paths = append(paths, info.Pkg.Path())
-	}
-	sort.Sort(util.ByAlph(paths))
-	pkgs := make([]*types.Package, 0, len(unordered))
-	for _, path := range paths {
-		pkgs = append(pkgs, prog.Package(path).Pkg)
-	}
-	return pkgs, nil
-}
-
-// Warn is an interfacer warning suggesting a better type for a function
-// parameter.
-type Warn struct {
-	Pos     token.Position
-	Name    string
-	NewType string
-}
-
-func (w Warn) String() string {
-	return fmt.Sprintf("%s:%d:%d: %s can be %s",
-		w.Pos.Filename, w.Pos.Line, w.Pos.Column, w.Name, w.NewType)
+	return c.ifaces[s], s
 }
 
 type varUsage struct {
@@ -96,105 +59,138 @@ type varUsage struct {
 }
 
 type funcDecl struct {
-	name    string
-	sign    *types.Signature
-	astType *ast.FuncType
-}
-
-type visitor struct {
-	*cache
-	*loader.PackageInfo
-
-	wd    string
-	fset  *token.FileSet
-	funcs []*funcDecl
-
-	discardFuncs map[*types.Signature]struct{}
-
-	vars     map[*types.Var]*varUsage
-	impNames map[string]string
+	astDecl *ast.FuncDecl
+	ssaFn   *ssa.Function
 }
 
 // CheckArgs checks the packages specified by their import paths in
-// args. It will call the onWarns function as each package is processed,
-// passing its import path and the warnings found. Returns an error, if
-// any.
-func CheckArgs(args []string, onWarns func(string, []Warn)) error {
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+// args.
+func CheckArgs(args []string) ([]string, error) {
 	paths := gotool.ImportPaths(args)
-	c := newCache()
-	rest, err := c.FromArgs(paths, false)
+	conf := loader.Config{}
+	conf.AllowErrors = true
+	rest, err := conf.FromArgs(paths, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(rest) > 0 {
-		return fmt.Errorf("unwanted extra args: %v", rest)
+		return nil, fmt.Errorf("unwanted extra args: %v", rest)
 	}
-	prog, err := c.Load()
+	lprog, err := conf.Load()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	pkgs, err := progPackages(prog)
+	prog := ssautil.CreateProgram(lprog, 0)
+	prog.Build()
+	c := new(Checker)
+	c.Program(lprog)
+	c.ProgramSSA(prog)
+	issues, err := c.Check()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	v := &visitor{
-		cache: c,
-		wd:    wd,
-		fset:  prog.Fset,
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
 	}
-	for _, pkg := range pkgs {
-		c.grabNames(pkg)
-		warns := v.checkPkg(prog.AllPackages[pkg])
-		onWarns(pkg.Path(), warns)
+	lines := make([]string, len(issues))
+	for i, issue := range issues {
+		fpos := prog.Fset.Position(issue.Pos()).String()
+		if strings.HasPrefix(fpos, wd) {
+			fpos = fpos[len(wd)+1:]
+		}
+		lines[i] = fmt.Sprintf("%s: %s", fpos, issue.Message())
 	}
-	return nil
+	return lines, nil
 }
 
-// CheckArgsList is like CheckArgs, but returning a list of all the
-// warnings instead.
-func CheckArgsList(args []string) (all []Warn, err error) {
-	onWarns := func(path string, warns []Warn) {
-		all = append(all, warns...)
-	}
-	err = CheckArgs(args, onWarns)
-	return
+type Checker struct {
+	lprog *loader.Program
+	prog  *ssa.Program
+
+	pkgTypes
+	*loader.PackageInfo
+
+	fset  *token.FileSet
+	funcs []*funcDecl
+
+	ssaByPos map[token.Pos]*ssa.Function
+
+	discardFuncs map[*types.Signature]struct{}
+
+	vars map[*types.Var]*varUsage
 }
 
-// CheckArgsOutput is like CheckArgs, but intended for human-readable
-// text output.
-func CheckArgsOutput(args []string, w io.Writer, verbose bool) error {
-	onWarns := func(path string, warns []Warn) {
-		if verbose {
-			fmt.Fprintln(w, path)
-		}
-		for _, warn := range warns {
-			fmt.Fprintln(w, warn.String())
-		}
-	}
-	return CheckArgs(args, onWarns)
+var (
+	_ lint.Checker = (*Checker)(nil)
+	_ lint.WithSSA = (*Checker)(nil)
+)
+
+func (c *Checker) Program(lprog *loader.Program) {
+	c.lprog = lprog
 }
 
-func (v *visitor) checkPkg(info *loader.PackageInfo) []Warn {
-	v.PackageInfo = info
-	v.discardFuncs = make(map[*types.Signature]struct{})
-	v.vars = make(map[*types.Var]*varUsage)
-	v.impNames = make(map[string]string)
-	for _, f := range info.Files {
-		for _, imp := range f.Imports {
-			if imp.Name == nil {
-				continue
-			}
-			name := imp.Name.Name
-			path, _ := strconv.Unquote(imp.Path.Value)
-			v.impNames[path] = name
-		}
-		ast.Walk(v, f)
+func (c *Checker) ProgramSSA(prog *ssa.Program) {
+	c.prog = prog
+}
+
+func (c *Checker) Check() ([]lint.Issue, error) {
+	var total []lint.Issue
+	c.ssaByPos = make(map[token.Pos]*ssa.Function)
+	wantPkg := make(map[*types.Package]bool)
+	for _, pinfo := range c.lprog.InitialPackages() {
+		wantPkg[pinfo.Pkg] = true
 	}
-	return v.packageWarns()
+	for fn := range ssautil.AllFunctions(c.prog) {
+		if fn.Pkg == nil { // builtin?
+			continue
+		}
+		if len(fn.Blocks) == 0 { // stub
+			continue
+		}
+		if !wantPkg[fn.Pkg.Pkg] { // not part of given pkgs
+			continue
+		}
+		c.ssaByPos[fn.Pos()] = fn
+	}
+	for _, pinfo := range c.lprog.InitialPackages() {
+		pkg := pinfo.Pkg
+		c.getTypes(pkg)
+		c.PackageInfo = c.lprog.AllPackages[pkg]
+		total = append(total, c.checkPkg()...)
+	}
+	return total, nil
+}
+
+func (c *Checker) checkPkg() []lint.Issue {
+	c.discardFuncs = make(map[*types.Signature]struct{})
+	c.vars = make(map[*types.Var]*varUsage)
+	c.funcs = c.funcs[:0]
+	findFuncs := func(node ast.Node) bool {
+		decl, ok := node.(*ast.FuncDecl)
+		if !ok {
+			return true
+		}
+		ssaFn := c.ssaByPos[decl.Name.Pos()]
+		if ssaFn == nil {
+			return true
+		}
+		fd := &funcDecl{
+			astDecl: decl,
+			ssaFn:   ssaFn,
+		}
+		if c.funcSigns[signString(fd.ssaFn.Signature)] {
+			// implements interface
+			return true
+		}
+		c.funcs = append(c.funcs, fd)
+		ast.Walk(c, decl.Body)
+		return true
+	}
+	for _, f := range c.Files {
+		ast.Inspect(f, findFuncs)
+	}
+	return c.packageIssues()
 }
 
 func paramVarAndType(sign *types.Signature, i int) (*types.Var, types.Type) {
@@ -217,17 +213,17 @@ func paramVarAndType(sign *types.Signature, i int) (*types.Var, types.Type) {
 	}
 }
 
-func (v *visitor) varUsage(e ast.Expr) *varUsage {
+func (c *Checker) varUsage(e ast.Expr) *varUsage {
 	id, ok := e.(*ast.Ident)
 	if !ok {
 		return nil
 	}
-	param, ok := v.ObjectOf(id).(*types.Var)
+	param, ok := c.ObjectOf(id).(*types.Var)
 	if !ok {
 		// not a variable
 		return nil
 	}
-	if usage, e := v.vars[param]; e {
+	if usage, e := c.vars[param]; e {
 		return usage
 	}
 	if !interesting(param.Type()) {
@@ -237,15 +233,15 @@ func (v *visitor) varUsage(e ast.Expr) *varUsage {
 		calls:    make(map[string]struct{}),
 		assigned: make(map[*varUsage]struct{}),
 	}
-	v.vars[param] = usage
+	c.vars[param] = usage
 	return usage
 }
 
-func (v *visitor) addUsed(e ast.Expr, as types.Type) {
+func (c *Checker) addUsed(e ast.Expr, as types.Type) {
 	if as == nil {
 		return
 	}
-	if usage := v.varUsage(e); usage != nil {
+	if usage := c.varUsage(e); usage != nil {
 		// using variable
 		iface, ok := as.Underlying().(*types.Interface)
 		if !ok {
@@ -256,15 +252,15 @@ func (v *visitor) addUsed(e ast.Expr, as types.Type) {
 			m := iface.Method(i)
 			usage.calls[m.Name()] = struct{}{}
 		}
-	} else if t, ok := v.TypeOf(e).(*types.Signature); ok {
+	} else if t, ok := c.TypeOf(e).(*types.Signature); ok {
 		// using func
-		v.discardFuncs[t] = struct{}{}
+		c.discardFuncs[t] = struct{}{}
 	}
 }
 
-func (v *visitor) addAssign(to, from ast.Expr) {
-	pto := v.varUsage(to)
-	pfrom := v.varUsage(from)
+func (c *Checker) addAssign(to, from ast.Expr) {
+	pto := c.varUsage(to)
+	pfrom := c.varUsage(from)
 	if pto == nil || pfrom == nil {
 		// either isn't interesting
 		return
@@ -272,96 +268,75 @@ func (v *visitor) addAssign(to, from ast.Expr) {
 	pfrom.assigned[pto] = struct{}{}
 }
 
-func (v *visitor) discard(e ast.Expr) {
-	if usage := v.varUsage(e); usage != nil {
+func (c *Checker) discard(e ast.Expr) {
+	if usage := c.varUsage(e); usage != nil {
 		usage.discard = true
 	}
 }
 
-func (v *visitor) comparedWith(e, with ast.Expr) {
+func (c *Checker) comparedWith(e, with ast.Expr) {
 	if _, ok := with.(*ast.BasicLit); ok {
-		v.discard(e)
+		c.discard(e)
 	}
 }
 
-func (v *visitor) implementsIface(sign *types.Signature) bool {
-	s := signString(sign)
-	return v.funcOf(s) != ""
-}
-
-func (v *visitor) Visit(node ast.Node) ast.Visitor {
-	var fd *funcDecl
+func (c *Checker) Visit(node ast.Node) ast.Visitor {
 	switch x := node.(type) {
-	case *ast.FuncDecl:
-		fd = &funcDecl{
-			name:    x.Name.Name,
-			sign:    v.Defs[x.Name].Type().(*types.Signature),
-			astType: x.Type,
-		}
-		if v.implementsIface(fd.sign) {
-			return nil
-		}
 	case *ast.SelectorExpr:
-		if _, ok := v.TypeOf(x.Sel).(*types.Signature); !ok {
-			v.discard(x.X)
+		if _, ok := c.TypeOf(x.Sel).(*types.Signature); !ok {
+			c.discard(x.X)
 		}
 	case *ast.StarExpr:
-		v.discard(x.X)
+		c.discard(x.X)
 	case *ast.UnaryExpr:
-		v.discard(x.X)
+		c.discard(x.X)
 	case *ast.IndexExpr:
-		v.discard(x.X)
+		c.discard(x.X)
 	case *ast.IncDecStmt:
-		v.discard(x.X)
+		c.discard(x.X)
 	case *ast.BinaryExpr:
-		v.onBinary(x)
-	case *ast.DeclStmt:
-		v.onDecl(x)
+		switch x.Op {
+		case token.EQL, token.NEQ:
+			c.comparedWith(x.X, x.Y)
+			c.comparedWith(x.Y, x.X)
+		default:
+			c.discard(x.X)
+			c.discard(x.Y)
+		}
+	case *ast.ValueSpec:
+		for _, val := range x.Values {
+			c.addUsed(val, c.TypeOf(x.Type))
+		}
 	case *ast.AssignStmt:
-		v.onAssign(x)
+		for i, val := range x.Rhs {
+			left := x.Lhs[i]
+			if x.Tok == token.ASSIGN {
+				c.addUsed(val, c.TypeOf(left))
+			}
+			c.addAssign(left, val)
+		}
 	case *ast.CompositeLit:
-		v.onComposite(x)
+		for i, e := range x.Elts {
+			switch y := e.(type) {
+			case *ast.KeyValueExpr:
+				c.addUsed(y.Key, c.TypeOf(y.Value))
+				c.addUsed(y.Value, c.TypeOf(y.Key))
+			case *ast.Ident:
+				c.addUsed(y, compositeIdentType(c.TypeOf(x), i))
+			}
+		}
 	case *ast.CallExpr:
-		v.onCall(x)
-	}
-	if fd != nil {
-		v.funcs = append(v.funcs, fd)
-	}
-	return v
-}
-
-func (v *visitor) onBinary(be *ast.BinaryExpr) {
-	switch be.Op {
-	case token.EQL, token.NEQ:
-		v.comparedWith(be.X, be.Y)
-		v.comparedWith(be.Y, be.X)
-	default:
-		v.discard(be.X)
-		v.discard(be.Y)
-	}
-}
-
-func (v *visitor) onDecl(ds *ast.DeclStmt) {
-	gd := ds.Decl.(*ast.GenDecl)
-	for _, sp := range gd.Specs {
-		vs, ok := sp.(*ast.ValueSpec)
-		if !ok {
-			continue
-		}
-		for _, val := range vs.Values {
-			v.addUsed(val, v.TypeOf(vs.Type))
+		switch y := c.TypeOf(x.Fun).Underlying().(type) {
+		case *types.Signature:
+			c.onMethodCall(x, y)
+		default:
+			// type conversion
+			if len(x.Args) == 1 {
+				c.addUsed(x.Args[0], y)
+			}
 		}
 	}
-}
-
-func (v *visitor) onAssign(as *ast.AssignStmt) {
-	for i, val := range as.Rhs {
-		left := as.Lhs[i]
-		if as.Tok == token.ASSIGN {
-			v.addUsed(val, v.TypeOf(left))
-		}
-		v.addAssign(left, val)
-	}
+	return c
 }
 
 func compositeIdentType(t types.Type, i int) types.Type {
@@ -378,60 +353,36 @@ func compositeIdentType(t types.Type, i int) types.Type {
 	return nil
 }
 
-func (v *visitor) onComposite(cl *ast.CompositeLit) {
-	for i, e := range cl.Elts {
-		switch x := e.(type) {
-		case *ast.KeyValueExpr:
-			v.addUsed(x.Key, v.TypeOf(x.Value))
-			v.addUsed(x.Value, v.TypeOf(x.Key))
-		case *ast.Ident:
-			v.addUsed(x, compositeIdentType(v.TypeOf(cl), i))
-		}
-	}
-}
-
-func (v *visitor) onCall(ce *ast.CallExpr) {
-	switch x := v.TypeOf(ce.Fun).Underlying().(type) {
-	case *types.Signature:
-		v.onMethodCall(ce, x)
-	default:
-		// type conversion
-		if len(ce.Args) == 1 {
-			v.addUsed(ce.Args[0], x.Underlying())
-		}
-	}
-}
-
-func (v *visitor) onMethodCall(ce *ast.CallExpr, sign *types.Signature) {
+func (c *Checker) onMethodCall(ce *ast.CallExpr, sign *types.Signature) {
 	for i, e := range ce.Args {
 		paramObj, t := paramVarAndType(sign, i)
 		// Don't if this is a parameter being re-used as itself
 		// in a recursive call
 		if id, ok := e.(*ast.Ident); ok {
-			if paramObj == v.ObjectOf(id) {
+			if paramObj == c.ObjectOf(id) {
 				continue
 			}
 		}
-		v.addUsed(e, t)
+		c.addUsed(e, t)
 	}
 	sel, ok := ce.Fun.(*ast.SelectorExpr)
 	if !ok {
 		return
 	}
 	// receiver func call on the left side
-	if usage := v.varUsage(sel.X); usage != nil {
+	if usage := c.varUsage(sel.X); usage != nil {
 		usage.calls[sel.Sel.Name] = struct{}{}
 	}
 }
 
 func (fd *funcDecl) paramGroups() [][]*types.Var {
-	astList := fd.astType.Params.List
+	astList := fd.astDecl.Type.Params.List
 	groups := make([][]*types.Var, len(astList))
 	signIndex := 0
 	for i, field := range astList {
 		group := make([]*types.Var, len(field.Names))
 		for j := range field.Names {
-			group[j] = fd.sign.Params().At(signIndex)
+			group[j] = fd.ssaFn.Signature.Params().At(signIndex)
 			signIndex++
 		}
 		groups[i] = group
@@ -439,54 +390,44 @@ func (fd *funcDecl) paramGroups() [][]*types.Var {
 	return groups
 }
 
-func (v *visitor) packageWarns() []Warn {
-	var warns []Warn
-	for _, fd := range v.funcs {
-		if _, e := v.discardFuncs[fd.sign]; e {
+func (c *Checker) packageIssues() []lint.Issue {
+	var issues []lint.Issue
+	for _, fd := range c.funcs {
+		if _, e := c.discardFuncs[fd.ssaFn.Signature]; e {
 			continue
 		}
 		for _, group := range fd.paramGroups() {
-			warns = append(warns, v.groupWarns(fd, group)...)
+			issues = append(issues, c.groupIssues(fd, group)...)
 		}
 	}
-	return warns
+	return issues
 }
 
-func (v *visitor) groupWarns(fd *funcDecl, group []*types.Var) []Warn {
-	var warns []Warn
+type Issue struct {
+	pos token.Pos
+	msg string
+}
+
+func (i Issue) Pos() token.Pos  { return i.pos }
+func (i Issue) Message() string { return i.msg }
+
+func (c *Checker) groupIssues(fd *funcDecl, group []*types.Var) []lint.Issue {
+	var issues []lint.Issue
 	for _, param := range group {
-		usage := v.vars[param]
+		usage := c.vars[param]
 		if usage == nil {
 			return nil
 		}
-		newType := v.paramNewType(fd.name, param, usage)
+		newType := c.paramNewType(fd.astDecl.Name.Name, param, usage)
 		if newType == "" {
 			return nil
 		}
-		pos := v.fset.Position(param.Pos())
-		// go/loader seems to like absolute paths
-		if rel, err := filepath.Rel(v.wd, pos.Filename); err == nil {
-			pos.Filename = rel
-		}
-		warns = append(warns, Warn{
-			Pos:     pos,
-			Name:    param.Name(),
-			NewType: newType,
+		issues = append(issues, Issue{
+			pos: param.Pos(),
+			msg: fmt.Sprintf("%s can be %s", param.Name(), newType),
 		})
 	}
-	return warns
-}
-
-var fullPathParts = regexp.MustCompile(`^(\*)?(([^/]+/)*([^/]+\.))?([^/]+)$`)
-
-func (v *visitor) simpleName(fullName string) string {
-	m := fullPathParts.FindStringSubmatch(fullName)
-	fullPkg := strings.TrimSuffix(m[2], ".")
-	star, pkg, name := m[1], m[4], m[5]
-	if pkgName, e := v.impNames[fullPkg]; e {
-		pkg = pkgName + "."
-	}
-	return star + pkg + name
+	return issues
 }
 
 func willAddAllocation(t types.Type) bool {
@@ -497,9 +438,9 @@ func willAddAllocation(t types.Type) bool {
 	return true
 }
 
-func (v *visitor) paramNewType(funcName string, param *types.Var, usage *varUsage) string {
+func (c *Checker) paramNewType(funcName string, param *types.Var, usage *varUsage) string {
 	t := param.Type()
-	if !util.Exported(funcName) && willAddAllocation(t) {
+	if !ast.IsExported(funcName) && willAddAllocation(t) {
 		return ""
 	}
 	if named := typeNamed(t); named != nil {
@@ -509,7 +450,7 @@ func (v *visitor) paramNewType(funcName string, param *types.Var, usage *varUsag
 			return ""
 		}
 	}
-	ifname, iftype := v.interfaceMatching(param, usage)
+	ifname, iftype := c.interfaceMatching(param, usage)
 	if ifname == "" {
 		return ""
 	}
@@ -518,5 +459,5 @@ func (v *visitor) paramNewType(funcName string, param *types.Var, usage *varUsag
 			return ""
 		}
 	}
-	return v.simpleName(ifname)
+	return ifname
 }

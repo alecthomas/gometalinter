@@ -15,6 +15,7 @@
 package main
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/ryanuber/go-glob"
@@ -41,6 +42,7 @@ func (f *fileList) String() string {
 	for p := range f.patterns {
 		ps = append(ps, p)
 	}
+	sort.Strings(ps)
 	return strings.Join(ps, ", ")
 }
 
@@ -55,14 +57,24 @@ func (f *fileList) Set(path string) error {
 
 func (f fileList) Contains(path string) bool {
 	for p := range f.patterns {
-		if glob.Glob(p, path) {
-			if logger != nil {
-				logger.Printf("skipping: %s\n", path)
+		if strings.Contains(p, glob.GLOB) {
+			if glob.Glob(p, path) {
+				if logger != nil {
+					logger.Printf("skipping: %s\n", path)
+				}
+				return true
 			}
-			return true
+		} else {
+			// check if only a sub-folder of the path is excluded
+			if strings.Contains(path, p) {
+				if logger != nil {
+					logger.Printf("skipping: %s\n", path)
+				}
+				return true
+			}
+
 		}
 	}
-	//log.Printf("including: %s\n", path)
 	return false
 }
 

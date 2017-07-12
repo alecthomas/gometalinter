@@ -73,7 +73,16 @@ var scm = map[string]bool{
 // isSCMPath returns true if the path is likely part of a (private) SCM
 //  directory.  E.g.  ./git/something  = true
 func isSCMPath(s string) bool {
-	parts := strings.Split(s, string(filepath.Separator))
+	// hack for .git/COMMIT_EDITMSG and .git/TAG_EDITMSG
+	// normally we don't look at anything in .git
+	// but COMMIT_EDITMSG and TAG_EDITMSG are used as
+	// temp files for git commits.  Allowing misspell to inspect
+	// these files allows for commit-msg hooks
+	// https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks
+	if strings.Contains(filepath.Base(s), "EDITMSG") {
+		return false
+	}
+	parts := strings.Split(filepath.Clean(s), string(filepath.Separator))
 	for _, dir := range parts {
 		if scm[dir] {
 			return true
