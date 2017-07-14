@@ -161,13 +161,15 @@ Severity override map (default is "warning"):
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
 
-	configureEnvironment()
-
 	if config.Install {
+		if config.VendoredLinters {
+			configureEnvironmentForInstall()
+		}
 		installLinters()
 		return
 	}
 
+	configureEnvironment()
 	include, exclude := processConfig(config)
 
 	start := time.Now()
@@ -282,7 +284,7 @@ func resolvePaths(paths, skip []string) []string {
 	}
 
 	skipPath := newPathFilter(skip)
-	dirs := map[string]bool{}
+	dirs := newStringSet()
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
 			root := filepath.Dir(path)
@@ -297,16 +299,16 @@ func resolvePaths(paths, skip []string) []string {
 				case i.IsDir() && skip:
 					return filepath.SkipDir
 				case !i.IsDir() && !skip && strings.HasSuffix(p, ".go"):
-					dirs[filepath.Clean(filepath.Dir(p))] = true
+					dirs.add(filepath.Clean(filepath.Dir(p)))
 				}
 				return nil
 			})
 		} else {
-			dirs[filepath.Clean(path)] = true
+			dirs.add(filepath.Clean(path))
 		}
 	}
-	out := make([]string, 0, len(dirs))
-	for d := range dirs {
+	out := make([]string, 0, dirs.size())
+	for _, d := range dirs.asSlice() {
 		out = append(out, relativePackagePath(d))
 	}
 	sort.Strings(out)
@@ -419,62 +421,66 @@ func getGoPathList() []string {
 	return strings.Split(getGoPath(), string(os.PathListSeparator))
 }
 
-// addPath appends p to paths and returns it if:
-// 1. p is not a blank string
-// 2. p doesn't already exist in paths
-// Otherwise paths is returned unchanged.
-func addPath(p string, paths []string) []string {
-	if p == "" {
-		return paths
-	}
-	for _, path := range paths {
-		if p == path {
+// addPath appends path to paths if path does not already exist in paths. Returns
+// the new paths.
+func addPath(paths []string, path string) []string {
+	for _, existingpath := range paths {
+		if path == existingpath {
 			return paths
 		}
 	}
-	return append(paths, p)
+	return append(paths, path)
 }
 
-// Ensure all "bin" directories from GOPATH exists in PATH, as well as GOBIN if set.
+// configureEnvironment adds all `bin/` directories from $GOPATH to $PATH
 func configureEnvironment() {
-	gopaths := getGoPathList()
+	paths := addGoBinsToPath(getGoPathList())
+	setEnv("PATH", strings.Join(paths, string(os.PathListSeparator)))
+	debugPrintEnv()
+}
+
+func addGoBinsToPath(gopaths []string) []string {
 	paths := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
-	gobin := os.Getenv("GOBIN")
-
-	if config.VendoredLinters && config.Install {
-		vendorRoot := findVendoredLinters()
-		if vendorRoot == "" {
-			kingpin.Fatalf("could not find vendored linters in GOPATH=%q", getGoPath())
-		}
-		debug("found vendored linters at %s, updating environment", vendorRoot)
-		if gobin == "" {
-			gobin = filepath.Join(gopaths[0], "bin")
-		}
-		// "go install" panics when one GOPATH element is beneath another, so we just set
-		// our vendor root instead.
-		gopaths = []string{vendorRoot}
-	}
-
 	for _, p := range gopaths {
-		paths = addPath(filepath.Join(p, "bin"), paths)
+		paths = addPath(paths, filepath.Join(p, "bin"))
 	}
-	paths = addPath(gobin, paths)
-
-	path := strings.Join(paths, string(os.PathListSeparator))
-	gopath := strings.Join(gopaths, string(os.PathListSeparator))
-
-	if err := os.Setenv("PATH", path); err != nil {
-		warning("setenv PATH: %s", err)
+	gobin := os.Getenv("GOBIN")
+	if gobin != "" {
+		paths = addPath(paths, gobin)
 	}
+	return paths
+}
+
+// configureEnvironmentForInstall sets GOPATH and GOBIN so that vendored linters
+// can be installed
+func configureEnvironmentForInstall() {
+	gopaths := getGoPathList()
+	vendorRoot := findVendoredLinters()
+	if vendorRoot == "" {
+		kingpin.Fatalf("could not find vendored linters in GOPATH=%q", getGoPath())
+	}
+	debug("found vendored linters at %s, updating environment", vendorRoot)
+
+	gobin := os.Getenv("GOBIN")
+	if gobin == "" {
+		gobin = filepath.Join(gopaths[0], "bin")
+	}
+	setEnv("GOBIN", gobin)
+
+	// "go install" panics when one GOPATH element is beneath another, so set
+	// GOPATH to the vendor root
+	setEnv("GOPATH", vendorRoot)
+	debugPrintEnv()
+}
+
+func setEnv(key string, value string) {
+	if err := os.Setenv(key, value); err != nil {
+		warning("setenv %s: %s", key, err)
+	}
+}
+
+func debugPrintEnv() {
 	debug("PATH=%s", os.Getenv("PATH"))
-
-	if err := os.Setenv("GOPATH", gopath); err != nil {
-		warning("setenv GOPATH: %s", err)
-	}
 	debug("GOPATH=%s", os.Getenv("GOPATH"))
-
-	if err := os.Setenv("GOBIN", gobin); err != nil {
-		warning("setenv GOBIN: %s", err)
-	}
 	debug("GOBIN=%s", os.Getenv("GOBIN"))
 }

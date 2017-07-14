@@ -155,3 +155,10 @@ func TestDeadlineFlag(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2*time.Minute, config.Deadline.Duration())
 }
+
+func TestAddPath(t *testing.T) {
+	paths := []string{"existing"}
+	assert.Equal(t, paths, addPath(paths, "existing"))
+	expected := []string{"existing", "new"}
+	assert.Equal(t, expected, addPath(paths, "new"))
+}
