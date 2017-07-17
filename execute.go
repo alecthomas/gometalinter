@@ -51,7 +51,7 @@ const ( // nolint: deadcode
 )
 
 type Issue struct {
-	Linter   *Linter  `json:"linter"`
+	Linter   string   `json:"linter"`
 	Severity Severity `json:"severity"`
 	Path     string   `json:"path"`
 	Line     int      `json:"line"`
@@ -239,7 +239,7 @@ func processOutput(state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue := &Issue{Line: 1, Linter: state.Linter}
+		issue := &Issue{Line: 1, Linter: state.Linter.Name}
 		for i, name := range re.SubexpNames() {
 			if group[i] == nil {
 				continue
@@ -352,7 +352,7 @@ func (s *sortedIssues) Less(i, j int) bool {
 				return false
 			}
 		case "linter":
-			if l.Linter.Name > r.Linter.Name {
+			if l.Linter > r.Linter {
 				return false
 			}
 		}

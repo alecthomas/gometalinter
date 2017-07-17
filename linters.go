@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,19 +11,15 @@ import (
 )
 
 type Linter struct {
-	Name             string   `json:"name"`
-	Command          string   `json:"command"`
-	Pattern          string   `json:"pattern"`
-	InstallFrom      string   `json:"install_from"`
-	SeverityOverride Severity `json:"severity,omitempty"`
-	MessageOverride  string   `json:"message_override,omitempty"`
+	Name             string
+	Command          string
+	Pattern          string
+	InstallFrom      string
+	SeverityOverride Severity
+	MessageOverride  string
 
 	regex             *regexp.Regexp
 	partitionStrategy partitionStrategy
-}
-
-func (l *Linter) MarshalJSON() ([]byte, error) {
-	return json.Marshal(l.Name)
 }
 
 func (l *Linter) String() string {

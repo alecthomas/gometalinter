@@ -24,7 +24,7 @@ func (i *ignoredRange) matches(issue *Issue) bool {
 		return true
 	}
 	for _, l := range i.linters {
-		if l == issue.Linter.Name {
+		if l == issue.Linter {
 			return true
 		}
 	}
