@@ -10,18 +10,6 @@ const MaxCommandBytes = 32000
 
 type partitionStrategy func([]string, []string) ([][]string, error)
 
-func getPartitionStrategy(name string) partitionStrategy {
-	switch {
-	case linterTakesFiles.contains(name):
-		return partitionToMaxArgSizeWithFileGlobs
-	case linterTakesFilesGroupedByPackage.contains(name):
-		return partitionToPackageFileGlobs
-	case linterTakesPackagePaths.contains(name):
-		return partitionToMaxArgSizeWithPackagePaths
-	}
-	return partitionToMaxArgSize
-}
-
 func pathsToFileGlobs(paths []string) ([]string, error) {
 	filePaths := []string{}
 	for _, dir := range paths {

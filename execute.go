@@ -82,7 +82,7 @@ func (l *linterState) Partitions() ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	parts, err := l.Linter.partitionStrategy(cmdArgs, l.paths)
+	parts, err := l.Linter.PartitionStrategy(cmdArgs, l.paths)
 	if err != nil {
 		return nil, err
 	}
@@ -268,6 +268,8 @@ func processOutput(state *linterState, out []byte) {
 			case "":
 			}
 		}
+		// TODO: set messageOveride and severity on the Linter instead of reading
+		// them directly from the static config
 		if m, ok := config.MessageOverride[state.Name]; ok {
 			issue.Message = vars.Replace(m)
 		}
@@ -284,7 +286,6 @@ func processOutput(state *linterState, out []byte) {
 		}
 		state.issues <- issue
 	}
-	return
 }
 
 func relativePath(root, path string) string {
