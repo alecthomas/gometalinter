@@ -139,7 +139,7 @@ var (
 		"goimports":   `goimports -l:^(?P<path>.*?\.go)$`,
 		"golint":      "golint -min_confidence {min_confidence}:PATH:LINE:COL:MESSAGE",
 		"gosimple":    "gosimple:PATH:LINE:COL:MESSAGE",
-		"gotype":      "gotype -e {tests=-a}:PATH:LINE:COL:MESSAGE",
+		"gotype":      "gotype -e {tests=-t}:PATH:LINE:COL:MESSAGE",
 		"ineffassign": `ineffassign -n:PATH:LINE:COL:MESSAGE`,
 		"interfacer":  `interfacer:PATH:LINE:COL:MESSAGE`,
 		"lll":         `lll -g -l {maxlinelength}:PATH:LINE:MESSAGE`,
