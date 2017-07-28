@@ -342,7 +342,7 @@ func lintersFromConfig(config *Config) map[string]*Linter {
 	for _, name := range config.Enable {
 		linter := getLinterByName(name, config.Linters[name])
 
-		if config.Fast && linter.IsSlow {
+		if config.Fast && !linter.IsFast {
 			continue
 		}
 		out[name] = linter
