@@ -51,7 +51,7 @@ const ( // nolint: deadcode
 )
 
 type Issue struct {
-	Linter   *Linter  `json:"linter"`
+	Linter   string   `json:"linter"`
 	Severity Severity `json:"severity"`
 	Path     string   `json:"path"`
 	Line     int      `json:"line"`
@@ -82,7 +82,7 @@ func (l *linterState) Partitions() ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	parts, err := l.Linter.partitionStrategy(cmdArgs, l.paths)
+	parts, err := l.Linter.PartitionStrategy(cmdArgs, l.paths)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func processOutput(state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue := &Issue{Line: 1, Linter: state.Linter}
+		issue := &Issue{Line: 1, Linter: state.Linter.Name}
 		for i, name := range re.SubexpNames() {
 			if group[i] == nil {
 				continue
@@ -268,6 +268,8 @@ func processOutput(state *linterState, out []byte) {
 			case "":
 			}
 		}
+		// TODO: set messageOveride and severity on the Linter instead of reading
+		// them directly from the static config
 		if m, ok := config.MessageOverride[state.Name]; ok {
 			issue.Message = vars.Replace(m)
 		}
@@ -284,7 +286,6 @@ func processOutput(state *linterState, out []byte) {
 		}
 		state.issues <- issue
 	}
-	return
 }
 
 func relativePath(root, path string) string {
@@ -352,7 +353,7 @@ func (s *sortedIssues) Less(i, j int) bool {
 				return false
 			}
 		case "linter":
-			if l.Linter.Name > r.Linter.Name {
+			if l.Linter > r.Linter {
 				return false
 			}
 		}

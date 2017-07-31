@@ -107,7 +107,7 @@ func disableAllAction(app *kingpin.Application, element *kingpin.ParseElement, c
 }
 
 func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	for linter := range linterDefinitions {
+	for linter := range defaultLinters {
 		config.Enable = append(config.Enable, linter)
 	}
 	config.EnableAll = true
@@ -126,13 +126,13 @@ func warning(format string, args ...interface{}) {
 
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
-	for name := range linterDefinitions {
-		linter := LinterFromName(name)
+	for _, linter := range getDefaultLinters() {
 		install := "(" + linter.InstallFrom + ")"
 		if install == "()" {
 			install = ""
 		}
-		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n", name, install, linter.Command, linter.Pattern)
+		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n",
+			linter.Name, install, linter.Command, linter.Pattern)
 	}
 	return w.String()
 }
@@ -175,9 +175,9 @@ Severity override map (default is "warning"):
 	start := time.Now()
 	paths := resolvePaths(*pathsArg, config.Skip)
 
-	linters := lintersFromFlags()
-	status := 0
+	linters := lintersFromConfig(config)
 	issues, errch := runLinters(linters, paths, config.Concurrency, exclude, include)
+	status := 0
 	if config.JSON {
 		status |= outputToJSON(issues)
 	} else if config.Checkstyle {
@@ -196,11 +196,6 @@ Severity override map (default is "warning"):
 
 // nolint: gocyclo
 func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Regexp) {
-	// Move configured linters into linterDefinitions.
-	for name, definition := range config.Linters {
-		linterDefinitions[name] = definition
-	}
-
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	formatTemplate = tmpl
@@ -341,19 +336,19 @@ func relativePackagePath(dir string) string {
 	return "./" + dir
 }
 
-func lintersFromFlags() map[string]*Linter {
+func lintersFromConfig(config *Config) map[string]*Linter {
 	out := map[string]*Linter{}
-	config.Enable = replaceWithMegacheck(config.Enable)
-	for _, linter := range config.Enable {
-		out[linter] = LinterFromName(linter)
+	config.Enable = replaceWithMegacheck(config.Enable, config.EnableAll)
+	for _, name := range config.Enable {
+		linter := getLinterByName(name, config.Linters[name])
+
+		if config.Fast && !linter.IsFast {
+			continue
+		}
+		out[name] = linter
 	}
 	for _, linter := range config.Disable {
 		delete(out, linter)
-	}
-	if config.Fast {
-		for _, linter := range slowLinters {
-			delete(out, linter)
-		}
 	}
 	return out
 }
@@ -362,7 +357,7 @@ func lintersFromFlags() map[string]*Linter {
 // returns a either a revised list removing those and adding megacheck or an
 // unchanged slice. Emits a warning if linters were removed and swapped with
 // megacheck.
-func replaceWithMegacheck(enabled []string) []string {
+func replaceWithMegacheck(enabled []string, enableAll bool) []string {
 	var (
 		staticcheck,
 		gosimple,
@@ -384,7 +379,7 @@ func replaceWithMegacheck(enabled []string) []string {
 		}
 	}
 	if staticcheck && gosimple && unused {
-		if !config.EnableAll {
+		if !enableAll {
 			warning("staticcheck, gosimple and unused are all set, using megacheck instead")
 		}
 		return append(revised, "megacheck")

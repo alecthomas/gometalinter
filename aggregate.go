@@ -37,18 +37,18 @@ func aggregateIssues(issues chan *Issue) chan *Issue {
 				message: issue.Message,
 			}
 			if existing, ok := issueMap[key]; ok {
-				existing.linterNames = append(existing.linterNames, issue.Linter.Name)
+				existing.linterNames = append(existing.linterNames, issue.Linter)
 			} else {
 				issueMap[key] = &multiIssue{
 					Issue:       issue,
-					linterNames: []string{issue.Linter.Name},
+					linterNames: []string{issue.Linter},
 				}
 			}
 		}
 		for _, multi := range issueMap {
 			issue := multi.Issue
 			sort.Strings(multi.linterNames)
-			issue.Linter.Name = strings.Join(multi.linterNames, ", ")
+			issue.Linter = strings.Join(multi.linterNames, ", ")
 			out <- issue
 		}
 		close(out)
