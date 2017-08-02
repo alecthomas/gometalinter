@@ -18,6 +18,7 @@
     - [1. Update to the latest build of gometalinter and all linters](#1-update-to-the-latest-build-of-gometalinter-and-all-linters)
     - [2. Analyse the debug output](#2-analyse-the-debug-output)
     - [3. Report an issue.](#3-report-an-issue)
+  - [How do I filter issues between two git refs?](#how-do-i-filter-issues-between-two-git-refs)
 - [Details](#details)
 - [Checkstyle XML format](#checkstyle-xml-format)
 
@@ -292,7 +293,7 @@ failing.
 Failing all else, if the problem looks like a bug please file an issue and
 include the output of `gometalinter --debug`.
 
-## How do I only show issues between two git branches?
+### How do I filter issues between two git refs?
 
 [revgrep](https://github.com/bradleyfalzon/revgrep) can be used to filter the output of `gometalinter`
 to show issues on lines that have changed between two git refs, such as unstaged changes, changes in
