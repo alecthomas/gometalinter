@@ -292,6 +292,21 @@ failing.
 Failing all else, if the problem looks like a bug please file an issue and
 include the output of `gometalinter --debug`.
 
+## How do I only show issues between two git branches?
+
+[revgrep](https://github.com/bradleyfalzon/revgrep) can be used to filter the output of `gometalinter`
+to show issues on lines that have changed between two git refs, such as unstaged changes, changes in
+`HEAD` vs `master` and between `master` and `origin/master`. See the project's documentation and `-help`
+usage for more information.
+
+```
+go get -u github.com/bradleyfalzon/revgrep/...
+gometalinter |& revgrep               # If unstaged changes or untracked files, those issues are shown.
+gometalinter |& revgrep               # Else show issues in the last commit.
+gometalinter |& revgrep master        # Show issues between master and HEAD (or any other reference).
+gometalinter |& revgrep origin/master # Show issues that haven't been pushed.
+```
+
 ## Details
 
 Additional linters can be configured via the command line:
