@@ -35,6 +35,9 @@ func NewLinter(config LinterConfig) (*Linter, error) {
 	if err != nil {
 		return nil, err
 	}
+	if config.PartitionStrategy == nil {
+		config.PartitionStrategy = partitionToMaxArgSize
+	}
 	return &Linter{
 		LinterConfig: config,
 		regex:        regex,
@@ -66,6 +69,7 @@ func parseLinterSpec(name string, spec string) *Linter {
 
 	config := defaultLinters[name]
 	config.Command, config.Pattern = parts[0], parts[1]
+	config.Name = name
 
 	linter, err := NewLinter(config)
 	kingpin.FatalIfError(err, "invalid linter %q", name)
