@@ -336,11 +336,24 @@ func relativePackagePath(dir string) string {
 	return "./" + dir
 }
 
+// NB: emits a warning if a linter config is specified in both config.Linters
+// and config.LinterOverrides.
 func lintersFromConfig(config *Config) map[string]*Linter {
 	out := map[string]*Linter{}
 	config.Enable = replaceWithMegacheck(config.Enable, config.EnableAll)
 	for _, name := range config.Enable {
-		linter := getLinterByName(name, config.Linters[name])
+		var linter *Linter
+		customSpec, customSpecOK := config.Linters[name]
+		override, overrideOK := config.LinterOverrides[name]
+		switch {
+		case overrideOK && customSpecOK:
+			warning("Linter %s has both a custom spec and a custom override defined. Ignoring custom override", name)
+			linter = getLinterByName(name, customSpec)
+		case overrideOK:
+			linter = getLinterByOverride(name, override)
+		default:
+			linter = getLinterByName(name, customSpec)
+		}
 
 		if config.Fast && !linter.IsFast {
 			continue

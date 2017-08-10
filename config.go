@@ -15,6 +15,11 @@ type Config struct { // nolint: aligncheck
 	// are expanded by gometalinter (not by the shell).
 	Linters map[string]string
 
+	// A map of linter name to a `LinterOverrideConfig` struct.
+	// NB: If a linter configuration is specified in both `Linters` and `LinterOverride`, the former
+	// is given precedence.
+	LinterOverrides map[string]LinterOverrideConfig
+
 	// The set of linters that should be enabled.
 	Enable  []string
 	Disable []string
