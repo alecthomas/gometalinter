@@ -21,14 +21,6 @@ type LinterConfig struct {
 	defaultEnabled    bool
 }
 
-// LinterOverrideConfig allows users to override parts of linter configuration without requiring them
-// to override the whole thing. E.g. it permits users the ability to specify just the command override
-// for a linter.
-type LinterOverrideConfig struct {
-	Command *string
-	Pattern *string
-}
-
 type Linter struct {
 	LinterConfig
 	regex *regexp.Regexp
@@ -61,41 +53,29 @@ var predefinedPatterns = map[string]string{
 	"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
 }
 
-func getLinterByName(name string, customSpec string) *Linter {
-	if customSpec != "" {
-		return parseLinterSpec(name, customSpec)
+func getLinterByName(name string, overrideConf LinterConfig) *Linter {
+	conf := defaultLinters[name]
+	if val := overrideConf.Command; val != "" {
+		conf.Command = val
 	}
-	linter, _ := NewLinter(defaultLinters[name])
+	if val := overrideConf.Pattern; val != "" {
+		conf.Pattern = val
+	}
+	linter, _ := NewLinter(conf)
 	return linter
 }
 
-func getLinterByOverride(name string, override LinterOverrideConfig) *Linter {
-	config := defaultLinters[name]
-	config.Name = name
-	if c := override.Command; c != nil {
-		config.Command = *c
-	}
-	if p := override.Pattern; p != nil {
-		config.Pattern = *p
-	}
-	linter, err := NewLinter(config)
-	kingpin.FatalIfError(err, "invalid linter %q", name)
-	return linter
-}
-
-func parseLinterSpec(name string, spec string) *Linter {
+func parseLinterSpec(name string, spec string) (LinterConfig, error) {
 	parts := strings.SplitN(spec, ":", 2)
 	if len(parts) < 2 {
-		kingpin.Fatalf("invalid linter: %q", spec)
+		return LinterConfig{}, fmt.Errorf("command spec needs at least two components")
 	}
 
 	config := defaultLinters[name]
 	config.Command, config.Pattern = parts[0], parts[1]
 	config.Name = name
 
-	linter, err := NewLinter(config)
-	kingpin.FatalIfError(err, "invalid linter %q", name)
-	return linter
+	return config, nil
 }
 
 func makeInstallCommand(linters ...string) []string {

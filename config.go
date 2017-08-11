@@ -9,16 +9,13 @@ import (
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
 type Config struct { // nolint: aligncheck
-	// A map of linter name to "<command>:<pattern>".
+	// A map from linter name -> <LinterConfig|string>.
 	//
-	// <command> should always include {path} as the target directory to execute. Globs in <command>
+	// For backwards compatibility, the value stored in the JSON blob can also
+	// be a string of the form "<command>:<pattern>", <command> should always
+	// include {path} as the target directory to execute. Globs in <command>
 	// are expanded by gometalinter (not by the shell).
-	Linters map[string]string
-
-	// A map of linter name to a `LinterOverrideConfig` struct.
-	// NB: If a linter configuration is specified in both `Linters` and `LinterOverride`, the former
-	// is given precedence.
-	LinterOverrides map[string]LinterOverrideConfig
+	Linters map[string]StringOrLinterConfig
 
 	// The set of linters that should be enabled.
 	Enable  []string
@@ -58,6 +55,29 @@ type Config struct { // nolint: aligncheck
 	EnableAll       bool
 }
 
+type StringOrLinterConfig LinterConfig
+
+func (c *StringOrLinterConfig) UnmarshalJSON(raw []byte) error {
+	var linterConfig LinterConfig
+	// first try to un-marshall directly into struct
+	if err := json.Unmarshal(raw, &linterConfig); err == nil {
+		*c = StringOrLinterConfig(linterConfig)
+		return nil
+	}
+
+	// i.e. bytes didn't represent the struct, treat them as a string
+	var linterSpec string
+	if err := json.Unmarshal(raw, &linterSpec); err != nil {
+		return nil
+	}
+	linter, err := parseLinterSpec("", linterSpec)
+	if err != nil {
+		return err
+	}
+	*c = StringOrLinterConfig(linter)
+	return nil
+}
+
 type jsonDuration time.Duration
 
 func (td *jsonDuration) UnmarshalJSON(raw []byte) error {
@@ -84,6 +104,7 @@ var sortKeys = []string{"none", "path", "line", "column", "severity", "message",
 var config = &Config{
 	Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",
 
+	Linters: map[string]StringOrLinterConfig{},
 	Severity: map[string]string{
 		"gotype":  "error",
 		"test":    "error",

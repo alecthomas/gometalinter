@@ -16,13 +16,3 @@ func TestNewLinterWithCustomLinter(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, linter.LinterConfig.PartitionStrategy)
 }
-
-func TestLinterWithOverrideCommand(t *testing.T) {
-	command := "gosimple --with --args"
-	override := LinterOverrideConfig{
-		Command: &command,
-	}
-	linter := getLinterByOverride("gosimple", override)
-	assert.NotNil(t, linter)
-	require.Equal(t, command, linter.Command)
-}
