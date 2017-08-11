@@ -352,8 +352,6 @@ func relativePackagePath(dir string) string {
 	return "./" + dir
 }
 
-// NB: emits a warning if a linter config is specified in both config.Linters
-// and config.LinterOverrides.
 func lintersFromConfig(config *Config) map[string]*Linter {
 	out := map[string]*Linter{}
 	config.Enable = replaceWithMegacheck(config.Enable, config.EnableAll)
