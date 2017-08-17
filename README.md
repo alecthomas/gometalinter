@@ -313,7 +313,7 @@ gometalinter |& revgrep origin/master # Show issues that haven't been pushed.
 Additional linters can be configured via the command line:
 
 ```
-$ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf {path}:PATH:LINE:MESSAGE' .
+$ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf:PATH:LINE:MESSAGE' .
 stutter.go:21:15:warning: error return value not checked (defer a.Close()) (errcheck)
 stutter.go:22:15:warning: error return value not checked (defer a.Close()) (errcheck)
 stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck) (errcheck)
