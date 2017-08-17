@@ -10,9 +10,6 @@ import (
 // Config for gometalinter. This can be loaded from a JSON file with --config.
 type Config struct { // nolint: aligncheck
 	// A map of linter name to "<command>:<pattern>".
-	//
-	// <command> should always include {path} as the target directory to execute. Globs in <command>
-	// are expanded by gometalinter (not by the shell).
 	Linters map[string]string
 
 	// The set of linters that should be enabled.
