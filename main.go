@@ -74,7 +74,7 @@ func cliLinterOverrides(app *kingpin.Application, element *kingpin.ParseElement,
 	spec := parts[1]
 	conf, err := parseLinterConfigSpec(name, spec)
 	if err != nil {
-		return fmt.Errorf("incorrectly formatted input [%s], err: %v", *element.Value, err)
+		return fmt.Errorf("incorrectly formatted input: %s", *element.Value)
 	}
 	config.Linters[name] = StringOrLinterConfig(conf)
 	return nil
