@@ -65,10 +65,10 @@ func getLinterByName(name string, overrideConf LinterConfig) *Linter {
 	return linter
 }
 
-func parseLinterSpec(name string, spec string) (LinterConfig, error) {
+func parseLinterConfigSpec(name string, spec string) (LinterConfig, error) {
 	parts := strings.SplitN(spec, ":", 2)
 	if len(parts) < 2 {
-		return LinterConfig{}, fmt.Errorf("command spec needs at least two components")
+		return LinterConfig{}, fmt.Errorf("linter spec needs at least two components")
 	}
 
 	config := defaultLinters[name]

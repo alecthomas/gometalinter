@@ -72,7 +72,7 @@ func cliLinterOverrides(app *kingpin.Application, element *kingpin.ParseElement,
 	}
 	name := parts[0]
 	spec := parts[1]
-	conf, err := parseLinterSpec(name, spec)
+	conf, err := parseLinterConfigSpec(name, spec)
 	if err != nil {
 		return fmt.Errorf("incorrectly formatted input [%s], err: %v", *element.Value, err)
 	}

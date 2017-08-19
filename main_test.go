@@ -163,7 +163,7 @@ func TestAddPath(t *testing.T) {
 	assert.Equal(t, expected, addPath(paths, "new"))
 }
 
-func TestLinterFlags(t *testing.T) {
+func TestSetupFlagsLinterFlag(t *testing.T) {
 	originalConfig := *config
 	defer func() { config = &originalConfig }()
 
@@ -177,7 +177,7 @@ func TestLinterFlags(t *testing.T) {
 	assert.Equal(t, "c", linter.Pattern)
 }
 
-func TestHistoricalLinterConfig(t *testing.T) {
+func TestSetupFlagsConfigWithLinterString(t *testing.T) {
 	originalConfig := *config
 	defer func() { config = &originalConfig }()
 
@@ -200,7 +200,7 @@ func TestHistoricalLinterConfig(t *testing.T) {
 	assert.Equal(t, "path", linter.Pattern)
 }
 
-func TestMapLinterConfig(t *testing.T) {
+func TestSetupFlagsConfigWithLinterMap(t *testing.T) {
 	originalConfig := *config
 	defer func() { config = &originalConfig }()
 
@@ -225,7 +225,7 @@ func TestMapLinterConfig(t *testing.T) {
 	assert.Equal(t, "", linter.Pattern)
 }
 
-func TestMapAndCliLinterConfig(t *testing.T) {
+func TestSetupFlagsConfigAndLinterFlag(t *testing.T) {
 	originalConfig := *config
 	defer func() { config = &originalConfig }()
 
@@ -234,7 +234,7 @@ func TestMapAndCliLinterConfig(t *testing.T) {
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(`{"Linters":
-		{"linter": { "Command": "command" }}}`))
+		{"linter": { "Command": "some-command" }}}`))
 	require.NoError(t, err)
 	require.NoError(t, tmpfile.Close())
 

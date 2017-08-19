@@ -70,7 +70,7 @@ func (c *StringOrLinterConfig) UnmarshalJSON(raw []byte) error {
 	if err := json.Unmarshal(raw, &linterSpec); err != nil {
 		return err
 	}
-	linter, err := parseLinterSpec("", linterSpec)
+	linter, err := parseLinterConfigSpec("", linterSpec)
 	if err != nil {
 		return err
 	}
