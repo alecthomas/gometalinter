@@ -12,9 +12,7 @@ type Config struct { // nolint: aligncheck
 	// A map from linter name -> <LinterConfig|string>.
 	//
 	// For backwards compatibility, the value stored in the JSON blob can also
-	// be a string of the form "<command>:<pattern>", <command> should always
-	// include {path} as the target directory to execute. Globs in <command>
-	// are expanded by gometalinter (not by the shell).
+	// be a string of the form "<command>:<pattern>".
 	Linters map[string]StringOrLinterConfig
 
 	// The set of linters that should be enabled.
