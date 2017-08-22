@@ -12,26 +12,36 @@ import (
 	"strings"
 )
 
-var (
-	root            string
-	dontRecurseFlag = flag.Bool("n", false, "don't recursively check paths")
-)
+const invalidArgumentExitCode = 3
+
+var dontRecurseFlag = flag.Bool("n", false, "don't recursively check paths")
 
 func main() {
 	flag.Parse()
-	if len(flag.Args()) != 1 {
+
+	if len(flag.Args()) == 0 {
 		fmt.Println("missing argument: filepath")
-		return
+		os.Exit(invalidArgumentExitCode)
 	}
 
-	var err error
-	root, err = filepath.Abs(flag.Arg(0))
-	if err != nil {
-		fmt.Printf("Error finding absolute path :%s", err)
-		return
+	lintFailed := false
+	for _, path := range flag.Args() {
+		root, err := filepath.Abs(path)
+		if err != nil {
+			fmt.Printf("Error finding absolute path: %s", err)
+			os.Exit(invalidArgumentExitCode)
+		}
+		if walkPath(root) {
+			lintFailed = true
+		}
 	}
+	if lintFailed {
+		os.Exit(1)
+	}
+}
 
-	errors := false
+func walkPath(root string) bool {
+	lintFailed := false
 	filepath.Walk(root, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("Error during filesystem walk: %v\n", err)
@@ -51,13 +61,11 @@ func main() {
 		fset, _, ineff := checkPath(path)
 		for _, id := range ineff {
 			fmt.Printf("%s: ineffectual assignment to %s\n", fset.Position(id.Pos()), id.Name)
-			errors = true
+			lintFailed = true
 		}
 		return nil
 	})
-	if errors {
-		os.Exit(1)
-	}
+	return lintFailed
 }
 
 func checkPath(path string) (*token.FileSet, []*ast.CommentGroup, []*ast.Ident) {

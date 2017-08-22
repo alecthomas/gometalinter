@@ -37,7 +37,7 @@
 			"importpath": "github.com/gordonklaus/ineffassign",
 			"repository": "https://github.com/gordonklaus/ineffassign",
 			"vcs": "git",
-			"revision": "08cd83b3f513abe575f40d23acf2ae79088128bb",
+			"revision": "da3d65debb9bff70fcfb6f277a8db31e8200de20",
 			"branch": "master",
 			"notests": true
 		},
