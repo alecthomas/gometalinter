@@ -130,9 +130,17 @@ func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ct
 	return nil
 }
 
+type debugFunction func(format string, args ...interface{})
+
 func debug(format string, args ...interface{}) {
 	if config.Debug {
 		fmt.Fprintf(os.Stderr, "DEBUG: "+format+"\n", args...)
+	}
+}
+
+func namespacedDebug(prefix string) debugFunction {
+	return func(format string, args ...interface{}) {
+		debug(prefix+format, args...)
 	}
 }
 

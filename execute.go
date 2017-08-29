@@ -68,6 +68,7 @@ func (i *Issue) String() string {
 
 type linterState struct {
 	*Linter
+	id       int
 	paths    []string
 	issues   chan *Issue
 	vars     Vars
@@ -111,6 +112,7 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 	}
 
 	wg := &sync.WaitGroup{}
+	id := 1
 	for _, linter := range linters {
 		deadline := time.After(config.Deadline.Duration())
 		state := &linterState{
@@ -133,15 +135,16 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 			// Call the goroutine with a copy of the args array so that the
 			// contents of the array are not modified by the next iteration of
 			// the above for loop
-			go func(args []string) {
+			go func(id int, args []string) {
 				concurrencych <- true
-				err := executeLinter(state, args)
+				err := executeLinter(id, state, args)
 				if err != nil {
 					errch <- err
 				}
 				<-concurrencych
 				wg.Done()
-			}(append(args))
+			}(id, args)
+			id++
 		}
 	}
 
@@ -153,13 +156,14 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 	return processedIssues, errch
 }
 
-func executeLinter(state *linterState, args []string) error {
+func executeLinter(id int, state *linterState, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing linter command")
 	}
 
 	start := time.Now()
-	debug("executing %s", strings.Join(args, " "))
+	dbg := namespacedDebug(fmt.Sprintf("[%s.%d]: ", state.Name, id))
+	dbg("executing %s", strings.Join(args, " "))
 	buf := bytes.NewBuffer(nil)
 	command := args[0]
 	cmd := exec.Command(command, args[1:]...) // nolint: gas
@@ -191,12 +195,12 @@ func executeLinter(state *linterState, args []string) error {
 	}
 
 	if err != nil {
-		debug("warning: %s returned %s: %s", command, err, buf.String())
+		dbg("warning: %s returned %s: %s", command, err, buf.String())
 	}
 
-	processOutput(state, buf.Bytes())
+	processOutput(dbg, state, buf.Bytes())
 	elapsed := time.Since(start)
-	debug("%s linter took %s", state.Name, elapsed)
+	dbg("%s linter took %s", state.Name, elapsed)
 	return nil
 }
 
@@ -216,10 +220,10 @@ func parseCommand(command string) ([]string, error) {
 }
 
 // nolint: gocyclo
-func processOutput(state *linterState, out []byte) {
+func processOutput(dbg debugFunction, state *linterState, out []byte) {
 	re := state.regex
 	all := re.FindAllSubmatchIndex(out, -1)
-	debug("%s hits %d: %s", state.Name, len(all), state.Pattern)
+	dbg("%s hits %d: %s", state.Name, len(all), state.Pattern)
 
 	cwd, err := os.Getwd()
 	if err != nil {
