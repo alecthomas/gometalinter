@@ -18,6 +18,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/maruel/panicparse/stack",
+			"repository": "https://github.com/maruel/panicparse",
+			"vcs": "git",
+			"revision": "ae43f192cef2add653fe1481a3070ed00a4a6981",
+			"branch": "master",
+			"path": "/stack",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/nicksnyder/go-i18n/i18n",
 			"repository": "https://github.com/nicksnyder/go-i18n",
 			"vcs": "git",

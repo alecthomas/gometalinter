@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,9 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/google/shlex"
+	"github.com/maruel/panicparse/stack"
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
@@ -179,25 +183,50 @@ func executeLinter(state *linterState, args []string) error {
 	// Wait for process to complete or deadline to expire.
 	select {
 	case <-done:
-
-	case <-state.deadline:
-		err = fmt.Errorf("deadline exceeded by linter %s (try increasing --deadline)",
-			state.Name)
-		kerr := cmd.Process.Kill()
-		if kerr != nil {
-			warning("failed to kill %s: %s", state.Name, kerr)
+		if err != nil {
+			debug("warning: %s returned %s\n%s", command, err, buf.String())
 		}
-		return err
+	case <-state.deadline:
+		if err := cmd.Process.Kill(); err != nil {
+			warning("failed to kill %s: %s", state.Name, err)
+		}
+		return fmt.Errorf("deadline exceeded by linter %s (try increasing --deadline)",
+			state.Name)
 	}
 
 	if err != nil {
 		debug("warning: %s returned %s: %s", command, err, buf.String())
 	}
 
-	processOutput(state, buf.Bytes())
-	elapsed := time.Since(start)
-	debug("%s linter took %s", state.Name, elapsed)
+	cmdOutput := buf.Bytes()
+	err = preprocessLinterPanic(state.Name, buf, err)
+	processOutput(state, cmdOutput)
+	debug("%s linter took %s", state.Name, time.Since(start))
+	return err
+}
+
+const panicExitStatus = 2
+
+func preprocessLinterPanic(name string, buf io.Reader, processError error) error {
+	if exitStatus(processError) == panicExitStatus {
+		routines, _ := stack.ParseDump(buf, ioutil.Discard)
+		if len(routines) > 0 {
+			return fmt.Errorf("linter %s may have panicked, check output with --debug", name)
+		}
+	}
 	return nil
+}
+
+func exitStatus(err error) int {
+	if err == nil {
+		return 0
+	}
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			return status.ExitStatus()
+		}
+	}
+	return panicExitStatus
 }
 
 func parseCommand(command string) ([]string, error) {
