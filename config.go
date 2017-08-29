@@ -9,8 +9,11 @@ import (
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
 type Config struct { // nolint: aligncheck
-	// A map of linter name to "<command>:<pattern>".
-	Linters map[string]string
+	// A map from linter name -> <LinterConfig|string>.
+	//
+	// For backwards compatibility, the value stored in the JSON blob can also
+	// be a string of the form "<command>:<pattern>".
+	Linters map[string]StringOrLinterConfig
 
 	// The set of linters that should be enabled.
 	Enable  []string
@@ -50,6 +53,29 @@ type Config struct { // nolint: aligncheck
 	EnableAll       bool
 }
 
+type StringOrLinterConfig LinterConfig
+
+func (c *StringOrLinterConfig) UnmarshalJSON(raw []byte) error {
+	var linterConfig LinterConfig
+	// first try to un-marshall directly into struct
+	if err := json.Unmarshal(raw, &linterConfig); err == nil {
+		*c = StringOrLinterConfig(linterConfig)
+		return nil
+	}
+
+	// i.e. bytes didn't represent the struct, treat them as a string
+	var linterSpec string
+	if err := json.Unmarshal(raw, &linterSpec); err != nil {
+		return err
+	}
+	linter, err := parseLinterConfigSpec("", linterSpec)
+	if err != nil {
+		return err
+	}
+	*c = StringOrLinterConfig(linter)
+	return nil
+}
+
 type jsonDuration time.Duration
 
 func (td *jsonDuration) UnmarshalJSON(raw []byte) error {
@@ -76,6 +102,7 @@ var sortKeys = []string{"none", "path", "line", "column", "severity", "message",
 var config = &Config{
 	Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",
 
+	Linters: map[string]StringOrLinterConfig{},
 	Severity: map[string]string{
 		"gotype":  "error",
 		"test":    "error",

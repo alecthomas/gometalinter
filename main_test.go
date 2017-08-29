@@ -162,3 +162,91 @@ func TestAddPath(t *testing.T) {
 	expected := []string{"existing", "new"}
 	assert.Equal(t, expected, addPath(paths, "new"))
 }
+
+func TestSetupFlagsLinterFlag(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	app := kingpin.New("test-app", "")
+	setupFlags(app)
+	_, err := app.Parse([]string{"--linter", "a:b:c"})
+	require.NoError(t, err)
+	linter, ok := config.Linters["a"]
+	assert.True(t, ok)
+	assert.Equal(t, "b", linter.Command)
+	assert.Equal(t, "c", linter.Pattern)
+}
+
+func TestSetupFlagsConfigWithLinterString(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpfile, err := ioutil.TempFile("", "test-config")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte(`{"Linters": {"linter": "command:path"} }`))
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	app := kingpin.New("test-app", "")
+	setupFlags(app)
+
+	_, err = app.Parse([]string{"--config", tmpfile.Name()})
+	require.NoError(t, err)
+	linter, ok := config.Linters["linter"]
+	assert.True(t, ok)
+	assert.Equal(t, "command", linter.Command)
+	assert.Equal(t, "path", linter.Pattern)
+}
+
+func TestSetupFlagsConfigWithLinterMap(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpfile, err := ioutil.TempFile("", "test-config")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte(`{"Linters":
+		{"linter":
+			{ "Command": "command" }}}`))
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	app := kingpin.New("test-app", "")
+	setupFlags(app)
+
+	_, err = app.Parse([]string{"--config", tmpfile.Name()})
+	require.NoError(t, err)
+	linter, ok := config.Linters["linter"]
+	assert.True(t, ok)
+	assert.Equal(t, "command", linter.Command)
+	assert.Equal(t, "", linter.Pattern)
+}
+
+func TestSetupFlagsConfigAndLinterFlag(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpfile, err := ioutil.TempFile("", "test-config")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+
+	_, err = tmpfile.Write([]byte(`{"Linters":
+		{"linter": { "Command": "some-command" }}}`))
+	require.NoError(t, err)
+	require.NoError(t, tmpfile.Close())
+
+	app := kingpin.New("test-app", "")
+	setupFlags(app)
+
+	_, err = app.Parse([]string{
+		"--config", tmpfile.Name(),
+		"--linter", "linter:command:pattern"})
+	require.NoError(t, err)
+	linter, ok := config.Linters["linter"]
+	assert.True(t, ok)
+	assert.Equal(t, "command", linter.Command)
+	assert.Equal(t, "pattern", linter.Pattern)
+}

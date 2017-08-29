@@ -29,7 +29,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("config", "Load JSON configuration from file.").Action(loadConfig).String()
 	app.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
 	app.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
-	app.Flag("linter", "Define a linter.").PlaceHolder("NAME:COMMAND:PATTERN").StringMapVar(&config.Linters)
+	app.Flag("linter", "Define a linter.").PlaceHolder("NAME:COMMAND:PATTERN").Action(cliLinterOverrides).StringMap()
 	app.Flag("message-overrides", "Override message from linter. {message} will be expanded to the original message.").PlaceHolder("LINTER:MESSAGE").StringMapVar(&config.MessageOverride)
 	app.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
 	app.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
@@ -62,6 +62,22 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
 	app.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
 	app.GetFlag("help").Short('h')
+}
+
+func cliLinterOverrides(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	// expected input structure - <name>:<command-spec>
+	parts := strings.SplitN(*element.Value, ":", 2)
+	if len(parts) < 2 {
+		return fmt.Errorf("incorrectly formatted input: %s", *element.Value)
+	}
+	name := parts[0]
+	spec := parts[1]
+	conf, err := parseLinterConfigSpec(name, spec)
+	if err != nil {
+		return fmt.Errorf("incorrectly formatted input: %s", *element.Value)
+	}
+	config.Linters[name] = StringOrLinterConfig(conf)
+	return nil
 }
 
 func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
@@ -340,8 +356,7 @@ func lintersFromConfig(config *Config) map[string]*Linter {
 	out := map[string]*Linter{}
 	config.Enable = replaceWithMegacheck(config.Enable, config.EnableAll)
 	for _, name := range config.Enable {
-		linter := getLinterByName(name, config.Linters[name])
-
+		linter := getLinterByName(name, LinterConfig(config.Linters[name]))
 		if config.Fast && !linter.IsFast {
 			continue
 		}
