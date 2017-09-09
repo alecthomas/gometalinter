@@ -132,11 +132,11 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 		}
 		for _, args := range partitions {
 			wg.Add(1)
+			concurrencych <- true
 			// Call the goroutine with a copy of the args array so that the
 			// contents of the array are not modified by the next iteration of
 			// the above for loop
 			go func(id int, args []string) {
-				concurrencych <- true
 				err := executeLinter(id, state, args)
 				if err != nil {
 					errch <- err
