@@ -1,7 +1,7 @@
 // Copyright (c) 2015, Daniel Martí <mvdan@mvdan.cc>
 // See LICENSE for licensing information
 
-package interfacer
+package check // import "mvdan.cc/interfacer/check"
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"golang.org/x/tools/go/ssa/ssautil"
 
 	"github.com/kisielk/gotool"
-	"github.com/mvdan/lint"
+	"mvdan.cc/lint"
 )
 
 func toDiscard(usage *varUsage) bool {
@@ -111,7 +111,6 @@ type Checker struct {
 	pkgTypes
 	*loader.PackageInfo
 
-	fset  *token.FileSet
 	funcs []*funcDecl
 
 	ssaByPos map[token.Pos]*ssa.Function

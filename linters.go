@@ -287,7 +287,7 @@ var defaultLinters = map[string]LinterConfig{
 		Name:              "interfacer",
 		Command:           `interfacer`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "github.com/mvdan/interfacer/cmd/interfacer",
+		InstallFrom:       "mvdan.cc/interfacer",
 		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
 		defaultEnabled:    true,
 	},
@@ -361,7 +361,7 @@ var defaultLinters = map[string]LinterConfig{
 		Name:              "unparam",
 		Command:           `unparam`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "github.com/mvdan/unparam",
+		InstallFrom:       "mvdan.cc/unparam",
 		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
 	},
 	"unused": {

@@ -1,21 +1,21 @@
 // Copyright (c) 2015, Daniel Martí <mvdan@mvdan.cc>
 // See LICENSE for licensing information
 
-package main
+package main // import "mvdan.cc/interfacer"
 
 import (
 	"flag"
 	"fmt"
 	"os"
 
-	"github.com/mvdan/interfacer"
+	"mvdan.cc/interfacer/check"
 )
 
 var _ = flag.Bool("v", false, "print the names of packages as they are checked")
 
 func main() {
 	flag.Parse()
-	lines, err := interfacer.CheckArgs(flag.Args())
+	lines, err := check.CheckArgs(flag.Args())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -1,7 +1,7 @@
 // Copyright (c) 2017, Daniel Martí <mvdan@mvdan.cc>
 // See LICENSE for licensing information
 
-package main
+package main // import "mvdan.cc/lint/cmd/metalint"
 
 import (
 	"flag"
@@ -13,12 +13,12 @@ import (
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 
-	"github.com/mvdan/lint"
+	"mvdan.cc/lint"
 
 	"github.com/kisielk/gotool"
 
-	"github.com/mvdan/interfacer"
-	unparam "github.com/mvdan/unparam/check"
+	interfacer "mvdan.cc/interfacer/check"
+	unparam "mvdan.cc/unparam/check"
 )
 
 var tests = flag.Bool("tests", false, "include tests")
