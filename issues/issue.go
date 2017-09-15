@@ -51,11 +51,11 @@ func NewIssue(linter string, formatTmpl *template.Template) (*Issue, error) {
 }
 
 func (i *Issue) String() string {
-	col := ""
-	if i.Col != 0 {
-		col = fmt.Sprintf("%d", i.Col)
-	}
 	if i.formatTmpl == nil {
+		col := ""
+		if i.Col != 0 {
+			col = fmt.Sprintf("%d", i.Col)
+		}
 		return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
 	}
 	buf := new(bytes.Buffer)
@@ -71,35 +71,28 @@ type sortedIssues struct {
 func (s *sortedIssues) Len() int      { return len(s.issues) }
 func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
 
-// nolint: gocyclo
 func (s *sortedIssues) Less(i, j int) bool {
 	l, r := s.issues[i], s.issues[j]
-	for _, key := range s.order {
-		switch key {
-		case "path":
-			if l.Path > r.Path {
-				return false
-			}
-		case "line":
-			if l.Line > r.Line {
-				return false
-			}
-		case "column":
-			if l.Col > r.Col {
-				return false
-			}
-		case "severity":
-			if l.Severity > r.Severity {
-				return false
-			}
-		case "message":
-			if l.Message > r.Message {
-				return false
-			}
-		case "linter":
-			if l.Linter > r.Linter {
-				return false
-			}
+	return Compare(*l, *r, s.order)
+}
+
+// Compare two Issues and return true if left should sort before right
+// nolint: gocyclo
+func Compare(l, r Issue, order []string) bool {
+	for _, key := range order {
+		switch {
+		case key == "path" && l.Path != r.Path:
+			return l.Path < r.Path
+		case key == "line" && l.Line != r.Line:
+			return l.Line < r.Line
+		case key == "column" && l.Col != r.Col:
+			return l.Col < r.Col
+		case key == "severity" && l.Severity != r.Severity:
+			return l.Severity < r.Severity
+		case key == "message" && l.Message != r.Message:
+			return l.Message < r.Message
+		case key == "linter" && l.Linter != r.Linter:
+			return l.Linter < r.Linter
 		}
 	}
 	return true
@@ -124,9 +117,4 @@ func SortChan(issues chan *Issue, order []string) chan *Issue {
 		close(out)
 	}()
 	return out
-}
-
-// Sort a slice of issues
-func Sort(issues []*Issue, order []string) {
-	sort.Sort(&sortedIssues{issues: issues, order: order})
 }
