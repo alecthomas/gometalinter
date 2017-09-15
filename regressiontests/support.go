@@ -8,36 +8,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
+	"github.com/alecthomas/gometalinter/issues"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type Issue struct {
-	Linter   string `json:"linter"`
-	Severity string `json:"severity"`
-	Path     string `json:"path"`
-	Line     int    `json:"line"`
-	Col      int    `json:"col"`
-	Message  string `json:"message"`
-}
-
-func (i *Issue) String() string {
-	col := ""
-	if i.Col != 0 {
-		col = fmt.Sprintf("%d", i.Col)
-	}
-	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
-}
-
-type Issues []Issue
-
-func (e Issues) Len() int           { return len(e) }
-func (e Issues) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
-func (e Issues) Less(i, j int) bool { return e[i].String() < e[j].String() }
+type Issues []issues.Issue
 
 // ExpectIssues runs gometalinter and expects it to generate exactly the
 // issues provided.
@@ -71,22 +50,13 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	}
 
 	// Remove output from other linters.
-	actualForLinter := Issues{}
-	for _, issue := range actual {
-		if issue.Linter == linter || linter == "" {
-			// Normalise path.
-			issue.Path = "test.go"
-			issue.Message = strings.Replace(issue.Message, testFile, "test.go", -1)
-			issue.Message = strings.Replace(issue.Message, dir, "", -1)
-			actualForLinter = append(actualForLinter, issue)
-		}
-	}
-	sort.Sort(expected)
-	sort.Sort(actualForLinter)
+	actualForLinter := filterIssues(actual, linter, testFile)
+	sort(expected)
+	sort(actualForLinter)
 
 	if !assert.Equal(t, expected, actualForLinter) {
-		fmt.Printf("Stderr: %s\n", errBuffer)
-		fmt.Printf("Output: %s\n", output)
+		fmt.Printf("Stderr: %s", errBuffer)
+		fmt.Printf("Output: %s", output)
 	}
 }
 
@@ -97,4 +67,25 @@ func buildBinary(t *testing.T) (string, func()) {
 	cmd := exec.Command("go", "build", "-o", path, "..")
 	require.NoError(t, cmd.Run())
 	return path, func() { os.RemoveAll(tmpdir) }
+}
+
+func sort(source Issues) {
+	withRef := []*issues.Issue{}
+	for _, issue := range source {
+		withRef = append(withRef, &issue)
+	}
+	issues.Sort(withRef, []string{"path", "line", "column", "severity"})
+}
+
+func filterIssues(issues Issues, linterName string, filename string) Issues {
+	actualForLinter := Issues{}
+	for _, issue := range issues {
+		if issue.Linter == linterName || linterName == "" {
+			// Normalise path.
+			issue.Path = "test.go"
+			issue.Message = strings.Replace(issue.Message, filename, "test.go", -1)
+			actualForLinter = append(actualForLinter, issue)
+		}
+	}
+	return actualForLinter
 }

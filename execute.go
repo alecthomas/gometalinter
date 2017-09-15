@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/alecthomas/gometalinter/issues"
 	"github.com/google/shlex"
-	"gopkg.in/alecthomas/kingpin.v3-unstable"
+	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 type Vars map[string]string
@@ -41,36 +41,11 @@ func (v Vars) Replace(s string) string {
 	return s
 }
 
-// Severity of linter message.
-type Severity string
-
-// Linter message severity levels.
-const ( // nolint: deadcode
-	Error   Severity = "error"
-	Warning Severity = "warning"
-)
-
-type Issue struct {
-	Linter   string   `json:"linter"`
-	Severity Severity `json:"severity"`
-	Path     string   `json:"path"`
-	Line     int      `json:"line"`
-	Col      int      `json:"col"`
-	Message  string   `json:"message"`
-}
-
-func (i *Issue) String() string {
-	buf := new(bytes.Buffer)
-	err := formatTemplate.Execute(buf, i)
-	kingpin.FatalIfError(err, "Invalid output format")
-	return buf.String()
-}
-
 type linterState struct {
 	*Linter
 	id       int
 	paths    []string
-	issues   chan *Issue
+	issues   chan *issues.Issue
 	vars     Vars
 	exclude  *regexp.Regexp
 	include  *regexp.Regexp
@@ -90,10 +65,10 @@ func (l *linterState) Partitions() ([][]string, error) {
 	return parts, nil
 }
 
-func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
+func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *issues.Issue, chan error) {
 	errch := make(chan error, len(linters))
 	concurrencych := make(chan bool, concurrency)
-	incomingIssues := make(chan *Issue, 1000000)
+	incomingIssues := make(chan *issues.Issue, 1000000)
 	processedIssues := filterIssuesViaDirectives(
 		newDirectiveParser(),
 		maybeSortIssues(maybeAggregateIssues(incomingIssues)))
@@ -243,7 +218,9 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue := &Issue{Line: 1, Linter: state.Linter.Name}
+		issue, err := issues.NewIssue(state.Linter.Name, config.formatTemplate)
+		kingpin.FatalIfError(err, "Invalid output format")
+
 		for i, name := range re.SubexpNames() {
 			if group[i] == nil {
 				continue
@@ -278,9 +255,9 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			issue.Message = vars.Replace(m)
 		}
 		if sev, ok := config.Severity[state.Name]; ok {
-			issue.Severity = Severity(sev)
+			issue.Severity = issues.Severity(sev)
 		} else {
-			issue.Severity = Warning
+			issue.Severity = issues.Warning
 		}
 		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
 			continue
@@ -323,66 +300,16 @@ func resolvePath(path string) string {
 	return path
 }
 
-type sortedIssues struct {
-	issues []*Issue
-	order  []string
-}
-
-func (s *sortedIssues) Len() int      { return len(s.issues) }
-func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
-
-// nolint: gocyclo
-func (s *sortedIssues) Less(i, j int) bool {
-	l, r := s.issues[i], s.issues[j]
-	for _, key := range s.order {
-		switch key {
-		case "path":
-			if l.Path > r.Path {
-				return false
-			}
-		case "line":
-			if l.Line > r.Line {
-				return false
-			}
-		case "column":
-			if l.Col > r.Col {
-				return false
-			}
-		case "severity":
-			if l.Severity > r.Severity {
-				return false
-			}
-		case "message":
-			if l.Message > r.Message {
-				return false
-			}
-		case "linter":
-			if l.Linter > r.Linter {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func maybeSortIssues(issues chan *Issue) chan *Issue {
+func maybeSortIssues(chIssues chan *issues.Issue) chan *issues.Issue {
 	if reflect.DeepEqual([]string{"none"}, config.Sort) {
-		return issues
+		return chIssues
 	}
-	out := make(chan *Issue, 1000000)
-	sorted := &sortedIssues{
-		issues: []*Issue{},
-		order:  config.Sort,
+	return issues.SortChan(chIssues, config.Sort)
+}
+
+func maybeAggregateIssues(chIssues chan *issues.Issue) chan *issues.Issue {
+	if !config.Aggregate {
+		return chIssues
 	}
-	go func() {
-		for issue := range issues {
-			sorted.issues = append(sorted.issues, issue)
-		}
-		sort.Sort(sorted)
-		for _, issue := range sorted.issues {
-			out <- issue
-		}
-		close(out)
-	}()
-	return out
+	return issues.AggregateChan(chIssues)
 }

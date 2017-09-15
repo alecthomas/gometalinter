@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"text/template"
 	"time"
+
+	"github.com/alecthomas/gometalinter/issues"
 )
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
@@ -51,6 +53,8 @@ type Config struct { // nolint: aligncheck
 	EnableGC        bool
 	Aggregate       bool
 	EnableAll       bool
+
+	formatTemplate *template.Template
 }
 
 type StringOrLinterConfig LinterConfig
@@ -93,14 +97,11 @@ func (td *jsonDuration) Duration() time.Duration {
 	return time.Duration(*td)
 }
 
-// TODO: should be a field on Config struct
-var formatTemplate = &template.Template{}
-
 var sortKeys = []string{"none", "path", "line", "column", "severity", "message", "linter"}
 
 // Configuration defaults.
 var config = &Config{
-	Format: "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})",
+	Format: issues.DefaultFormat,
 
 	Linters: map[string]StringOrLinterConfig{},
 	Severity: map[string]string{

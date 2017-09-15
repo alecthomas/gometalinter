@@ -14,7 +14,8 @@ import (
 	"text/template"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v3-unstable"
+	"github.com/alecthomas/gometalinter/issues"
+	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 var (
@@ -222,7 +223,7 @@ Severity override map (default is "warning"):
 func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Regexp) {
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
-	formatTemplate = tmpl
+	config.formatTemplate = tmpl
 
 	// Linters are by their very nature, short lived, so disable GC.
 	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
@@ -266,10 +267,10 @@ https://github.com/alecthomas/gometalinter/issues/new
 	return include, exclude
 }
 
-func outputToConsole(issues chan *Issue) int {
+func outputToConsole(chIssues chan *issues.Issue) int {
 	status := 0
-	for issue := range issues {
-		if config.Errors && issue.Severity != Error {
+	for issue := range chIssues {
+		if config.Errors && issue.Severity != issues.Error {
 			continue
 		}
 		fmt.Println(issue.String())
@@ -278,11 +279,11 @@ func outputToConsole(issues chan *Issue) int {
 	return status
 }
 
-func outputToJSON(issues chan *Issue) int {
+func outputToJSON(chIssues chan *issues.Issue) int {
 	fmt.Println("[")
 	status := 0
-	for issue := range issues {
-		if config.Errors && issue.Severity != Error {
+	for issue := range chIssues {
+		if config.Errors && issue.Severity != issues.Error {
 			continue
 		}
 		if status != 0 {
