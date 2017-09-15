@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -30,34 +31,33 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	err = ioutil.WriteFile(testFile, []byte(source), 0644)
 	require.NoError(t, err)
 
-	// Run gometalinter.
+	actual := RunLinter(t, linter, dir, extraFlags...)
+	AssertEqualIssues(t, expected, actual)
+}
+
+// RunLinter runs the gometalinter as a binary against the files at path and
+// returns the issues it encountered
+func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) []issues.Issue {
 	binary, cleanup := buildBinary(t)
 	defer cleanup()
-	args := []string{"-d", "--disable-all", "--enable", linter, "--json", dir}
+
+	args := []string{"-d", "--disable-all", "--enable", linter, "--json", path}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(binary, args...)
+
 	errBuffer := new(bytes.Buffer)
 	cmd.Stderr = errBuffer
-	require.NoError(t, err)
 
 	output, _ := cmd.Output()
-	var actual Issues
-	err = json.Unmarshal(output, &actual)
+
+	var actual []issues.Issue
+	err := json.Unmarshal(output, &actual)
 	if !assert.NoError(t, err) {
 		fmt.Printf("Stderr: %s\n", errBuffer)
 		fmt.Printf("Output: %s\n", output)
-		return
+		return nil
 	}
-
-	// Remove output from other linters.
-	actualForLinter := filterIssues(actual, linter, testFile)
-	sort(expected)
-	sort(actualForLinter)
-
-	if !assert.Equal(t, expected, actualForLinter) {
-		fmt.Printf("Stderr: %s", errBuffer)
-		fmt.Printf("Output: %s", output)
-	}
+	return filterIssues(actual, linter, path)
 }
 
 func buildBinary(t *testing.T) (string, func()) {
@@ -69,23 +69,44 @@ func buildBinary(t *testing.T) (string, func()) {
 	return path, func() { os.RemoveAll(tmpdir) }
 }
 
-func sort(source Issues) {
-	withRef := []*issues.Issue{}
-	for _, issue := range source {
-		withRef = append(withRef, &issue)
-	}
-	issues.Sort(withRef, []string{"path", "line", "column", "severity"})
+func sortIssues(source Issues) {
+	order := []string{"path", "line", "column", "severity", "message", "linter"}
+	sort.Sort(&sortedIssues{issues: source, order: order})
 }
 
-func filterIssues(issues Issues, linterName string, filename string) Issues {
-	actualForLinter := Issues{}
+type sortedIssues struct {
+	issues []issues.Issue
+	order  []string
+}
+
+func (s *sortedIssues) Len() int      { return len(s.issues) }
+func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
+
+func (s *sortedIssues) Less(i, j int) bool {
+	l, r := s.issues[i], s.issues[j]
+	return issues.Compare(l, r, s.order)
+}
+
+// filterIssues to just the issues relevant for the current linter and normalize
+// the error message by removing the directory part of the path from both Path
+// and Message
+func filterIssues(issues Issues, linterName string, dir string) Issues {
+	filtered := Issues{}
 	for _, issue := range issues {
 		if issue.Linter == linterName || linterName == "" {
-			// Normalise path.
-			issue.Path = "test.go"
-			issue.Message = strings.Replace(issue.Message, filename, "test.go", -1)
-			actualForLinter = append(actualForLinter, issue)
+			issue.Path = strings.Replace(issue.Path, dir+string(os.PathSeparator), "", -1)
+			issue.Message = strings.Replace(issue.Message, dir+string(os.PathSeparator), "", -1)
+			issue.Message = strings.Replace(issue.Message, dir, "", -1)
+			filtered = append(filtered, issue)
 		}
 	}
-	return actualForLinter
+	return filtered
+}
+
+// AssertEqualIssues compares two lists of issues and asserts they are the
+// same list, ignoring the order of the list.
+func AssertEqualIssues(t assert.TestingT, expected Issues, actual Issues) bool {
+	sortIssues(expected)
+	sortIssues(actual)
+	return assert.Equal(t, expected, actual)
 }
