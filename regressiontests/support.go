@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gotestyourself/gotestyourself/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -59,10 +60,11 @@ func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) I
 	args := []string{
 		"-d", "--disable-all", "--enable", linter, "--json",
 		"--sort=path", "--sort=line", "--sort=column", "--sort=message",
-		path,
+		"./...",
 	}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(binary, args...)
+	cmd.Dir = path
 
 	errBuffer := new(bytes.Buffer)
 	cmd.Stderr = errBuffer
@@ -80,12 +82,11 @@ func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) I
 }
 
 func buildBinary(t *testing.T) (string, func()) {
-	tmpdir, err := ioutil.TempDir("", "regression-test")
-	require.NoError(t, err)
-	path := filepath.Join(tmpdir, "binary")
+	tmpdir := fs.NewDir(t, "regression-test-binary")
+	path := tmpdir.Join("gometalinter")
 	cmd := exec.Command("go", "build", "-o", path, "..")
 	require.NoError(t, cmd.Run())
-	return path, func() { os.RemoveAll(tmpdir) }
+	return path, tmpdir.Remove
 }
 
 // filterIssues to just the issues relevant for the current linter and normalize
