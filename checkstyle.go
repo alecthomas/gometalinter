@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"fmt"
 
-	"github.com/alecthomas/gometalinter/issues"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
@@ -27,13 +26,13 @@ type checkstyleError struct {
 	Source   string `xml:"source,attr"`
 }
 
-func outputToCheckstyle(chIssues chan *issues.Issue) int {
+func outputToCheckstyle(issues chan *Issue) int {
 	var lastFile *checkstyleFile
 	out := checkstyleOutput{
 		Version: "5.0",
 	}
 	status := 0
-	for issue := range chIssues {
+	for issue := range issues {
 		if lastFile != nil && lastFile.Name != issue.Path {
 			out.Files = append(out.Files, lastFile)
 			lastFile = nil
@@ -44,7 +43,7 @@ func outputToCheckstyle(chIssues chan *issues.Issue) int {
 			}
 		}
 
-		if config.Errors && issue.Severity != issues.Error {
+		if config.Errors && issue.Severity != Error {
 			continue
 		}
 

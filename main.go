@@ -14,7 +14,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/alecthomas/gometalinter/issues"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
@@ -267,10 +266,10 @@ https://github.com/alecthomas/gometalinter/issues/new
 	return include, exclude
 }
 
-func outputToConsole(chIssues chan *issues.Issue) int {
+func outputToConsole(issues chan *Issue) int {
 	status := 0
-	for issue := range chIssues {
-		if config.Errors && issue.Severity != issues.Error {
+	for issue := range issues {
+		if config.Errors && issue.Severity != Error {
 			continue
 		}
 		fmt.Println(issue.String())
@@ -279,11 +278,11 @@ func outputToConsole(chIssues chan *issues.Issue) int {
 	return status
 }
 
-func outputToJSON(chIssues chan *issues.Issue) int {
+func outputToJSON(issues chan *Issue) int {
 	fmt.Println("[")
 	status := 0
-	for issue := range chIssues {
-		if config.Errors && issue.Severity != issues.Error {
+	for issue := range issues {
+		if config.Errors && issue.Severity != Error {
 			continue
 		}
 		if status != 0 {

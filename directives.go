@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/alecthomas/gometalinter/issues"
 )
 
 type ignoredRange struct {
@@ -18,7 +16,7 @@ type ignoredRange struct {
 	linters    []string
 }
 
-func (i *ignoredRange) matches(issue *issues.Issue) bool {
+func (i *ignoredRange) matches(issue *Issue) bool {
 	if issue.Line < i.start || issue.Line > i.end {
 		return false
 	}
@@ -57,7 +55,7 @@ func newDirectiveParser() *directiveParser {
 }
 
 // IsIgnored returns true if the given linter issue is ignored by a linter directive.
-func (d *directiveParser) IsIgnored(issue *issues.Issue) bool {
+func (d *directiveParser) IsIgnored(issue *Issue) bool {
 	d.lock.Lock()
 	ranges, ok := d.files[issue.Path]
 	if !ok {
@@ -144,10 +142,10 @@ func extractCommentGroupRange(fset *token.FileSet, comments ...*ast.CommentGroup
 	return
 }
 
-func filterIssuesViaDirectives(directives *directiveParser, chIssues chan *issues.Issue) chan *issues.Issue {
-	out := make(chan *issues.Issue, 1000000)
+func filterIssuesViaDirectives(directives *directiveParser, issues chan *Issue) chan *Issue {
+	out := make(chan *Issue, 1000000)
 	go func() {
-		for issue := range chIssues {
+		for issue := range issues {
 			if !directives.IsIgnored(issue) {
 				out <- issue
 			}

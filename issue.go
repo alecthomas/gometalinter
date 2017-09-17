@@ -1,4 +1,4 @@
-package issues
+package main
 
 import (
 	"bytes"
@@ -9,8 +9,8 @@ import (
 	"text/template"
 )
 
-// DefaultFormat used to print an issue
-const DefaultFormat = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"
+// DefaultIssueFormat used to print an issue
+const DefaultIssueFormat = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"
 
 // Severity of linter message
 type Severity string
@@ -34,13 +34,6 @@ type Issue struct {
 // NewIssue returns a new issue. Returns an error if formatTmpl is not a valid
 // template for an Issue.
 func NewIssue(linter string, formatTmpl *template.Template) (*Issue, error) {
-	if formatTmpl == nil {
-		var err error
-		formatTmpl, err = template.New("output").Parse(DefaultFormat)
-		if err != nil {
-			return nil, err
-		}
-	}
 	issue := &Issue{
 		Line:       1,
 		Linter:     linter,
@@ -73,12 +66,12 @@ func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], 
 
 func (s *sortedIssues) Less(i, j int) bool {
 	l, r := s.issues[i], s.issues[j]
-	return Compare(*l, *r, s.order)
+	return CompareIssue(*l, *r, s.order)
 }
 
-// Compare two Issues and return true if left should sort before right
+// CompareIssue two Issues and return true if left should sort before right
 // nolint: gocyclo
-func Compare(l, r Issue, order []string) bool {
+func CompareIssue(l, r Issue, order []string) bool {
 	for _, key := range order {
 		switch {
 		case key == "path" && l.Path != r.Path:
@@ -98,9 +91,9 @@ func Compare(l, r Issue, order []string) bool {
 	return true
 }
 
-// SortChan reads issues from one channel, sorts them, and returns them to another
+// SortIssueChan reads issues from one channel, sorts them, and returns them to another
 // channel
-func SortChan(issues chan *Issue, order []string) chan *Issue {
+func SortIssueChan(issues chan *Issue, order []string) chan *Issue {
 	out := make(chan *Issue, 1000000)
 	sorted := &sortedIssues{
 		issues: []*Issue{},

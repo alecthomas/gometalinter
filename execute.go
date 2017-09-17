@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/gometalinter/issues"
 	"github.com/google/shlex"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
@@ -45,7 +44,7 @@ type linterState struct {
 	*Linter
 	id       int
 	paths    []string
-	issues   chan *issues.Issue
+	issues   chan *Issue
 	vars     Vars
 	exclude  *regexp.Regexp
 	include  *regexp.Regexp
@@ -65,10 +64,10 @@ func (l *linterState) Partitions() ([][]string, error) {
 	return parts, nil
 }
 
-func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *issues.Issue, chan error) {
+func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
 	errch := make(chan error, len(linters))
 	concurrencych := make(chan bool, concurrency)
-	incomingIssues := make(chan *issues.Issue, 1000000)
+	incomingIssues := make(chan *Issue, 1000000)
 	processedIssues := filterIssuesViaDirectives(
 		newDirectiveParser(),
 		maybeSortIssues(maybeAggregateIssues(incomingIssues)))
@@ -218,7 +217,7 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue, err := issues.NewIssue(state.Linter.Name, config.formatTemplate)
+		issue, err := NewIssue(state.Linter.Name, config.formatTemplate)
 		kingpin.FatalIfError(err, "Invalid output format")
 
 		for i, name := range re.SubexpNames() {
@@ -255,9 +254,9 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			issue.Message = vars.Replace(m)
 		}
 		if sev, ok := config.Severity[state.Name]; ok {
-			issue.Severity = issues.Severity(sev)
+			issue.Severity = Severity(sev)
 		} else {
-			issue.Severity = issues.Warning
+			issue.Severity = Warning
 		}
 		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
 			continue
@@ -300,16 +299,16 @@ func resolvePath(path string) string {
 	return path
 }
 
-func maybeSortIssues(chIssues chan *issues.Issue) chan *issues.Issue {
+func maybeSortIssues(issues chan *Issue) chan *Issue {
 	if reflect.DeepEqual([]string{"none"}, config.Sort) {
-		return chIssues
+		return issues
 	}
-	return issues.SortChan(chIssues, config.Sort)
+	return SortIssueChan(issues, config.Sort)
 }
 
-func maybeAggregateIssues(chIssues chan *issues.Issue) chan *issues.Issue {
+func maybeAggregateIssues(issues chan *Issue) chan *Issue {
 	if !config.Aggregate {
-		return chIssues
+		return issues
 	}
-	return issues.AggregateChan(chIssues)
+	return AggregateIssueChan(issues)
 }

@@ -1,4 +1,4 @@
-package issues
+package main
 
 import (
 	"sort"
@@ -16,10 +16,10 @@ type multiIssue struct {
 	linterNames []string
 }
 
-// AggregateChan reads issues from a channel, aggregates issues which have
+// AggregateIssueChan reads issues from a channel, aggregates issues which have
 // the same file, line, vol, and message, and returns aggregated issues on
 // a new channel.
-func AggregateChan(issues chan *Issue) chan *Issue {
+func AggregateIssueChan(issues chan *Issue) chan *Issue {
 	out := make(chan *Issue, 1000000)
 	issueMap := make(map[issueKey]*multiIssue)
 	go func() {

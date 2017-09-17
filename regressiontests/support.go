@@ -8,16 +8,31 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
-	"github.com/alecthomas/gometalinter/issues"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-type Issues []issues.Issue
+type Issue struct {
+	Linter   string `json:"linter"`
+	Severity string `json:"severity"`
+	Path     string `json:"path"`
+	Line     int    `json:"line"`
+	Col      int    `json:"col"`
+	Message  string `json:"message"`
+}
+
+func (i *Issue) String() string {
+	col := ""
+	if i.Col != 0 {
+		col = fmt.Sprintf("%d", i.Col)
+	}
+	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
+}
+
+type Issues []Issue
 
 // ExpectIssues runs gometalinter and expects it to generate exactly the
 // issues provided.
@@ -32,16 +47,20 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	require.NoError(t, err)
 
 	actual := RunLinter(t, linter, dir, extraFlags...)
-	AssertEqualIssues(t, expected, actual)
+	assert.Equal(t, expected, actual)
 }
 
 // RunLinter runs the gometalinter as a binary against the files at path and
 // returns the issues it encountered
-func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) []issues.Issue {
+func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) Issues {
 	binary, cleanup := buildBinary(t)
 	defer cleanup()
 
-	args := []string{"-d", "--disable-all", "--enable", linter, "--json", path}
+	args := []string{
+		"-d", "--disable-all", "--enable", linter, "--json",
+		"--sort=path", "--sort=line", "--sort=column", "--sort=message",
+		path,
+	}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(binary, args...)
 
@@ -50,7 +69,7 @@ func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) [
 
 	output, _ := cmd.Output()
 
-	var actual []issues.Issue
+	var actual Issues
 	err := json.Unmarshal(output, &actual)
 	if !assert.NoError(t, err) {
 		fmt.Printf("Stderr: %s\n", errBuffer)
@@ -69,24 +88,6 @@ func buildBinary(t *testing.T) (string, func()) {
 	return path, func() { os.RemoveAll(tmpdir) }
 }
 
-func sortIssues(source Issues) {
-	order := []string{"path", "line", "column", "severity", "message", "linter"}
-	sort.Sort(&sortedIssues{issues: source, order: order})
-}
-
-type sortedIssues struct {
-	issues []issues.Issue
-	order  []string
-}
-
-func (s *sortedIssues) Len() int      { return len(s.issues) }
-func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }
-
-func (s *sortedIssues) Less(i, j int) bool {
-	l, r := s.issues[i], s.issues[j]
-	return issues.Compare(l, r, s.order)
-}
-
 // filterIssues to just the issues relevant for the current linter and normalize
 // the error message by removing the directory part of the path from both Path
 // and Message
@@ -101,12 +102,4 @@ func filterIssues(issues Issues, linterName string, dir string) Issues {
 		}
 	}
 	return filtered
-}
-
-// AssertEqualIssues compares two lists of issues and asserts they are the
-// same list, ignoring the order of the list.
-func AssertEqualIssues(t assert.TestingT, expected Issues, actual Issues) bool {
-	sortIssues(expected)
-	sortIssues(actual)
-	return assert.Equal(t, expected, actual)
 }
