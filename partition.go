@@ -26,6 +26,8 @@ func (ps *partitionStrategy) UnmarshalJSON(raw []byte) error {
 		*ps = partitionPathsAsPackages
 	case "files-by-package":
 		*ps = partitionPathsAsFilesGroupedByPackage
+	case "single-directory":
+		*ps = partitionPathsByDirectory
 	default:
 		return fmt.Errorf("unknown parition strategy %s", strategyName)
 	}
@@ -150,4 +152,12 @@ func packageNameFromPath(path string) (string, error) {
 		return rel, nil
 	}
 	return "", fmt.Errorf("%s not in GOPATH", path)
+}
+
+func partitionPathsByDirectory(cmdArgs []string, paths []string) ([][]string, error) {
+	parts := [][]string{}
+	for _, path := range paths {
+		parts = append(parts, append(cmdArgs, path))
+	}
+	return parts, nil
 }

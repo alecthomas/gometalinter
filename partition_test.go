@@ -97,3 +97,18 @@ func fakeGoPath(t *testing.T, path string) func() {
 	require.NoError(t, os.Setenv("GOPATH", path))
 	return func() { require.NoError(t, os.Setenv("GOPATH", oldpath)) }
 }
+
+func TestPartitionPathsByDirectory(t *testing.T) {
+	cmdArgs := []string{"/usr/bin/foo", "-c"}
+	paths := []string{"one", "two", "three"}
+
+	parts, err := partitionPathsByDirectory(cmdArgs, paths)
+	require.NoError(t, err)
+	expected := [][]string{
+		append(cmdArgs, "one"),
+		append(cmdArgs, "two"),
+		append(cmdArgs, "three"),
+	}
+	assert.Equal(t, expected, parts)
+
+}

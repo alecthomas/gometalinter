@@ -121,6 +121,7 @@ Linters supports the following fields:
   * `packages` - call the linter once with a list of all the package paths
   * `files-by-package` - call the linter once per package with a list of the
     files in the package.
+  * `single-directory` - call the linter once per directory
 
 The config for default linters can be overridden by using the name of the
 linter.
