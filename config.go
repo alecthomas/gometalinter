@@ -60,7 +60,8 @@ type StringOrLinterConfig LinterConfig
 func (c *StringOrLinterConfig) UnmarshalJSON(raw []byte) error {
 	var linterConfig LinterConfig
 	// first try to un-marshall directly into struct
-	if err := json.Unmarshal(raw, &linterConfig); err == nil {
+	origErr := json.Unmarshal(raw, &linterConfig)
+	if origErr == nil {
 		*c = StringOrLinterConfig(linterConfig)
 		return nil
 	}
@@ -68,7 +69,7 @@ func (c *StringOrLinterConfig) UnmarshalJSON(raw []byte) error {
 	// i.e. bytes didn't represent the struct, treat them as a string
 	var linterSpec string
 	if err := json.Unmarshal(raw, &linterSpec); err != nil {
-		return err
+		return origErr
 	}
 	linter, err := parseLinterConfigSpec("", linterSpec)
 	if err != nil {
