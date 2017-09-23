@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"gopkg.in/alecthomas/kingpin.v3-unstable"
+	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 type LinterConfig struct {
@@ -270,7 +270,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `gotype -e {tests=-t}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "golang.org/x/tools/cmd/gotype",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionToPackageFileGlobs,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},

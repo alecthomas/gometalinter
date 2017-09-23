@@ -14,7 +14,7 @@ import (
 	"text/template"
 	"time"
 
-	"gopkg.in/alecthomas/kingpin.v3-unstable"
+	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
 var (
@@ -222,7 +222,7 @@ Severity override map (default is "warning"):
 func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Regexp) {
 	tmpl, err := template.New("output").Parse(config.Format)
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
-	formatTemplate = tmpl
+	config.formatTemplate = tmpl
 
 	// Linters are by their very nature, short lived, so disable GC.
 	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
