@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 
@@ -35,10 +34,6 @@ func (i *Issue) String() string {
 
 type Issues []Issue
 
-func (e Issues) Len() int           { return len(e) }
-func (e Issues) Swap(i, j int)      { e[i], e[j] = e[j], e[i] }
-func (e Issues) Less(i, j int) bool { return e[i].String() < e[j].String() }
-
 // ExpectIssues runs gometalinter and expects it to generate exactly the
 // issues provided.
 func ExpectIssues(t *testing.T, linter string, source string, expected Issues, extraFlags ...string) {
@@ -51,43 +46,37 @@ func ExpectIssues(t *testing.T, linter string, source string, expected Issues, e
 	err = ioutil.WriteFile(testFile, []byte(source), 0644)
 	require.NoError(t, err)
 
-	// Run gometalinter.
+	actual := RunLinter(t, linter, dir, extraFlags...)
+	assert.Equal(t, expected, actual)
+}
+
+// RunLinter runs the gometalinter as a binary against the files at path and
+// returns the issues it encountered
+func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) Issues {
 	binary, cleanup := buildBinary(t)
 	defer cleanup()
-	args := []string{"-d", "--disable-all", "--enable", linter, "--json", dir}
+
+	args := []string{
+		"-d", "--disable-all", "--enable", linter, "--json",
+		"--sort=path", "--sort=line", "--sort=column", "--sort=message",
+		path,
+	}
 	args = append(args, extraFlags...)
 	cmd := exec.Command(binary, args...)
+
 	errBuffer := new(bytes.Buffer)
 	cmd.Stderr = errBuffer
-	require.NoError(t, err)
 
 	output, _ := cmd.Output()
+
 	var actual Issues
-	err = json.Unmarshal(output, &actual)
+	err := json.Unmarshal(output, &actual)
 	if !assert.NoError(t, err) {
 		fmt.Printf("Stderr: %s\n", errBuffer)
 		fmt.Printf("Output: %s\n", output)
-		return
+		return nil
 	}
-
-	// Remove output from other linters.
-	actualForLinter := Issues{}
-	for _, issue := range actual {
-		if issue.Linter == linter || linter == "" {
-			// Normalise path.
-			issue.Path = "test.go"
-			issue.Message = strings.Replace(issue.Message, testFile, "test.go", -1)
-			issue.Message = strings.Replace(issue.Message, dir, "", -1)
-			actualForLinter = append(actualForLinter, issue)
-		}
-	}
-	sort.Sort(expected)
-	sort.Sort(actualForLinter)
-
-	if !assert.Equal(t, expected, actualForLinter) {
-		fmt.Printf("Stderr: %s\n", errBuffer)
-		fmt.Printf("Output: %s\n", output)
-	}
+	return filterIssues(actual, linter, path)
 }
 
 func buildBinary(t *testing.T) (string, func()) {
@@ -97,4 +86,20 @@ func buildBinary(t *testing.T) (string, func()) {
 	cmd := exec.Command("go", "build", "-o", path, "..")
 	require.NoError(t, cmd.Run())
 	return path, func() { os.RemoveAll(tmpdir) }
+}
+
+// filterIssues to just the issues relevant for the current linter and normalize
+// the error message by removing the directory part of the path from both Path
+// and Message
+func filterIssues(issues Issues, linterName string, dir string) Issues {
+	filtered := Issues{}
+	for _, issue := range issues {
+		if issue.Linter == linterName || linterName == "" {
+			issue.Path = strings.Replace(issue.Path, dir+string(os.PathSeparator), "", -1)
+			issue.Message = strings.Replace(issue.Message, dir+string(os.PathSeparator), "", -1)
+			issue.Message = strings.Replace(issue.Message, dir, "", -1)
+			filtered = append(filtered, issue)
+		}
+	}
+	return filtered
 }
