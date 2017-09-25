@@ -36,7 +36,7 @@ func NewLinter(config LinterConfig) (*Linter, error) {
 		return nil, err
 	}
 	if config.PartitionStrategy == nil {
-		config.PartitionStrategy = partitionToMaxArgSize
+		config.PartitionStrategy = partitionPathsAsDirectories
 	}
 	return &Linter{
 		LinterConfig: config,
@@ -61,6 +61,16 @@ func getLinterByName(name string, overrideConf LinterConfig) *Linter {
 	if val := overrideConf.Pattern; val != "" {
 		conf.Pattern = val
 	}
+	if val := overrideConf.InstallFrom; val != "" {
+		conf.InstallFrom = val
+	}
+	if overrideConf.IsFast {
+		conf.IsFast = true
+	}
+	if val := overrideConf.PartitionStrategy; val != nil {
+		conf.PartitionStrategy = val
+	}
+
 	linter, _ := NewLinter(conf)
 	return linter
 }
@@ -180,7 +190,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           "aligncheck",
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		InstallFrom:       "github.com/opennota/check/cmd/aligncheck",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"deadcode": {
@@ -188,7 +198,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           "deadcode",
 		Pattern:           `^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		InstallFrom:       "github.com/tsenart/deadcode",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 	},
 	"dupl": {
@@ -196,7 +206,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `dupl -plumbing -threshold {duplthreshold}`,
 		Pattern:           `^(?P<path>.*?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 		InstallFrom:       "github.com/mibk/dupl",
-		PartitionStrategy: partitionToMaxArgSizeWithFileGlobs,
+		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
 	"errcheck": {
@@ -204,7 +214,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `errcheck -abspath`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/kisielk/errcheck",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"gas": {
@@ -212,7 +222,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `gas -fmt=csv`,
 		Pattern:           `^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
 		InstallFrom:       "github.com/GoASTScanner/gas",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -221,7 +231,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `goconst -min-occurrences {min_occurrences} -min-length {min_const_length}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/jgautheron/goconst/cmd/goconst",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -230,7 +240,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `gocyclo -over {mincyclo}`,
 		Pattern:           `^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>.*?\.go):(?P<line>\d+):(\d+)$`,
 		InstallFrom:       "github.com/alecthomas/gocyclo",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -238,7 +248,7 @@ var defaultLinters = map[string]LinterConfig{
 		Name:              "gofmt",
 		Command:           `gofmt -l -s`,
 		Pattern:           `^(?P<path>.*?\.go)$`,
-		PartitionStrategy: partitionToMaxArgSizeWithFileGlobs,
+		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
 	"goimports": {
@@ -246,7 +256,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `goimports -l`,
 		Pattern:           `^(?P<path>.*?\.go)$`,
 		InstallFrom:       "golang.org/x/tools/cmd/goimports",
-		PartitionStrategy: partitionToMaxArgSizeWithFileGlobs,
+		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
 	"golint": {
@@ -254,7 +264,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `golint -min_confidence {min_confidence}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/golang/lint/golint",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -263,14 +273,14 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `gosimple`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/gosimple",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"gotype": {
 		Name:              "gotype",
 		Command:           `gotype -e {tests=-t}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "golang.org/x/tools/cmd/gotype",
-		PartitionStrategy: partitionToPackageFileGlobs,
+		PartitionStrategy: partitionPathsAsFilesGroupedByPackage,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -279,7 +289,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `ineffassign -n`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/gordonklaus/ineffassign",
-		PartitionStrategy: partitionToMaxArgSize,
+		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -288,7 +298,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `interfacer`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/interfacer",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"lll": {
@@ -296,7 +306,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `lll -g -l {maxlinelength}`,
 		Pattern:           `PATH:LINE:MESSAGE`,
 		InstallFrom:       "github.com/walle/lll/cmd/lll",
-		PartitionStrategy: partitionToMaxArgSizeWithFileGlobs,
+		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
 	"megacheck": {
@@ -304,7 +314,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `megacheck`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/megacheck",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"misspell": {
@@ -312,7 +322,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `misspell -j 1`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/client9/misspell/cmd/misspell",
-		PartitionStrategy: partitionToMaxArgSizeWithFileGlobs,
+		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
 	"safesql": {
@@ -320,41 +330,41 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `safesql`,
 		Pattern:           `^- (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+)$`,
 		InstallFrom:       "github.com/stripe/safesql",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"staticcheck": {
 		Name:              "staticcheck",
 		Command:           `staticcheck`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/staticcheck",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"structcheck": {
 		Name:              "structcheck",
 		Command:           `structcheck {tests=-t}`,
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		InstallFrom:       "github.com/opennota/check/cmd/structcheck",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"test": {
 		Name:              "test",
 		Command:           `go test`,
 		Pattern:           `^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"testify": {
 		Name:              "testify",
 		Command:           `go test`,
 		Pattern:           `Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"unconvert": {
 		Name:              "unconvert",
 		Command:           `unconvert`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/mdempsky/unconvert",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"unparam": {
@@ -362,28 +372,28 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `unparam`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/unparam",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"unused": {
 		Name:              "unused",
 		Command:           `unused`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/unused",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"varcheck": {
 		Name:              "varcheck",
 		Command:           `varcheck`,
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		InstallFrom:       "github.com/opennota/check/cmd/varcheck",
-		PartitionStrategy: partitionToMaxArgSizeWithPackagePaths,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
 	"vet": {
 		Name:              "vet",
 		Command:           `go tool vet`,
 		Pattern:           vetPattern,
-		PartitionStrategy: partitionToPackageFileGlobs,
+		PartitionStrategy: partitionPathsAsFilesGroupedByPackage,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
@@ -391,7 +401,7 @@ var defaultLinters = map[string]LinterConfig{
 		Name:              "vetshadow",
 		Command:           `go tool vet --shadow`,
 		Pattern:           vetPattern,
-		PartitionStrategy: partitionToPackageFileGlobs,
+		PartitionStrategy: partitionPathsAsFilesGroupedByPackage,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},

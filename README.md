@@ -19,7 +19,6 @@
     - [2. Analyse the debug output](#2-analyse-the-debug-output)
     - [3. Report an issue.](#3-report-an-issue)
   - [How do I filter issues between two git refs?](#how-do-i-filter-issues-between-two-git-refs)
-- [Details](#details)
 - [Checkstyle XML format](#checkstyle-xml-format)
 
 <!-- /MarkdownTOC -->
@@ -91,8 +90,8 @@ Additional linters can be added through the command line with `--linter=NAME:COM
 ## Configuration file
 
 gometalinter now supports a JSON configuration file which can be loaded via
-`--config=<file>`. The format of this file is determined by the Config struct
-in `config.go`.
+`--config=<file>`. The format of this file is determined by the `Config` struct
+in [config.go](https://github.com/alecthomas/gometalinter/blob/master/config.go).
 
 The configuration file mostly corresponds to command-line flags, with the following exceptions:
 
@@ -106,6 +105,34 @@ Here is an example configuration file:
 {
   "Enable": ["deadcode", "unconvert"]
 }
+```
+
+### Adding Custom linters
+
+Linters can be added and customized from the config file using the `Linters` field.
+Linters supports the following fields:
+
+* `Command` - the path to the linter binary and any default arguments
+* `Pattern` - a regular expression used to parse the linter output
+* `IsFast` - if the linter should be run when the `--fast` flag is used
+* `PartitionStrategy` - how paths args should be passed to the linter command:
+  * `directories` - call the linter once with a list of all the directories
+  * `files` - call the linter once with a list of all the files
+  * `packages` - call the linter once with a list of all the package paths
+  * `files-by-package` - call the linter once per package with a list of the
+    files in the package.
+  * `single-directory` - call the linter once per directory
+
+The config for default linters can be overridden by using the name of the
+linter.
+
+Additional linters can be configured via the command line using the format
+`NAME:COMMAND:PATTERN`.
+
+Example:
+
+```
+$ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf:PATH:LINE:MESSAGE' .
 ```
 
 ## Installing
@@ -306,21 +333,6 @@ gometalinter |& revgrep               # If unstaged changes or untracked files, 
 gometalinter |& revgrep               # Else show issues in the last commit.
 gometalinter |& revgrep master        # Show issues between master and HEAD (or any other reference).
 gometalinter |& revgrep origin/master # Show issues that haven't been pushed.
-```
-
-## Details
-
-Additional linters can be configured via the command line:
-
-```
-$ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf:PATH:LINE:MESSAGE' .
-stutter.go:21:15:warning: error return value not checked (defer a.Close()) (errcheck)
-stutter.go:22:15:warning: error return value not checked (defer a.Close()) (errcheck)
-stutter.go:27:6:warning: error return value not checked (doit()           // test for errcheck) (errcheck)
-stutter.go:9::warning: unused global variable unusedGlobal (varcheck)
-stutter.go:13::warning: unused struct field MyStruct.Unused (structcheck)
-stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
-stutter.go:16:6:warning: exported type PublicUndocumented should have comment or be unexported (deadcode)
 ```
 
 ## Checkstyle XML format
