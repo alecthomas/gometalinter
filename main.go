@@ -61,6 +61,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
 	app.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
 	app.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
+	app.Flag("warn-unmatched-nolint", "Warn if a nolint directive is not matched with an issue.").BoolVar(&config.WarnUnmatchedDirective)
 	app.GetFlag("help").Short('h')
 }
 

@@ -68,9 +68,14 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 	errch := make(chan error, len(linters))
 	concurrencych := make(chan bool, concurrency)
 	incomingIssues := make(chan *Issue, 1000000)
-	processedIssues := filterIssuesViaDirectives(
-		newDirectiveParser(),
-		maybeSortIssues(maybeAggregateIssues(incomingIssues)))
+
+	directiveParser := newDirectiveParser()
+	if config.WarnUnmatchedDirective {
+		directiveParser.LoadFiles(paths)
+	}
+
+	processedIssues := maybeSortIssues(filterIssuesViaDirectives(
+		directiveParser, maybeAggregateIssues(incomingIssues)))
 
 	vars := Vars{
 		"duplthreshold":    fmt.Sprintf("%d", config.DuplThreshold),
@@ -255,8 +260,6 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 		}
 		if sev, ok := config.Severity[state.Name]; ok {
 			issue.Severity = Severity(sev)
-		} else {
-			issue.Severity = Warning
 		}
 		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
 			continue

@@ -16,7 +16,7 @@ const DefaultIssueFormat = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Se
 type Severity string
 
 // Linter message severity levels.
-const ( // nolint: deadcode
+const (
 	Error   Severity = "error"
 	Warning Severity = "warning"
 )
@@ -36,6 +36,7 @@ type Issue struct {
 func NewIssue(linter string, formatTmpl *template.Template) (*Issue, error) {
 	issue := &Issue{
 		Line:       1,
+		Severity:   Warning,
 		Linter:     linter,
 		formatTmpl: formatTmpl,
 	}
