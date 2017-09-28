@@ -280,7 +280,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `gotype -e {tests=-t}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "golang.org/x/tools/cmd/gotype",
-		PartitionStrategy: partitionPathsAsFilesGroupedByPackage,
+		PartitionStrategy: partitionPathsByDirectory,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
