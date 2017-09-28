@@ -105,6 +105,7 @@ var config = &Config{
 	Linters: map[string]StringOrLinterConfig{},
 	Severity: map[string]string{
 		"gotype":  "error",
+		"gotypex":  "error",
 		"test":    "error",
 		"testify": "error",
 		"vet":     "error",
