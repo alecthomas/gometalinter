@@ -27,15 +27,6 @@ func TestGoType(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func fileContent(pkg string) string {
-	return fmt.Sprintf(`package %s
-
-func badFunction() {
-	var foo string
-}
-	`, pkg)
-}
-
 func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
 	t.Parallel()
 
@@ -44,11 +35,21 @@ func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
 		fs.WithFile("file_test.go", fileContent("root_test")))
 	defer dir.Remove()
 
-	// Expect only one issue because the other file is in an external package and
-	// requires `gotype -x`
 	expected := Issues{
 		{Linter: "gotype", Severity: "error", Path: "file.go", Line: 4, Col: 6, Message: "foo declared but not used"},
+		{Linter: "gotypex", Severity: "error", Path: "file_test.go", Line: 4, Col: 6, Message: "foo declared but not used"},
 	}
 	actual := RunLinter(t, "gotype", dir.Path())
+	actual = append(actual, RunLinter(t, "gotypex", dir.Path())...)
 	assert.Equal(t, expected, actual)
+}
+
+
+func fileContent(pkg string) string {
+	return fmt.Sprintf(`package %s
+
+func badFunction() {
+	var foo string
+}
+	`, pkg)
 }

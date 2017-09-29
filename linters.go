@@ -284,6 +284,15 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
+	"gotypex": {
+		Name:              "gotypex",
+		Command:           `gotype -e -x`,
+		Pattern:           `PATH:LINE:COL:MESSAGE`,
+		InstallFrom:       "golang.org/x/tools/cmd/gotype",
+		PartitionStrategy: partitionPathsByDirectory,
+		defaultEnabled:    true,
+		IsFast:            true,
+	},
 	"ineffassign": {
 		Name:              "ineffassign",
 		Command:           `ineffassign -n`,
