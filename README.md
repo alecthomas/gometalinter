@@ -97,7 +97,8 @@ The configuration file mostly corresponds to command-line flags, with the follow
 
 - Linters defined in the configuration file will overlay existing definitions, not replace them.
 - "Enable" defines the exact set of linters that will be enabled (default
-  linters are disabled).
+  linters are disabled). `--help` displays the list of default linters with the exact names
+  you must use.
 
 Here is an example configuration file:
 
