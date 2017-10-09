@@ -21,7 +21,7 @@ func TestNewLinterWithCustomLinter(t *testing.T) {
 
 func TestGetLinterByName(t *testing.T) {
 	config := LinterConfig{
-		Command:           "aligncheck",
+		Command:           "maligned",
 		Pattern:           "path",
 		InstallFrom:       "./install/path",
 		PartitionStrategy: partitionPathsAsDirectories,
