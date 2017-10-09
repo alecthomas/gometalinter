@@ -52,6 +52,9 @@ type Config struct { // nolint: maligned
 	Aggregate       bool
 	EnableAll       bool
 
+	// Warn if a nolint directive was never matched to a linter issue
+	WarnUnmatchedDirective bool
+
 	formatTemplate *template.Template
 }
 
