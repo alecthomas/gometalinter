@@ -170,6 +170,25 @@ func formatSeverity() string {
 	return w.String()
 }
 
+func validateLinters(linters map[string]*Linter, config *Config) error {
+	var unknownLinters []string
+	for name, _ := range linters {
+		if _, isDefault := defaultLinters[name]; !isDefault {
+			if _, isCustom := config.Linters[name]; !isCustom {
+				unknownLinters = append(unknownLinters, name)
+			}
+		}
+	}
+	switch len(unknownLinters) {
+	case 0:
+		return nil
+	case 1:
+		return fmt.Errorf("unknown linter: %s", unknownLinters[0])
+	default:
+		return fmt.Errorf("unknown linters: %s", strings.Join(unknownLinters, ", "))
+	}
+}
+
 func main() {
 	pathsArg := kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	app := kingpin.CommandLine
@@ -201,6 +220,11 @@ Severity override map (default is "warning"):
 	paths := resolvePaths(*pathsArg, config.Skip)
 
 	linters := lintersFromConfig(config)
+	if err := validateLinters(linters, config); err != nil {
+		fmt.Fprintf(os.Stderr, "%s", err)
+		os.Exit(2)
+	}
+
 	issues, errch := runLinters(linters, paths, config.Concurrency, exclude, include)
 	status := 0
 	if config.JSON {
