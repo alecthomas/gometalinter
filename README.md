@@ -61,7 +61,7 @@ It is intended for use with editor/IDE integration.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
-- [aligncheck](https://github.com/opennota/check) - Warn about un-optimally aligned structures.
+- [maligned](https://github.com/mdempsky/maligned) -  Detect structs that would take less memory if their fields were sorted.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [megacheck](https://github.com/dominikh/go-tools/tree/master/cmd/megacheck) - Run staticcheck, gosimple and unused, sharing work.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
@@ -199,7 +199,7 @@ Install all known linters:
 $ gometalinter --install
 Installing:
   structcheck
-  aligncheck
+  maligned
   deadcode
   gocyclo
   ineffassign

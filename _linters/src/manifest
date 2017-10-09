@@ -90,6 +90,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/mdempsky/maligned",
+			"repository": "https://github.com/mdempsky/maligned",
+			"vcs": "git",
+			"revision": "08c8e9db1bce03f1af283686c0943fcb75f0109e",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/stripe/safesql",
 			"repository": "https://github.com/stripe/safesql",
 			"vcs": "git",

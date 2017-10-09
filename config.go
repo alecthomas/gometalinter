@@ -8,7 +8,7 @@ import (
 )
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
-type Config struct { // nolint: aligncheck
+type Config struct { // nolint: maligned
 	// A map from linter name -> <LinterConfig|string>.
 	//
 	// For backwards compatibility, the value stored in the JSON blob can also
@@ -105,7 +105,7 @@ var config = &Config{
 	Linters: map[string]StringOrLinterConfig{},
 	Severity: map[string]string{
 		"gotype":  "error",
-		"gotypex":  "error",
+		"gotypex": "error",
 		"test":    "error",
 		"testify": "error",
 		"vet":     "error",

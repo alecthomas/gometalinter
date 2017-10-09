@@ -185,11 +185,11 @@ func defaultEnabled() []string {
 const vetPattern = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
 
 var defaultLinters = map[string]LinterConfig{
-	"aligncheck": {
-		Name:              "aligncheck",
-		Command:           "aligncheck",
+	"maligned": {
+		Name:              "maligned",
+		Command:           "maligned",
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
-		InstallFrom:       "github.com/opennota/check/cmd/aligncheck",
+		InstallFrom:       "github.com/mdempsky/maligned",
 		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
