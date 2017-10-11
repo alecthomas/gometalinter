@@ -201,10 +201,8 @@ Severity override map (default is "warning"):
 	paths := resolvePaths(*pathsArg, config.Skip)
 
 	linters := lintersFromConfig(config)
-	if err := validateLinters(linters, config); err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
-		os.Exit(2)
-	}
+	err := validateLinters(linters, config)
+	kingpin.FatalIfError(err, "")
 
 	issues, errch := runLinters(linters, paths, config.Concurrency, exclude, include)
 	status := 0

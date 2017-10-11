@@ -184,21 +184,17 @@ func defaultEnabled() []string {
 
 func validateLinters(linters map[string]*Linter, config *Config) error {
 	var unknownLinters []string
-	for name, _ := range linters {
+	for name := range linters {
 		if _, isDefault := defaultLinters[name]; !isDefault {
 			if _, isCustom := config.Linters[name]; !isCustom {
 				unknownLinters = append(unknownLinters, name)
 			}
 		}
 	}
-	switch len(unknownLinters) {
-	case 0:
-		return nil
-	case 1:
-		return fmt.Errorf("unknown linter: %s", unknownLinters[0])
-	default:
+	if len(unknownLinters) > 0 {
 		return fmt.Errorf("unknown linters: %s", strings.Join(unknownLinters, ", "))
 	}
+	return nil
 }
 
 const vetPattern = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
