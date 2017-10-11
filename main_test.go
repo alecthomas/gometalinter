@@ -225,19 +225,6 @@ func TestSetupFlagsConfigWithLinterMap(t *testing.T) {
 	assert.Equal(t, "", linter.Pattern)
 }
 
-func TestUnknownLinter(t *testing.T) {
-	originalConfig := *config
-	defer func() { config = &originalConfig }()
-
-	app := kingpin.New("test-app", "")
-	setupFlags(app)
-	_, err := app.Parse([]string{"--enable=_dummylinter_"})
-	require.NoError(t, err)
-
-	err = validateLinters(lintersFromConfig(config), config)
-	require.Error(t, err, "expected unknown linter error for _dummylinter_")
-}
-
 func TestSetupFlagsConfigAndLinterFlag(t *testing.T) {
 	originalConfig := *config
 	defer func() { config = &originalConfig }()
