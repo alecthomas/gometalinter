@@ -35,6 +35,24 @@ func TestGetLinterByName(t *testing.T) {
 	assert.Equal(t, config.IsFast, overrideConfig.IsFast)
 }
 
+func TestValidateLinters(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	config = &Config{
+		Enable: []string{"_dummylinter_"},
+	}
+
+	err := validateLinters(lintersFromConfig(config), config)
+	require.Error(t, err, "expected unknown linter error for _dummylinter_")
+
+	config = &Config{
+		Enable: defaultEnabled(),
+	}
+	err = validateLinters(lintersFromConfig(config), config)
+	require.NoError(t, err)
+}
+
 func functionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
