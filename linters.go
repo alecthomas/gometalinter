@@ -12,7 +12,6 @@ import (
 )
 
 type LinterConfig struct {
-	Name              string
 	Command           string
 	Pattern           string
 	InstallFrom       string
@@ -23,11 +22,12 @@ type LinterConfig struct {
 
 type Linter struct {
 	LinterConfig
+	Name  string
 	regex *regexp.Regexp
 }
 
 // NewLinter returns a new linter from a config
-func NewLinter(config LinterConfig) (*Linter, error) {
+func NewLinter(name string, config LinterConfig) (*Linter, error) {
 	if p, ok := predefinedPatterns[config.Pattern]; ok {
 		config.Pattern = p
 	}
@@ -40,6 +40,7 @@ func NewLinter(config LinterConfig) (*Linter, error) {
 	}
 	return &Linter{
 		LinterConfig: config,
+		Name:         name,
 		regex:        regex,
 	}, nil
 }
@@ -71,7 +72,7 @@ func getLinterByName(name string, overrideConf LinterConfig) *Linter {
 		conf.PartitionStrategy = val
 	}
 
-	linter, _ := NewLinter(conf)
+	linter, _ := NewLinter(name, conf)
 	return linter
 }
 
@@ -83,7 +84,6 @@ func parseLinterConfigSpec(name string, spec string) (LinterConfig, error) {
 
 	config := defaultLinters[name]
 	config.Command, config.Pattern = parts[0], parts[1]
-	config.Name = name
 
 	return config, nil
 }
@@ -164,9 +164,9 @@ func installLinters() {
 
 func getDefaultLinters() []*Linter {
 	out := []*Linter{}
-	for _, config := range defaultLinters {
-		linter, err := NewLinter(config)
-		kingpin.FatalIfError(err, "invalid linter %q", config.Name)
+	for name, config := range defaultLinters {
+		linter, err := NewLinter(name, config)
+		kingpin.FatalIfError(err, "invalid linter %q", name)
 		out = append(out, linter)
 	}
 	return out
@@ -201,7 +201,6 @@ const vetPattern = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\
 
 var defaultLinters = map[string]LinterConfig{
 	"maligned": {
-		Name:              "maligned",
 		Command:           "maligned",
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		InstallFrom:       "github.com/mdempsky/maligned",
@@ -209,7 +208,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"deadcode": {
-		Name:              "deadcode",
 		Command:           "deadcode",
 		Pattern:           `^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		InstallFrom:       "github.com/tsenart/deadcode",
@@ -217,7 +215,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"dupl": {
-		Name:              "dupl",
 		Command:           `dupl -plumbing -threshold {duplthreshold}`,
 		Pattern:           `^(?P<path>.*?\.go):(?P<line>\d+)-\d+:\s*(?P<message>.*)$`,
 		InstallFrom:       "github.com/mibk/dupl",
@@ -225,7 +222,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"errcheck": {
-		Name:              "errcheck",
 		Command:           `errcheck -abspath`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/kisielk/errcheck",
@@ -233,7 +229,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"gas": {
-		Name:              "gas",
 		Command:           `gas -fmt=csv`,
 		Pattern:           `^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
 		InstallFrom:       "github.com/GoASTScanner/gas",
@@ -242,7 +237,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"goconst": {
-		Name:              "goconst",
 		Command:           `goconst -min-occurrences {min_occurrences} -min-length {min_const_length}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/jgautheron/goconst/cmd/goconst",
@@ -251,7 +245,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"gocyclo": {
-		Name:              "gocyclo",
 		Command:           `gocyclo -over {mincyclo}`,
 		Pattern:           `^(?P<cyclo>\d+)\s+\S+\s(?P<function>\S+)\s+(?P<path>.*?\.go):(?P<line>\d+):(\d+)$`,
 		InstallFrom:       "github.com/alecthomas/gocyclo",
@@ -260,14 +253,12 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"gofmt": {
-		Name:              "gofmt",
 		Command:           `gofmt -l -s`,
 		Pattern:           `^(?P<path>.*?\.go)$`,
 		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
 	"goimports": {
-		Name:              "goimports",
 		Command:           `goimports -l`,
 		Pattern:           `^(?P<path>.*?\.go)$`,
 		InstallFrom:       "golang.org/x/tools/cmd/goimports",
@@ -275,7 +266,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"golint": {
-		Name:              "golint",
 		Command:           `golint -min_confidence {min_confidence}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/golang/lint/golint",
@@ -284,14 +274,12 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"gosimple": {
-		Name:              "gosimple",
 		Command:           `gosimple`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/gosimple",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"gotype": {
-		Name:              "gotype",
 		Command:           `gotype -e {tests=-t}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "golang.org/x/tools/cmd/gotype",
@@ -300,7 +288,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"gotypex": {
-		Name:              "gotypex",
 		Command:           `gotype -e -x`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "golang.org/x/tools/cmd/gotype",
@@ -309,7 +296,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"ineffassign": {
-		Name:              "ineffassign",
 		Command:           `ineffassign -n`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/gordonklaus/ineffassign",
@@ -318,7 +304,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"interfacer": {
-		Name:              "interfacer",
 		Command:           `interfacer`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/interfacer",
@@ -326,7 +311,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"lll": {
-		Name:              "lll",
 		Command:           `lll -g -l {maxlinelength}`,
 		Pattern:           `PATH:LINE:MESSAGE`,
 		InstallFrom:       "github.com/walle/lll/cmd/lll",
@@ -334,7 +318,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"megacheck": {
-		Name:              "megacheck",
 		Command:           `megacheck`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/megacheck",
@@ -342,7 +325,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"misspell": {
-		Name:              "misspell",
 		Command:           `misspell -j 1`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/client9/misspell/cmd/misspell",
@@ -350,21 +332,18 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"safesql": {
-		Name:              "safesql",
 		Command:           `safesql`,
 		Pattern:           `^- (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+)$`,
 		InstallFrom:       "github.com/stripe/safesql",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"staticcheck": {
-		Name:              "staticcheck",
 		Command:           `staticcheck`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/staticcheck",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"structcheck": {
-		Name:              "structcheck",
 		Command:           `structcheck {tests=-t}`,
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
 		InstallFrom:       "github.com/opennota/check/cmd/structcheck",
@@ -372,19 +351,16 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"test": {
-		Name:              "test",
 		Command:           `go test`,
 		Pattern:           `^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"testify": {
-		Name:              "testify",
 		Command:           `go test`,
 		Pattern:           `Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"unconvert": {
-		Name:              "unconvert",
 		Command:           `unconvert`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/mdempsky/unconvert",
@@ -392,21 +368,18 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"unparam": {
-		Name:              "unparam",
 		Command:           `unparam`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/unparam",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"unused": {
-		Name:              "unused",
 		Command:           `unused`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/unused",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"varcheck": {
-		Name:              "varcheck",
 		Command:           `varcheck`,
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
 		InstallFrom:       "github.com/opennota/check/cmd/varcheck",
@@ -414,7 +387,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"vet": {
-		Name:              "vet",
 		Command:           `go tool vet`,
 		Pattern:           vetPattern,
 		PartitionStrategy: partitionPathsAsFilesGroupedByPackage,
@@ -422,7 +394,6 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"vetshadow": {
-		Name:              "vetshadow",
 		Command:           `go tool vet --shadow`,
 		Pattern:           vetPattern,
 		PartitionStrategy: partitionPathsAsFilesGroupedByPackage,
