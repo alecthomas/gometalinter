@@ -3,5 +3,5 @@ language: go
 install:
     - go get -t -v . ./regressiontests
     - gometalinter --install
-go: 1.7
+go: [1.7.x, 1.8.x, 1.9.x]
 script: go test -v . ./regressiontests
