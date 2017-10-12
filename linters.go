@@ -424,7 +424,7 @@ var defaultLinters = map[string]LinterConfig{
 	},
 	"vetshadow": {
 		Name:              "vetshadow",
-		Command:           `govet  --no-recurse --shadow`,
+		Command:           `govet --no-recurse --shadow`,
 		Pattern:           vetPattern,
 		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
