@@ -56,6 +56,7 @@ It is intended for use with editor/IDE integration.
 - [go vet](https://golang.org/cmd/vet/) - Reports potential errors that otherwise compile.
 - [go tool vet --shadow](https://golang.org/cmd/vet/#hdr-Shadowed_variables) - Reports variables that may have been unintentionally shadowed.
 - [gotype](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis similar to the Go compiler.
+- [gotype -x](https://golang.org/x/tools/cmd/gotype) - Syntactic and semantic analysis in external test packages (similar to the Go compiler).
 - [deadcode](https://github.com/tsenart/deadcode) - Finds unused code.
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
