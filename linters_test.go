@@ -14,9 +14,12 @@ func TestNewLinterWithCustomLinter(t *testing.T) {
 		Command: "/usr/bin/custom",
 		Pattern: "path",
 	}
-	linter, err := NewLinter(config)
+	linter, err := NewLinter("thename", config)
 	require.NoError(t, err)
-	assert.NotNil(t, linter.LinterConfig.PartitionStrategy)
+	assert.Equal(t, functionName(partitionPathsAsDirectories), functionName(linter.LinterConfig.PartitionStrategy))
+	assert.Equal(t, "(?m:path)", linter.regex.String())
+	assert.Equal(t, "thename", linter.Name)
+	assert.Equal(t, config.Command, linter.Command)
 }
 
 func TestGetLinterByName(t *testing.T) {
