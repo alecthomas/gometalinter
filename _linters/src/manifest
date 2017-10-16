@@ -26,6 +26,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/dnephin/govet",
+			"repository": "https://github.com/dnephin/govet",
+			"vcs": "git",
+			"revision": "4a96d43e39d340b63daa8bc5576985aa599885f6",
+			"branch": "fork",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/golang/lint",
 			"repository": "https://github.com/golang/lint",
 			"vcs": "git",
@@ -66,6 +74,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/mdempsky/maligned",
+			"repository": "https://github.com/mdempsky/maligned",
+			"vcs": "git",
+			"revision": "08c8e9db1bce03f1af283686c0943fcb75f0109e",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/mdempsky/unconvert",
 			"repository": "https://github.com/mdempsky/unconvert",
 			"vcs": "git",
@@ -86,14 +102,6 @@
 			"repository": "https://github.com/opennota/check",
 			"vcs": "git",
 			"revision": "11e2eec79ec4f789607e3efbf405cdca2504d4cb",
-			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/mdempsky/maligned",
-			"repository": "https://github.com/mdempsky/maligned",
-			"vcs": "git",
-			"revision": "08c8e9db1bce03f1af283686c0943fcb75f0109e",
 			"branch": "master",
 			"notests": true
 		},
