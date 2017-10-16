@@ -12,11 +12,11 @@ func TestGoType(t *testing.T) {
 	t.Parallel()
 
 	dir := fs.NewDir(t, "test-gotype",
-		fs.WithFile("file.go", fileContent("root")),
+		fs.WithFile("file.go", goTypeFile("root")),
 		fs.WithDir("sub",
-			fs.WithFile("file.go", fileContent("sub"))),
+			fs.WithFile("file.go", goTypeFile("sub"))),
 		fs.WithDir("excluded",
-			fs.WithFile("file.go", fileContent("excluded"))))
+			fs.WithFile("file.go", goTypeFile("excluded"))))
 	defer dir.Remove()
 
 	expected := Issues{
@@ -31,8 +31,8 @@ func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
 	t.Parallel()
 
 	dir := fs.NewDir(t, "test-gotype",
-		fs.WithFile("file.go", fileContent("root")),
-		fs.WithFile("file_test.go", fileContent("root_test")))
+		fs.WithFile("file.go", goTypeFile("root")),
+		fs.WithFile("file_test.go", goTypeFile("root_test")))
 	defer dir.Remove()
 
 	expected := Issues{
@@ -45,7 +45,7 @@ func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
 }
 
 
-func fileContent(pkg string) string {
+func goTypeFile(pkg string) string {
 	return fmt.Sprintf(`package %s
 
 func badFunction() {
