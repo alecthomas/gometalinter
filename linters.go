@@ -368,7 +368,7 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"unparam": {
-		Command:           `unparam`,
+		Command:           `unparam {not_tests=-tests=false}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/unparam",
 		PartitionStrategy: partitionPathsAsPackages,

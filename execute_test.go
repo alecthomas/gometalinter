@@ -45,6 +45,16 @@ func TestLinterStateCommand(t *testing.T) {
 			vars:     varsWithTest,
 			expected: `structcheck -t`,
 		},
+		{
+			linter: "unparam",
+			vars: varsDefault,
+			expected: `unparam -tests=false`,
+		},
+		{
+			linter: "unparam",
+			vars: varsWithTest,
+			expected: `unparam `,
+		},
 	}
 
 	for _, testcase := range testcases {
