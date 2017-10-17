@@ -42,8 +42,6 @@ func (v Vars) Replace(s string) string {
 
 type linterState struct {
 	*Linter
-	id       int
-	paths    []string
 	issues   chan *Issue
 	vars     Vars
 	exclude  *regexp.Regexp
@@ -51,17 +49,20 @@ type linterState struct {
 	deadline <-chan time.Time
 }
 
-func (l *linterState) Partitions() ([][]string, error) {
-	command := l.vars.Replace(l.Command)
-	cmdArgs, err := parseCommand(command)
+func (l *linterState) Partitions(paths []string) ([][]string, error) {
+	cmdArgs, err := parseCommand(l.command())
 	if err != nil {
 		return nil, err
 	}
-	parts, err := l.Linter.PartitionStrategy(cmdArgs, l.paths)
+	parts, err := l.Linter.PartitionStrategy(cmdArgs, paths)
 	if err != nil {
 		return nil, err
 	}
 	return parts, nil
+}
+
+func (l *linterState) command() string {
+	return l.vars.Replace(l.Command)
 }
 
 func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
@@ -85,9 +86,11 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 		"min_occurrences":  fmt.Sprintf("%d", config.MinOccurrences),
 		"min_const_length": fmt.Sprintf("%d", config.MinConstLength),
 		"tests":            "",
+		"not_tests":        "true",
 	}
 	if config.Test {
-		vars["tests"] = "-t"
+		vars["tests"] = "true"
+		vars["not_tests"] = ""
 	}
 
 	wg := &sync.WaitGroup{}
@@ -97,14 +100,13 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 		state := &linterState{
 			Linter:   linter,
 			issues:   incomingIssues,
-			paths:    paths,
 			vars:     vars,
 			exclude:  exclude,
 			include:  include,
 			deadline: deadline,
 		}
 
-		partitions, err := state.Partitions()
+		partitions, err := state.Partitions(paths)
 		if err != nil {
 			errch <- err
 			continue

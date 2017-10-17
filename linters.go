@@ -222,7 +222,7 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"errcheck": {
-		Command:           `errcheck -abspath`,
+		Command:           `errcheck -abspath {not_tests=-ignoretests}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "github.com/kisielk/errcheck",
 		PartitionStrategy: partitionPathsAsPackages,
