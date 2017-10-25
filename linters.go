@@ -84,6 +84,9 @@ func parseLinterConfigSpec(name string, spec string) (LinterConfig, error) {
 
 	config := defaultLinters[name]
 	config.Command, config.Pattern = parts[0], parts[1]
+	if predefined, ok := predefinedPatterns[config.Pattern]; ok {
+		config.Pattern = predefined
+	}
 
 	return config, nil
 }
