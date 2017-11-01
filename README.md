@@ -81,6 +81,7 @@ Disabled by default (enable with `--enable=<linter>`):
 - [gosimple](https://github.com/dominikh/go-tools/tree/master/cmd/gosimple) - Report simplifications in code.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
+- [nakedret](https://github.com/alexkohler/nakedret) - Finds naked returns.
 - [unparam](https://github.com/mvdan/unparam) - Find unused function parameters.
 - [unused](https://github.com/dominikh/go-tools/tree/master/cmd/unused) - Find unused variables.
 - [safesql](https://github.com/stripe/safesql) - Finds potential SQL injection vulnerabilities.
@@ -201,6 +202,7 @@ $ gometalinter --install
 Installing:
   structcheck
   maligned
+  nakedret
   deadcode
   gocyclo
   ineffassign

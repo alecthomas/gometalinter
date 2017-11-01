@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/alexkohler/nakedret",
+			"repository": "https://github.com/alexkohler/nakedret",
+			"vcs": "git",
+			"revision": "ca8b55b818e14bc0f1f52b714e7474634eadcd34",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/client9/misspell",
 			"repository": "https://github.com/client9/misspell",
 			"vcs": "git",
