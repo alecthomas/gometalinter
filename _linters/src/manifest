@@ -321,8 +321,8 @@
 			"importpath": "honnef.co/go/tools",
 			"repository": "https://github.com/dominikh/go-tools",
 			"vcs": "git",
-			"revision": "15d446f3efa09ffb7dc2745ae3086c3304250e78",
-			"branch": "master",
+			"revision": "50914165a1ae448f1608c6c325d052313396182e",
+			"branch": "HEAD",
 			"notests": true
 		},
 		{
