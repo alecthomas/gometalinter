@@ -56,6 +56,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("sort", fmt.Sprintf("Sort output by any of %s.", strings.Join(sortKeys, ", "))).PlaceHolder("none").EnumsVar(&config.Sort, sortKeys...)
 	app.Flag("tests", "Include test files for linters that support this option.").Short('t').BoolVar(&config.Test)
 	app.Flag("deadline", "Cancel linters if they have not completed within this duration.").PlaceHolder("30s").DurationVar((*time.Duration)(&config.Deadline))
+	app.Flag("output-abs", "Output absolute filepaths").Short('a').BoolVar(&config.OutputAbsPath)
 	app.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
 	app.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
 	app.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)

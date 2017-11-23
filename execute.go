@@ -237,7 +237,7 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			}
 			switch name {
 			case "path":
-				issue.Path = relativePath(cwd, part)
+				issue.Path = getOutputPath(cwd, part)
 
 			case "line":
 				n, err := strconv.ParseInt(part, 10, 32)
@@ -273,10 +273,15 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 	}
 }
 
-func relativePath(root, path string) string {
+func getOutputPath(root, path string) string {
 	fallback := path
 	root = resolvePath(root)
 	path = resolvePath(path)
+
+	if config.OutputAbsPath {
+		return path
+	}
+
 	var err error
 	path, err = filepath.Rel(root, path)
 	if err != nil {
