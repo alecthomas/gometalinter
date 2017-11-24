@@ -45,7 +45,6 @@ type Config struct { // nolint: maligned
 	Sort            []string
 	Test            bool
 	Deadline        jsonDuration
-	OutputAbsPath   bool
 	Errors          bool
 	JSON            bool
 	Checkstyle      bool

@@ -33,13 +33,13 @@ func outputToCheckstyle(issues chan *Issue) int {
 	}
 	status := 0
 	for issue := range issues {
-		if lastFile != nil && lastFile.Name != issue.Path {
+		if lastFile != nil && lastFile.Name != issue.Path.String() {
 			out.Files = append(out.Files, lastFile)
 			lastFile = nil
 		}
 		if lastFile == nil {
 			lastFile = &checkstyleFile{
-				Name: issue.Path,
+				Name: issue.Path.String(),
 			}
 		}
 
