@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -68,11 +67,11 @@ func newDirectiveParser() *directiveParser {
 // IsIgnored returns true if the given linter issue is ignored by a linter directive.
 func (d *directiveParser) IsIgnored(issue *Issue) bool {
 	d.lock.Lock()
-	ranges, ok := d.files[issue.Path.String()]
+	ranges, ok := d.files[issue.Path]
 	if !ok {
-		ranges = d.parseFile(issue.Path.String())
+		ranges = d.parseFile(issue.Path)
 		sort.Sort(ranges)
-		d.files[issue.Path.String()] = ranges
+		d.files[issue.Path] = ranges
 	}
 	d.lock.Unlock()
 	for _, r := range ranges {
@@ -206,18 +205,10 @@ func filterIssuesViaDirectives(directives *directiveParser, issues chan *Issue) 
 func warnOnUnusedDirective(directives *directiveParser) []*Issue {
 	out := []*Issue{}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		warning("failed to get working directory %s", err)
-	}
-
 	for path, ranges := range directives.Unmatched() {
 		for _, ignore := range ranges {
 			issue, _ := NewIssue("nolint", config.formatTemplate)
-			issue.Path = issuePath{
-				currentDir: cwd,
-				path:       path,
-			}
+			issue.Path = path
 			issue.Line = ignore.start
 			issue.Col = ignore.col
 			issue.Message = "nolint directive did not match any issue"
