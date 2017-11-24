@@ -235,7 +235,7 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `gas -fmt=csv`,
 		Pattern:           `^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
 		InstallFrom:       "github.com/GoASTScanner/gas",
-		PartitionStrategy: partitionPathsAsDirectories,
+		PartitionStrategy: partitionPathsAsFiles,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
