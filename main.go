@@ -156,8 +156,8 @@ func formatLinters() string {
 		if install == "()" {
 			install = ""
 		}
-		fmt.Fprintf(w, "  %s  %s\n        %s\n        %s\n",
-			linter.Name, install, linter.Command, linter.Pattern)
+		fmt.Fprintf(w, "  %s: %s\n\tcommand: %s\n\tregex: %s\n\tfast: %t\n\tdefault enabled: %t\n\n",
+			linter.Name, install, linter.Command, linter.Pattern, linter.IsFast, linter.defaultEnabled)
 	}
 	return w.String()
 }
