@@ -82,6 +82,7 @@ func runLinters(linters map[string]*Linter, paths []string, concurrency int, exc
 		"duplthreshold":    fmt.Sprintf("%d", config.DuplThreshold),
 		"mincyclo":         fmt.Sprintf("%d", config.Cyclo),
 		"maxlinelength":    fmt.Sprintf("%d", config.LineLength),
+		"misspelllocale":   fmt.Sprintf("%s", config.MisspellLocale),
 		"min_confidence":   fmt.Sprintf("%f", config.MinConfidence),
 		"min_occurrences":  fmt.Sprintf("%d", config.MinOccurrences),
 		"min_const_length": fmt.Sprintf("%d", config.MinConstLength),
