@@ -1,7 +1,24 @@
 sudo: false
 language: go
 install:
-    - go get -t -v . ./regressiontests
-    - gometalinter --install
-go: [1.7.x, 1.8.x, 1.9.x]
+- go get -t -v . ./regressiontests
+- gometalinter --install
+go:
+- 1.7.x
+- 1.8.x
+- 1.9.x
 script: go test -v . ./regressiontests
+before_deploy:
+  - ./package.sh
+deploy:
+  provider: releases
+  api_key:
+    secure: OBLrJXJvOLI0PPM15Jo0IEcJYl4CpQTBVXT4pjTeEFzukHdEmfQU0BmPoIsDsaqtbJLf+oQT4NfefQFEqFQqJidHKAxUFMttIlfv7LfIkVZVOFg/tDwqOg/VVFmWFOR696RwjlbOTKzGqFbEwmFnYgMwOXMlFl1en+R+40PEuos=
+  file_glob: true
+  file:
+    - dist/gometalinter-*.zip
+    - dist/gometalinter-*.tar.bz2
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: alecthomas/gometalinter

@@ -23,6 +23,7 @@ var (
 		{"github.com", "alecthomas", "gometalinter", "_linters"},
 		{"gopkg.in", "alecthomas", "gometalinter.v1", "_linters"},
 	}
+	Version = "master"
 )
 
 func setupFlags(app *kingpin.Application) {
@@ -35,12 +36,12 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
 	app.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
 	app.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
-	app.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
+	app.Flag("vendored-linters", "Use vendored linters (recommended) (DEPRECATED - use binary packages).").BoolVar(&config.VendoredLinters)
 	app.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
-	app.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
-	app.Flag("update", "Pass -u to go tool when installing.").Short('u').BoolVar(&config.Update)
-	app.Flag("force", "Pass -f to go tool when installing.").Short('f').BoolVar(&config.Force)
-	app.Flag("download-only", "Pass -d to go tool when installing.").BoolVar(&config.DownloadOnly)
+	app.Flag("install", "Attempt to install all known linters (DEPRECATED - use binary packages).").Short('i').BoolVar(&config.Install)
+	app.Flag("update", "Pass -u to go tool when installing (DEPRECATED - use binary packages).").Short('u').BoolVar(&config.Update)
+	app.Flag("force", "Pass -f to go tool when installing (DEPRECATED - use binary packages).").Short('f').BoolVar(&config.Force)
+	app.Flag("download-only", "Pass -d to go tool when installing (DEPRECATED - use binary packages).").BoolVar(&config.DownloadOnly)
 	app.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
 	app.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder(fmt.Sprintf("%d", runtime.NumCPU())).Short('j').IntVar(&config.Concurrency)
 	app.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
@@ -172,6 +173,7 @@ func formatSeverity() string {
 }
 
 func main() {
+	kingpin.Version(Version)
 	pathsArg := kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	app := kingpin.CommandLine
 	setupFlags(app)
