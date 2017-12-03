@@ -34,7 +34,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("severity", "Map of linter severities.").PlaceHolder("LINTER:SEVERITY").StringMapVar(&config.Severity)
 	app.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
 	app.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
-	app.Flag("format", "Output format.").PlaceHolder(fmt.Sprintf("\"%s\"", config.Format)).StringVar(&config.Format)
+	app.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
 	app.Flag("vendored-linters", "Use vendored linters (recommended).").BoolVar(&config.VendoredLinters)
 	app.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
 	app.Flag("install", "Attempt to install all known linters.").Short('i').BoolVar(&config.Install)
