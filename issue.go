@@ -11,7 +11,6 @@ import (
 	"text/template"
 )
 
-
 // DefaultIssueFormat used to print an issue
 const DefaultIssueFormat = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"
 
@@ -24,34 +23,34 @@ const (
 	Warning Severity = "warning"
 )
 
-type issuePath struct {
+type IssuePath struct {
 	root string
 	path string
 }
 
-func (i issuePath) String() string {
+func (i IssuePath) String() string {
 	return i.Relative()
 }
 
-func (i issuePath) Relative() string {
+func (i IssuePath) Relative() string {
 	return i.path
 }
 
-func (i issuePath) Abs() string {
+func (i IssuePath) Abs() string {
 	return filepath.Join(i.root, i.path)
 }
 
-func (i issuePath) MarshalJSON() ([]byte, error) {
+func (i IssuePath) MarshalJSON() ([]byte, error) {
 	return json.Marshal(i.String())
 }
 
-func newIssuePath(root, path string) issuePath {
-	return issuePath{root: root, path: path}
+func newIssuePath(root, path string) IssuePath {
+	return IssuePath{root: root, path: path}
 }
 
 // newIssuePathFromAbsPath returns a new issuePath from a path that may be
 // an absolute path. root must be an absolute path.
-func newIssuePathFromAbsPath(root, path string) (issuePath, error) {
+func newIssuePathFromAbsPath(root, path string) (IssuePath, error) {
 	resolvedRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
 		return newIssuePath(root, path), err
@@ -73,7 +72,7 @@ func newIssuePathFromAbsPath(root, path string) (issuePath, error) {
 type Issue struct {
 	Linter     string    `json:"linter"`
 	Severity   Severity  `json:"severity"`
-	Path       issuePath `json:"path"`
+	Path       IssuePath `json:"path"`
 	Line       int       `json:"line"`
 	Col        int       `json:"col"`
 	Message    string    `json:"message"`
