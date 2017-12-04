@@ -109,7 +109,7 @@
 			"importpath": "github.com/opennota/check",
 			"repository": "https://github.com/opennota/check",
 			"vcs": "git",
-			"revision": "11e2eec79ec4f789607e3efbf405cdca2504d4cb",
+			"revision": "0ec6d92e97559edf84eebe7c51b069953d4b522c",
 			"branch": "master",
 			"notests": true
 		},
