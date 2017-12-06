@@ -3,6 +3,8 @@
 # Only build packages for tagged releases
 TAG="$(git tag -l --points-at HEAD)"
 
+export CGO_ENABLED=0
+
 GO_VERSION="$(go version | awk '{print $3}' | cut -d. -f1-2)"
 
 if [ "$GO_VERSION" != "go1.9" ]; then
