@@ -12,6 +12,122 @@ import (
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
+func TestFindRCFile(t *testing.T) {
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkDir(t, tmpdir, "contains")
+	mkDir(t, tmpdir, "contains", "foo")
+	mkDir(t, tmpdir, "contains", "foo", "bar")
+	mkDir(t, tmpdir, "contains", "double")
+	mkDir(t, tmpdir, "lacks")
+
+	mkConfigFile(t, filepath.Join(tmpdir, "contains"), ".gometalinterrc")
+	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), ".gometalinterrc")
+
+	var testcases = []struct {
+		dir      string
+		expected string
+		found    bool
+	}{
+		{
+			dir:      tmpdir,
+			expected: "",
+			found:    false,
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains"),
+			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			found:    true,
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains", "foo"),
+			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			found:    true,
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains", "foo", "bar"),
+			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			found:    true,
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains", "double"),
+			expected: filepath.Join(tmpdir, "contains", "double", ".gometalinterrc"),
+			found:    true,
+		},
+		{
+			dir:      filepath.Join(tmpdir, "lacks"),
+			expected: "",
+			found:    false,
+		},
+	}
+
+	for _, testcase := range testcases {
+		require.NoError(t, os.Chdir(testcase.dir))
+		rcfile, found, err := findRCFile()
+		assert.Equal(t, testcase.expected, rcfile)
+		assert.Equal(t, testcase.found, found)
+		assert.NoError(t, err)
+	}
+}
+
+func TestFindRCFileWithHome(t *testing.T) {
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	homedir, homecleanup := setupTempHomeDir(t, tmpdir)
+	defer homecleanup()
+
+	mkConfigFile(t, homedir, ".gometalinterrc")
+
+	mkDir(t, tmpdir, "contains")
+	mkDir(t, tmpdir, "contains", "foo")
+	mkDir(t, tmpdir, "contains", "foo", "bar")
+	mkDir(t, tmpdir, "contains", "double")
+	mkDir(t, tmpdir, "lacks")
+
+	mkConfigFile(t, filepath.Join(tmpdir, "contains"), ".gometalinterrc")
+	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), ".gometalinterrc")
+
+	var testcases = []struct {
+		dir      string
+		expected string
+	}{
+		{
+			dir:      tmpdir,
+			expected: filepath.Join(homedir, ".gometalinterrc"),
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains"),
+			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains", "foo"),
+			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains", "foo", "bar"),
+			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+		},
+		{
+			dir:      filepath.Join(tmpdir, "contains", "double"),
+			expected: filepath.Join(tmpdir, "contains", "double", ".gometalinterrc"),
+		},
+		{
+			dir:      filepath.Join(tmpdir, "lacks"),
+			expected: filepath.Join(homedir, ".gometalinterrc"),
+		},
+	}
+
+	for _, testcase := range testcases {
+		require.NoError(t, os.Chdir(testcase.dir))
+		rcfile, found, err := findRCFile()
+		assert.Equal(t, testcase.expected, rcfile)
+		assert.True(t, found)
+		assert.NoError(t, err)
+	}
+}
+
 func TestRelativePackagePath(t *testing.T) {
 	var testcases = []struct {
 		dir      string
@@ -84,6 +200,9 @@ func setupTempDir(t *testing.T) (string, func()) {
 	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
 	require.NoError(t, err)
 
+	tmpdir, err = filepath.EvalSymlinks(tmpdir)
+	require.NoError(t, err)
+
 	oldwd, err := os.Getwd()
 	require.NoError(t, err)
 	require.NoError(t, os.Chdir(tmpdir))
@@ -91,6 +210,20 @@ func setupTempDir(t *testing.T) (string, func()) {
 	return tmpdir, func() {
 		os.RemoveAll(tmpdir)
 		require.NoError(t, os.Chdir(oldwd))
+	}
+}
+
+func setupTempHomeDir(t *testing.T, tmpdir string) (string, func()) {
+	homeDir := filepath.Join(tmpdir, "test-home")
+	mkDir(t, homeDir)
+
+	cachedFunc := getHomeDir
+	getHomeDir = func() (string, error) {
+		return homeDir, nil
+	}
+
+	return homeDir, func() {
+		getHomeDir = cachedFunc
 	}
 }
 
@@ -102,6 +235,12 @@ func mkDir(t *testing.T, paths ...string) {
 
 func mkGoFile(t *testing.T, path string, filename string) {
 	content := []byte("package foo")
+	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
+	require.NoError(t, err)
+}
+
+func mkConfigFile(t *testing.T, path string, filename string) {
+	content := []byte("{}")
 	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
 	require.NoError(t, err)
 }

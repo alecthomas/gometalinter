@@ -145,12 +145,12 @@ func findRCFile() (fullPath string, found bool, err error) {
 		prevPath, dirPath = dirPath, filepath.Dir(dirPath)
 	}
 
-	u, err := user.Current()
+	homeDir, err := getHomeDir()
 	if err != nil {
 		return "", false, err
 	}
 
-	return findRCFileInDir(u.HomeDir)
+	return findRCFileInDir(homeDir)
 }
 
 func findRCFileInDir(dirPath string) (fullPath string, found bool, err error) {
@@ -163,6 +163,14 @@ func findRCFileInDir(dirPath string) (fullPath string, found bool, err error) {
 	}
 
 	return fullPath, true, nil
+}
+
+var getHomeDir = func() (string, error) {
+	u, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return u.HomeDir, nil
 }
 
 func disableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
