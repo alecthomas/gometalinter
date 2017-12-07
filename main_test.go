@@ -22,8 +22,8 @@ func TestFindRCFile(t *testing.T) {
 	mkDir(t, tmpdir, "contains", "double")
 	mkDir(t, tmpdir, "lacks")
 
-	mkConfigFile(t, filepath.Join(tmpdir, "contains"), ".gometalinterrc")
-	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), ".gometalinterrc")
+	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath)
+	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath)
 
 	var testcases = []struct {
 		dir      string
@@ -37,22 +37,22 @@ func TestFindRCFile(t *testing.T) {
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains"),
-			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
 			found:    true,
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains", "foo"),
-			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
 			found:    true,
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains", "foo", "bar"),
-			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
 			found:    true,
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains", "double"),
-			expected: filepath.Join(tmpdir, "contains", "double", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", "double", defaultConfigPath),
 			found:    true,
 		},
 		{
@@ -78,7 +78,7 @@ func TestFindRCFileWithHome(t *testing.T) {
 	homedir, homecleanup := setupTempHomeDir(t, tmpdir)
 	defer homecleanup()
 
-	mkConfigFile(t, homedir, ".gometalinterrc")
+	mkConfigFile(t, homedir, defaultConfigPath)
 
 	mkDir(t, tmpdir, "contains")
 	mkDir(t, tmpdir, "contains", "foo")
@@ -86,8 +86,8 @@ func TestFindRCFileWithHome(t *testing.T) {
 	mkDir(t, tmpdir, "contains", "double")
 	mkDir(t, tmpdir, "lacks")
 
-	mkConfigFile(t, filepath.Join(tmpdir, "contains"), ".gometalinterrc")
-	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), ".gometalinterrc")
+	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath)
+	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath)
 
 	var testcases = []struct {
 		dir      string
@@ -95,27 +95,27 @@ func TestFindRCFileWithHome(t *testing.T) {
 	}{
 		{
 			dir:      tmpdir,
-			expected: filepath.Join(homedir, ".gometalinterrc"),
+			expected: filepath.Join(homedir, defaultConfigPath),
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains"),
-			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains", "foo"),
-			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains", "foo", "bar"),
-			expected: filepath.Join(tmpdir, "contains", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
 		},
 		{
 			dir:      filepath.Join(tmpdir, "contains", "double"),
-			expected: filepath.Join(tmpdir, "contains", "double", ".gometalinterrc"),
+			expected: filepath.Join(tmpdir, "contains", "double", defaultConfigPath),
 		},
 		{
 			dir:      filepath.Join(tmpdir, "lacks"),
-			expected: filepath.Join(homedir, ".gometalinterrc"),
+			expected: filepath.Join(homedir, defaultConfigPath),
 		},
 	}
 

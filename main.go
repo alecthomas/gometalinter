@@ -24,7 +24,8 @@ var (
 		{"gopkg.in", "alecthomas", "gometalinter.v1", "_linters"},
 		{"gopkg.in", "alecthomas", "gometalinter.v2", "_linters"},
 	}
-	Version = "master"
+	defaultConfigPath = ".gometalinterrc"
+	Version           = "master"
 )
 
 func setupFlags(app *kingpin.Application) {
@@ -154,7 +155,7 @@ func findRCFile() (fullPath string, found bool, err error) {
 }
 
 func findRCFileInDir(dirPath string) (fullPath string, found bool, err error) {
-	fullPath = filepath.Join(dirPath, ".gometalinterrc")
+	fullPath = filepath.Join(dirPath, defaultConfigPath)
 	if _, err := os.Stat(fullPath); err != nil {
 		if os.IsNotExist(err) {
 			return "", false, nil
