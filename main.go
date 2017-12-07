@@ -84,8 +84,35 @@ func cliLinterOverrides(app *kingpin.Application, element *kingpin.ParseElement,
 	return nil
 }
 
+func loadDefaultConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
+	if element != nil {
+		return nil
+	}
+
+	for _, elem := range ctx.Elements {
+		if elem.OneOf.Flag == app.GetFlag("config") {
+			return nil
+		}
+	}
+
+	rcfile, err := findRCFile()
+	if err != nil {
+		return err
+	}
+
+	return loadConfigFile(rcfile)
+}
+
 func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	r, err := os.Open(*element.Value)
+	return loadConfigFile(*element.Value)
+}
+
+func loadConfigFile(filename string) error {
+	if filename == "" {
+		return nil
+	}
+
+	r, err := os.Open(filename)
 	if err != nil {
 		return err
 	}
@@ -103,6 +130,42 @@ func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *ki
 		}
 	}
 	return err
+}
+
+func findRCFile() (string, error) {
+	prevPath := ""
+	dirPath, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for dirPath != prevPath {
+		fullPath, found, err := findFileInDir(dirPath)
+		if err != nil || found {
+			return fullPath, err
+		}
+		prevPath, dirPath = dirPath, filepath.Dir(dirPath)
+	}
+
+	u, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	fullPath, _, err := findFileInDir(u.HomeDir)
+
+	return fullPath, err
+}
+
+func findFileInDir(dirPath string) (fullPath string, found bool, err error) {
+	fullPath = filepath.Join(dirPath, ".gometalinterrc")
+	if _, err := os.Stat(fullPath); err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+
+	return fullPath, true, nil
 }
 
 func disableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
@@ -177,6 +240,7 @@ func main() {
 	kingpin.Version(Version)
 	pathsArg := kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	app := kingpin.CommandLine
+	app.Action(loadDefaultConfig)
 	setupFlags(app)
 	app.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 
