@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"text/template"
@@ -179,12 +178,7 @@ func findDefaultConfigFile() (fullPath string, found bool, err error) {
 		prevPath, dirPath = dirPath, filepath.Dir(dirPath)
 	}
 
-	homeDir, err := getHomeDir()
-	if err != nil {
-		return "", false, err
-	}
-
-	return findConfigFileInDir(homeDir)
+	return "", false, nil
 }
 
 func findConfigFileInDir(dirPath string) (fullPath string, found bool, err error) {
@@ -197,12 +191,4 @@ func findConfigFileInDir(dirPath string) (fullPath string, found bool, err error
 	}
 
 	return fullPath, true, nil
-}
-
-var getHomeDir = func() (string, error) {
-	u, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-	return u.HomeDir, nil
 }
