@@ -96,12 +96,12 @@ func loadDefaultConfig(app *kingpin.Application, element *kingpin.ParseElement, 
 		}
 	}
 
-	rcfile, found, err := findRCFile()
+	configFile, found, err := findDefaultConfigFile()
 	if err != nil || !found {
 		return err
 	}
 
-	return loadConfigFile(rcfile)
+	return loadConfigFile(configFile)
 }
 
 func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
@@ -129,7 +129,7 @@ func loadConfigFile(filename string) error {
 	return err
 }
 
-func findRCFile() (fullPath string, found bool, err error) {
+func findDefaultConfigFile() (fullPath string, found bool, err error) {
 	prevPath := ""
 	dirPath, err := os.Getwd()
 	if err != nil {
@@ -139,7 +139,7 @@ func findRCFile() (fullPath string, found bool, err error) {
 	for dirPath != prevPath {
 		var fullPath string
 		var found bool
-		fullPath, found, err = findRCFileInDir(dirPath)
+		fullPath, found, err = findConfigFileInDir(dirPath)
 		if err != nil || found {
 			return fullPath, found, err
 		}
@@ -151,10 +151,10 @@ func findRCFile() (fullPath string, found bool, err error) {
 		return "", false, err
 	}
 
-	return findRCFileInDir(homeDir)
+	return findConfigFileInDir(homeDir)
 }
 
-func findRCFileInDir(dirPath string) (fullPath string, found bool, err error) {
+func findConfigFileInDir(dirPath string) (fullPath string, found bool, err error) {
 	fullPath = filepath.Join(dirPath, defaultConfigPath)
 	if _, err := os.Stat(fullPath); err != nil {
 		if os.IsNotExist(err) {

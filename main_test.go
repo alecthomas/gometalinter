@@ -12,7 +12,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
-func TestFindRCFile(t *testing.T) {
+func TestFindDefaultConfigFile(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
 
@@ -64,14 +64,14 @@ func TestFindRCFile(t *testing.T) {
 
 	for _, testcase := range testcases {
 		require.NoError(t, os.Chdir(testcase.dir))
-		rcfile, found, err := findRCFile()
-		assert.Equal(t, testcase.expected, rcfile)
+		configFile, found, err := findDefaultConfigFile()
+		assert.Equal(t, testcase.expected, configFile)
 		assert.Equal(t, testcase.found, found)
 		assert.NoError(t, err)
 	}
 }
 
-func TestFindRCFileWithHome(t *testing.T) {
+func TestFindDefaultConfigFileWithHome(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
 
@@ -121,8 +121,8 @@ func TestFindRCFileWithHome(t *testing.T) {
 
 	for _, testcase := range testcases {
 		require.NoError(t, os.Chdir(testcase.dir))
-		rcfile, found, err := findRCFile()
-		assert.Equal(t, testcase.expected, rcfile)
+		configFile, found, err := findDefaultConfigFile()
+		assert.Equal(t, testcase.expected, configFile)
 		assert.True(t, found)
 		assert.NoError(t, err)
 	}
