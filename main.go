@@ -30,6 +30,7 @@ var (
 
 func setupFlags(app *kingpin.Application) {
 	app.Flag("config", "Load JSON configuration from file.").Envar("GOMETALINTER_CONFIG").Action(loadConfig).String()
+	app.Flag("no-config", "Disable automatic loading of config file.").Bool()
 	app.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
 	app.Flag("enable", "Enable previously disabled linters.").PlaceHolder("LINTER").Short('E').Action(enableAction).Strings()
 	app.Flag("linter", "Define a linter.").PlaceHolder("NAME:COMMAND:PATTERN").Action(cliLinterOverrides).StringMap()
@@ -91,7 +92,7 @@ func loadDefaultConfig(app *kingpin.Application, element *kingpin.ParseElement, 
 	}
 
 	for _, elem := range ctx.Elements {
-		if elem.OneOf.Flag == app.GetFlag("config") {
+		if f := elem.OneOf.Flag; f == app.GetFlag("config") || f == app.GetFlag("no-config") {
 			return nil
 		}
 	}
