@@ -24,7 +24,7 @@ var (
 		{"gopkg.in", "alecthomas", "gometalinter.v1", "_linters"},
 		{"gopkg.in", "alecthomas", "gometalinter.v2", "_linters"},
 	}
-	defaultConfigPath = ".gometalinterrc"
+	defaultConfigPath = ".gometalinter.json"
 	Version           = "master"
 )
 
