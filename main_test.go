@@ -12,122 +12,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
-func TestFindDefaultConfigFile(t *testing.T) {
-	tmpdir, cleanup := setupTempDir(t)
-	defer cleanup()
-
-	mkDir(t, tmpdir, "contains")
-	mkDir(t, tmpdir, "contains", "foo")
-	mkDir(t, tmpdir, "contains", "foo", "bar")
-	mkDir(t, tmpdir, "contains", "double")
-	mkDir(t, tmpdir, "lacks")
-
-	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath)
-	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath)
-
-	var testcases = []struct {
-		dir      string
-		expected string
-		found    bool
-	}{
-		{
-			dir:      tmpdir,
-			expected: "",
-			found:    false,
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains"),
-			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
-			found:    true,
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains", "foo"),
-			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
-			found:    true,
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains", "foo", "bar"),
-			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
-			found:    true,
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains", "double"),
-			expected: filepath.Join(tmpdir, "contains", "double", defaultConfigPath),
-			found:    true,
-		},
-		{
-			dir:      filepath.Join(tmpdir, "lacks"),
-			expected: "",
-			found:    false,
-		},
-	}
-
-	for _, testcase := range testcases {
-		require.NoError(t, os.Chdir(testcase.dir))
-		configFile, found, err := findDefaultConfigFile()
-		assert.Equal(t, testcase.expected, configFile)
-		assert.Equal(t, testcase.found, found)
-		assert.NoError(t, err)
-	}
-}
-
-func TestFindDefaultConfigFileWithHome(t *testing.T) {
-	tmpdir, cleanup := setupTempDir(t)
-	defer cleanup()
-
-	homedir, homecleanup := setupTempHomeDir(t, tmpdir)
-	defer homecleanup()
-
-	mkConfigFile(t, homedir, defaultConfigPath)
-
-	mkDir(t, tmpdir, "contains")
-	mkDir(t, tmpdir, "contains", "foo")
-	mkDir(t, tmpdir, "contains", "foo", "bar")
-	mkDir(t, tmpdir, "contains", "double")
-	mkDir(t, tmpdir, "lacks")
-
-	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath)
-	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath)
-
-	var testcases = []struct {
-		dir      string
-		expected string
-	}{
-		{
-			dir:      tmpdir,
-			expected: filepath.Join(homedir, defaultConfigPath),
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains"),
-			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains", "foo"),
-			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains", "foo", "bar"),
-			expected: filepath.Join(tmpdir, "contains", defaultConfigPath),
-		},
-		{
-			dir:      filepath.Join(tmpdir, "contains", "double"),
-			expected: filepath.Join(tmpdir, "contains", "double", defaultConfigPath),
-		},
-		{
-			dir:      filepath.Join(tmpdir, "lacks"),
-			expected: filepath.Join(homedir, defaultConfigPath),
-		},
-	}
-
-	for _, testcase := range testcases {
-		require.NoError(t, os.Chdir(testcase.dir))
-		configFile, found, err := findDefaultConfigFile()
-		assert.Equal(t, testcase.expected, configFile)
-		assert.True(t, found)
-		assert.NoError(t, err)
-	}
-}
-
 func TestRelativePackagePath(t *testing.T) {
 	var testcases = []struct {
 		dir      string
@@ -213,20 +97,6 @@ func setupTempDir(t *testing.T) (string, func()) {
 	}
 }
 
-func setupTempHomeDir(t *testing.T, tmpdir string) (string, func()) {
-	homeDir := filepath.Join(tmpdir, "test-home")
-	mkDir(t, homeDir)
-
-	cachedFunc := getHomeDir
-	getHomeDir = func() (string, error) {
-		return homeDir, nil
-	}
-
-	return homeDir, func() {
-		getHomeDir = cachedFunc
-	}
-}
-
 func mkDir(t *testing.T, paths ...string) {
 	fullPath := filepath.Join(paths...)
 	require.NoError(t, os.MkdirAll(fullPath, 0755))
@@ -235,12 +105,6 @@ func mkDir(t *testing.T, paths ...string) {
 
 func mkGoFile(t *testing.T, path string, filename string) {
 	content := []byte("package foo")
-	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
-	require.NoError(t, err)
-}
-
-func mkConfigFile(t *testing.T, path string, filename string) {
-	content := []byte("{}")
 	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
 	require.NoError(t, err)
 }
