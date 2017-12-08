@@ -33,8 +33,8 @@ func TestFindDefaultConfigFile(t *testing.T) {
 	mkDir(t, tmpdir, "contains", "double")
 	mkDir(t, tmpdir, "lacks")
 
-	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath)
-	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath)
+	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath, "{}")
+	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath, "{}")
 
 	var testcases = []struct {
 		dir      string
@@ -82,8 +82,7 @@ func TestFindDefaultConfigFile(t *testing.T) {
 	}
 }
 
-func mkConfigFile(t *testing.T, path string, filename string) {
-	content := []byte("{}")
-	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
+func mkConfigFile(t *testing.T, path string, filename string, content string) {
+	err := ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0644)
 	require.NoError(t, err)
 }

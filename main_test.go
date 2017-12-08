@@ -132,6 +132,61 @@ func TestPathFilter(t *testing.T) {
 	}
 }
 
+func TestLoadDefaultConfig(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkConfigFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+
+	app := kingpin.New("test-app", "")
+	app.Action(loadDefaultConfig)
+	setupFlags(app)
+
+	_, err := app.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, 3*time.Minute, config.Deadline.Duration())
+}
+
+func TestNoConfigFlag(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkConfigFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+
+	app := kingpin.New("test-app", "")
+	app.Action(loadDefaultConfig)
+	setupFlags(app)
+
+	_, err := app.Parse([]string{"--no-config"})
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, config.Deadline.Duration())
+}
+
+func TestConfigFlagSkipsDefault(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkConfigFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+	mkConfigFile(t, tmpdir, "test-config", `{}`)
+
+	app := kingpin.New("test-app", "")
+	app.Action(loadDefaultConfig)
+	setupFlags(app)
+
+	_, err := app.Parse([]string{"--config", filepath.Join(tmpdir, "test-config")})
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, config.Deadline.Duration())
+}
+
 func TestLoadConfigWithDeadline(t *testing.T) {
 	originalConfig := *config
 	defer func() { config = &originalConfig }()
