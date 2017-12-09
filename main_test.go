@@ -103,10 +103,13 @@ func mkDir(t *testing.T, paths ...string) {
 	mkGoFile(t, fullPath, "file.go")
 }
 
-func mkGoFile(t *testing.T, path string, filename string) {
-	content := []byte("package foo")
-	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
+func mkFile(t *testing.T, path string, filename string, content string) {
+	err := ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0644)
 	require.NoError(t, err)
+}
+
+func mkGoFile(t *testing.T, path string, filename string) {
+	mkFile(t, path, filename, "package foo")
 }
 
 func TestPathFilter(t *testing.T) {
@@ -139,7 +142,7 @@ func TestLoadDefaultConfig(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
 
-	mkConfigFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
 
 	app := kingpin.New("test-app", "")
 	app.Action(loadDefaultConfig)
@@ -157,7 +160,7 @@ func TestNoConfigFlag(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
 
-	mkConfigFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
 
 	app := kingpin.New("test-app", "")
 	app.Action(loadDefaultConfig)
@@ -175,8 +178,8 @@ func TestConfigFlagSkipsDefault(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
 
-	mkConfigFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
-	mkConfigFile(t, tmpdir, "test-config", `{}`)
+	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+	mkFile(t, tmpdir, "test-config", `{}`)
 
 	app := kingpin.New("test-app", "")
 	app.Action(loadDefaultConfig)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,8 +32,8 @@ func TestFindDefaultConfigFile(t *testing.T) {
 	mkDir(t, tmpdir, "contains", "double")
 	mkDir(t, tmpdir, "lacks")
 
-	mkConfigFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath, "{}")
-	mkConfigFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath, "{}")
+	mkFile(t, filepath.Join(tmpdir, "contains"), defaultConfigPath, "{}")
+	mkFile(t, filepath.Join(tmpdir, "contains", "double"), defaultConfigPath, "{}")
 
 	var testcases = []struct {
 		dir      string
@@ -80,9 +79,4 @@ func TestFindDefaultConfigFile(t *testing.T) {
 		assert.Equal(t, testcase.found, found)
 		assert.NoError(t, err)
 	}
-}
-
-func mkConfigFile(t *testing.T, path string, filename string, content string) {
-	err := ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0644)
-	require.NoError(t, err)
 }
