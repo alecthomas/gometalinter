@@ -169,8 +169,6 @@ func findDefaultConfigFile() (fullPath string, found bool, err error) {
 	}
 
 	for dirPath != prevPath {
-		var fullPath string
-		var found bool
 		fullPath, found, err = findConfigFileInDir(dirPath)
 		if err != nil || found {
 			return fullPath, found, err
