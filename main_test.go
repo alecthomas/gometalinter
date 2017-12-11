@@ -179,7 +179,7 @@ func TestConfigFlagSkipsDefault(t *testing.T) {
 	defer cleanup()
 
 	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
-	mkFile(t, tmpdir, "test-config", `{}`)
+	mkFile(t, tmpdir, "test-config", `{"Fast": true}`)
 
 	app := kingpin.New("test-app", "")
 	app.Action(loadDefaultConfig)
@@ -188,6 +188,7 @@ func TestConfigFlagSkipsDefault(t *testing.T) {
 	_, err := app.Parse([]string{"--config", filepath.Join(tmpdir, "test-config")})
 	require.NoError(t, err)
 	require.Equal(t, 30*time.Second, config.Deadline.Duration())
+	require.Equal(t, true, config.Fast)
 }
 
 func TestLoadConfigWithDeadline(t *testing.T) {
