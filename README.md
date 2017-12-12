@@ -91,9 +91,11 @@ Additional linters can be added through the command line with `--linter=NAME:COM
 
 ## Configuration file
 
-gometalinter now supports a JSON configuration file which can be loaded via
-`--config=<file>`. The format of this file is determined by the `Config` struct
-in [config.go](https://github.com/alecthomas/gometalinter/blob/master/config.go).
+gometalinter now supports a JSON configuration file called `.gometalinter.json` that can
+be placed at the root of your project. The configuration file will be automatically loaded
+from the working directory or any parent directory and can be overridden by passing
+`--config=<file>` or ignored with `--no-config`. The format of this file is determined by
+the `Config` struct in [config.go](https://github.com/alecthomas/gometalinter/blob/master/config.go).
 
 The configuration file mostly corresponds to command-line flags, with the following exceptions:
 
@@ -109,6 +111,12 @@ Here is an example configuration file:
   "Enable": ["deadcode", "unconvert"]
 }
 ```
+
+If a `.gometalinter.json` file is loaded, individual options can still be overridden by
+passing command-line flags. All flags are parsed in order, meaning configuration passed
+with the `--config` flag will override any command-line flags passed before and be
+overridden by flags passed after.
+
 
 #### `Format` key
 

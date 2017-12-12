@@ -84,6 +84,9 @@ func setupTempDir(t *testing.T) (string, func()) {
 	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
 	require.NoError(t, err)
 
+	tmpdir, err = filepath.EvalSymlinks(tmpdir)
+	require.NoError(t, err)
+
 	oldwd, err := os.Getwd()
 	require.NoError(t, err)
 	require.NoError(t, os.Chdir(tmpdir))
@@ -100,10 +103,13 @@ func mkDir(t *testing.T, paths ...string) {
 	mkGoFile(t, fullPath, "file.go")
 }
 
-func mkGoFile(t *testing.T, path string, filename string) {
-	content := []byte("package foo")
-	err := ioutil.WriteFile(filepath.Join(path, filename), content, 0644)
+func mkFile(t *testing.T, path string, filename string, content string) {
+	err := ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0644)
 	require.NoError(t, err)
+}
+
+func mkGoFile(t *testing.T, path string, filename string) {
+	mkFile(t, path, filename, "package foo")
 }
 
 func TestPathFilter(t *testing.T) {
@@ -127,6 +133,62 @@ func TestPathFilter(t *testing.T) {
 	for _, testcase := range testcases {
 		assert.Equal(t, testcase.expected, pathFilter(testcase.path), testcase.path)
 	}
+}
+
+func TestLoadDefaultConfig(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+
+	app := kingpin.New("test-app", "")
+	app.Action(loadDefaultConfig)
+	setupFlags(app)
+
+	_, err := app.Parse([]string{})
+	require.NoError(t, err)
+	require.Equal(t, 3*time.Minute, config.Deadline.Duration())
+}
+
+func TestNoConfigFlag(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+
+	app := kingpin.New("test-app", "")
+	app.Action(loadDefaultConfig)
+	setupFlags(app)
+
+	_, err := app.Parse([]string{"--no-config"})
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, config.Deadline.Duration())
+}
+
+func TestConfigFlagSkipsDefault(t *testing.T) {
+	originalConfig := *config
+	defer func() { config = &originalConfig }()
+
+	tmpdir, cleanup := setupTempDir(t)
+	defer cleanup()
+
+	mkFile(t, tmpdir, defaultConfigPath, `{"Deadline": "3m"}`)
+	mkFile(t, tmpdir, "test-config", `{"Fast": true}`)
+
+	app := kingpin.New("test-app", "")
+	app.Action(loadDefaultConfig)
+	setupFlags(app)
+
+	_, err := app.Parse([]string{"--config", filepath.Join(tmpdir, "test-config")})
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, config.Deadline.Duration())
+	require.Equal(t, true, config.Fast)
 }
 
 func TestLoadConfigWithDeadline(t *testing.T) {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"runtime"
 	"text/template"
 	"time"
@@ -136,4 +138,55 @@ var config = &Config{
 	DuplThreshold:   50,
 	Sort:            []string{"none"},
 	Deadline:        jsonDuration(time.Second * 30),
+}
+
+func loadConfigFile(filename string) error {
+	r, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer r.Close() // nolint: errcheck
+	err = json.NewDecoder(r).Decode(config)
+	if err != nil {
+		return err
+	}
+	for _, disable := range config.Disable {
+		for i, enable := range config.Enable {
+			if enable == disable {
+				config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
+				break
+			}
+		}
+	}
+	return err
+}
+
+func findDefaultConfigFile() (fullPath string, found bool, err error) {
+	prevPath := ""
+	dirPath, err := os.Getwd()
+	if err != nil {
+		return "", false, err
+	}
+
+	for dirPath != prevPath {
+		fullPath, found, err = findConfigFileInDir(dirPath)
+		if err != nil || found {
+			return fullPath, found, err
+		}
+		prevPath, dirPath = dirPath, filepath.Dir(dirPath)
+	}
+
+	return "", false, nil
+}
+
+func findConfigFileInDir(dirPath string) (fullPath string, found bool, err error) {
+	fullPath = filepath.Join(dirPath, defaultConfigPath)
+	if _, err := os.Stat(fullPath); err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+
+	return fullPath, true, nil
 }
