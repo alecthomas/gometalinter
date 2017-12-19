@@ -165,9 +165,9 @@ $ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Error
 
 There are two options for installing gometalinter.
 
-1. Install a stable version, eg. `go get -u gopkg.in/alecthomas/gometalinter.v1`.
+1. Install a stable version, eg. `go get -u gopkg.in/alecthomas/gometalinter.v2`.
    I will generally only tag a new stable version when it has passed the Travis
-  regression tests. The downside is that the binary will be called `gometalinter.v1`.
+  regression tests. The downside is that the binary will be called `gometalinter.v2`.
 2. Install from HEAD with: `go get -u github.com/alecthomas/gometalinter`.
    This has the downside that changes to gometalinter may break.
 
