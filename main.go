@@ -241,15 +241,6 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	if !config.EnableGC {
 		_ = os.Setenv("GOGC", "off")
 	}
-	if config.VendoredLinters && config.Install && config.Update {
-		warning(`Linters are now vendored by default, --update ignored. The original
-behaviour can be re-enabled with --no-vendored-linters.
-
-To request an update for a vendored linter file an issue at:
-https://github.com/alecthomas/gometalinter/issues/new
-`)
-		config.Update = false
-	}
 	// Force sorting by path if checkstyle mode is selected
 	// !jsonFlag check is required to handle:
 	// 	gometalinter --json --checkstyle --sort=severity
@@ -484,6 +475,14 @@ func addGoBinsToPath(gopaths []string) []string {
 // configureEnvironmentForInstall sets GOPATH and GOBIN so that vendored linters
 // can be installed
 func configureEnvironmentForInstall() {
+	if config.Update {
+		warning(`Linters are now vendored by default, --update ignored. The original
+behaviour can be re-enabled with --no-vendored-linters.
+
+To request an update for a vendored linter file an issue at:
+https://github.com/alecthomas/gometalinter/issues/new
+`)
+	}
 	gopaths := getGoPathList()
 	vendorRoot := findVendoredLinters()
 	if vendorRoot == "" {
