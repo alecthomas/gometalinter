@@ -4,8 +4,7 @@ import "testing"
 
 func TestPredeclared(t *testing.T) {
 	t.Parallel()
-	source := `
-package test
+	source := `package test
 var iota = 1
 func recover() interface{} {}
 func copy(a, b []int) {}
