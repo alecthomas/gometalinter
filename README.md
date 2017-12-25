@@ -86,7 +86,7 @@ Disabled by default (enable with `--enable=<linter>`):
 - [unused](https://github.com/dominikh/go-tools/tree/master/cmd/unused) - Find unused variables.
 - [safesql](https://github.com/stripe/safesql) - Finds potential SQL injection vulnerabilities.
 - [staticcheck](https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck) - Statically detect bugs, both obvious and subtle ones.
-- [predeclared](github.com/nishanths/predeclared) - Detect shadowing of predeclared identifiers
+- [predeclared](github.com/nishanths/predeclared) - Find code that shadows predeclared identifiers.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
