@@ -109,7 +109,7 @@
 			"importpath": "github.com/nishanths/predeclared",
 			"repository": "https://github.com/nishanths/predeclared",
 			"vcs": "git",
-			"revision": "05b9c08a3dcea629402c1af6d77f4ef4dfbebb2e",
+			"revision": "2cb813fdca83a519b3fc174af0e5dd9f09e65e96",
 			"branch": "master",
 			"notests": true
 		},

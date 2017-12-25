@@ -39,7 +39,6 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/doc"
 	"go/parser"
 	"go/scanner"
 	"go/token"
@@ -82,7 +81,7 @@ func initIgnoredIdents() {
 		if ident == "" {
 			continue
 		}
-		if !doc.IsPredeclared(ident) {
+		if !isPredeclaredIdent(ident) {
 			log.Printf("ident %q in -ignore is not a predeclared ident", ident)
 			os.Exit(2)
 		}
@@ -196,14 +195,14 @@ type Issue struct {
 
 func (i Issue) String() string {
 	pos := i.fset.Position(i.ident.Pos())
-	return fmt.Sprintf("%s: %s %s has same name as predeclared identifier", pos, i.kind, i.ident.Name)
+	return fmt.Sprintf("%s: %s %q has same name as predeclared identifier", pos, i.kind, i.ident.Name)
 }
 
 func processFile(fset *token.FileSet, file *ast.File) []Issue {
 	var issues []Issue
 
 	maybeAdd := func(x *ast.Ident, kind string) {
-		if !isIgnoredIdent(x.Name) && doc.IsPredeclared(x.Name) {
+		if !isIgnoredIdent(x.Name) && isPredeclaredIdent(x.Name) {
 			issues = append(issues, Issue{x, kind, fset})
 		}
 	}
