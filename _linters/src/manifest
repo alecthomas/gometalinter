@@ -106,6 +106,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/nishanths/predeclared",
+			"repository": "https://github.com/nishanths/predeclared",
+			"vcs": "git",
+			"revision": "05b9c08a3dcea629402c1af6d77f4ef4dfbebb2e",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/opennota/check",
 			"repository": "https://github.com/opennota/check",
 			"vcs": "git",
