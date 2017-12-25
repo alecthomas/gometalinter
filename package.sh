@@ -35,6 +35,7 @@ LINTERS="
   github.com/stripe/safesql
   github.com/tsenart/deadcode
   github.com/walle/lll/cmd/lll
+  github.com/nishanths/predeclared
   golang.org/x/tools/cmd/goimports
   golang.org/x/tools/cmd/gotype
   honnef.co/go/tools/cmd/gosimple

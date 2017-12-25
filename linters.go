@@ -340,6 +340,13 @@ var defaultLinters = map[string]LinterConfig{
 		InstallFrom:       "github.com/alexkohler/nakedret",
 		PartitionStrategy: partitionPathsAsDirectories,
 	},
+	"predeclared": {
+		Command:           `predeclared`,
+		Pattern:           `PATH:LINE:COL:MESSAGE`,
+		InstallFrom:       "github.com/nishanths/predeclared",
+		PartitionStrategy: partitionPathsAsDirectories,
+		IsFast:            true,
+	},
 	"safesql": {
 		Command:           `safesql`,
 		Pattern:           `^- (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+)$`,
