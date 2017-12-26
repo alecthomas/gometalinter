@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
+
+	"github.com/alecthomas/gometalinter/api"
 )
 
 type checkstyleOutput struct {
@@ -26,7 +28,7 @@ type checkstyleError struct {
 	Source   string `xml:"source,attr"`
 }
 
-func outputToCheckstyle(issues chan *Issue) int {
+func outputToCheckstyle(issues chan *api.Issue) int {
 	var lastFile *checkstyleFile
 	out := checkstyleOutput{
 		Version: "5.0",
@@ -43,7 +45,7 @@ func outputToCheckstyle(issues chan *Issue) int {
 			}
 		}
 
-		if config.Errors && issue.Severity != Error {
+		if config.Errors && issue.Severity != api.Error {
 			continue
 		}
 

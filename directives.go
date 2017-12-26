@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alecthomas/gometalinter/api"
 )
 
 type ignoredRange struct {
@@ -18,7 +20,7 @@ type ignoredRange struct {
 	matched    bool
 }
 
-func (i *ignoredRange) matches(issue *Issue) bool {
+func (i *ignoredRange) matches(issue *api.Issue) bool {
 	if issue.Line < i.start || issue.Line > i.end {
 		return false
 	}
@@ -65,7 +67,7 @@ func newDirectiveParser() *directiveParser {
 }
 
 // IsIgnored returns true if the given linter issue is ignored by a linter directive.
-func (d *directiveParser) IsIgnored(issue *Issue) bool {
+func (d *directiveParser) IsIgnored(issue *api.Issue) bool {
 	d.lock.Lock()
 	ranges, ok := d.files[issue.Path]
 	if !ok {
@@ -183,8 +185,8 @@ func extractCommentGroupRange(fset *token.FileSet, comments ...*ast.CommentGroup
 	return
 }
 
-func filterIssuesViaDirectives(directives *directiveParser, issues chan *Issue) chan *Issue {
-	out := make(chan *Issue, 1000000)
+func filterIssuesViaDirectives(directives *directiveParser, issues chan *api.Issue) chan *api.Issue {
+	out := make(chan *api.Issue, 1000000)
 	go func() {
 		for issue := range issues {
 			if !directives.IsIgnored(issue) {
@@ -202,11 +204,17 @@ func filterIssuesViaDirectives(directives *directiveParser, issues chan *Issue) 
 	return out
 }
 
-func warnOnUnusedDirective(directives *directiveParser) []*Issue {
-	out := []*Issue{}
+func warnOnUnusedDirective(directives *directiveParser) []*api.Issue {
+	out := []*api.Issue{}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		warning("failed to get working directory %s", err)
+	}
+
 	for path, ranges := range directives.Unmatched() {
 		for _, ignore := range ranges {
-			issue, _ := NewIssue("nolint", config.formatTemplate)
+			issue, _ := api.NewIssue("nolint", config.formatTemplate)
 			issue.Path = path
 			issue.Line = ignore.start
 			issue.Col = ignore.col
@@ -216,3 +224,4 @@ func warnOnUnusedDirective(directives *directiveParser) []*Issue {
 	}
 	return out
 }
+

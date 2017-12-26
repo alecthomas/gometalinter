@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"text/template"
 	"time"
+
+	"github.com/alecthomas/gometalinter/api"
 )
 
 // Config for gometalinter. This can be loaded from a JSON file with --config.
@@ -106,7 +108,7 @@ var sortKeys = []string{"none", "path", "line", "column", "severity", "message",
 
 // Configuration defaults.
 var config = &Config{
-	Format: DefaultIssueFormat,
+	Format: api.DefaultIssueFormat,
 
 	Linters: map[string]StringOrLinterConfig{},
 	Severity: map[string]string{

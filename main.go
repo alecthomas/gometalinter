@@ -14,6 +14,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/alecthomas/gometalinter/api"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
@@ -269,10 +270,10 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	return include, exclude
 }
 
-func outputToConsole(issues chan *Issue) int {
+func outputToConsole(issues chan *api.Issue) int {
 	status := 0
 	for issue := range issues {
-		if config.Errors && issue.Severity != Error {
+		if config.Errors && issue.Severity != api.Error {
 			continue
 		}
 		fmt.Println(issue.String())
@@ -281,11 +282,11 @@ func outputToConsole(issues chan *Issue) int {
 	return status
 }
 
-func outputToJSON(issues chan *Issue) int {
+func outputToJSON(issues chan *api.Issue) int {
 	fmt.Println("[")
 	status := 0
 	for issue := range issues {
-		if config.Errors && issue.Severity != Error {
+		if config.Errors && issue.Severity != api.Error {
 			continue
 		}
 		if status != 0 {

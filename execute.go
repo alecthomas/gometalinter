@@ -15,6 +15,8 @@ import (
 
 	"github.com/google/shlex"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
+
+	"github.com/alecthomas/gometalinter/api"
 )
 
 type Vars map[string]string
@@ -42,7 +44,7 @@ func (v Vars) Replace(s string) string {
 
 type linterState struct {
 	*Linter
-	issues   chan *Issue
+	issues   chan *api.Issue
 	vars     Vars
 	exclude  *regexp.Regexp
 	include  *regexp.Regexp
@@ -65,10 +67,10 @@ func (l *linterState) command() string {
 	return l.vars.Replace(l.Command)
 }
 
-func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *Issue, chan error) {
+func runLinters(linters map[string]*Linter, paths []string, concurrency int, exclude, include *regexp.Regexp) (chan *api.Issue, chan error) {
 	errch := make(chan error, len(linters))
 	concurrencych := make(chan bool, concurrency)
-	incomingIssues := make(chan *Issue, 1000000)
+	incomingIssues := make(chan *api.Issue, 1000000)
 
 	directiveParser := newDirectiveParser()
 	if config.WarnUnmatchedDirective {
@@ -225,7 +227,7 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue, err := NewIssue(state.Linter.Name, config.formatTemplate)
+		issue, err := api.NewIssue(state.Linter.Name, config.formatTemplate)
 		kingpin.FatalIfError(err, "Invalid output format")
 
 		for i, name := range re.SubexpNames() {
@@ -262,7 +264,7 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			issue.Message = vars.Replace(m)
 		}
 		if sev, ok := config.Severity[state.Name]; ok {
-			issue.Severity = Severity(sev)
+			issue.Severity = api.Severity(sev)
 		}
 		if state.exclude != nil && state.exclude.MatchString(issue.String()) {
 			continue
@@ -305,14 +307,14 @@ func resolvePath(path string) string {
 	return path
 }
 
-func maybeSortIssues(issues chan *Issue) chan *Issue {
+func maybeSortIssues(issues chan *api.Issue) chan *api.Issue {
 	if reflect.DeepEqual([]string{"none"}, config.Sort) {
 		return issues
 	}
-	return SortIssueChan(issues, config.Sort)
+	return api.SortIssueChan(issues, config.Sort)
 }
 
-func maybeAggregateIssues(issues chan *Issue) chan *Issue {
+func maybeAggregateIssues(issues chan *api.Issue) chan *api.Issue {
 	if !config.Aggregate {
 		return issues
 	}
