@@ -4,32 +4,34 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/alecthomas/gometalinter/api"
 )
 
 func TestIgnoreRangeMatch(t *testing.T) {
 	var testcases = []struct {
 		doc      string
-		issue    Issue
+		issue    api.Issue
 		linters  []string
 		expected bool
 	}{
 		{
 			doc:   "unmatched line",
-			issue: Issue{Line: 100},
+			issue: api.Issue{Line: 100},
 		},
 		{
 			doc:      "matched line, all linters",
-			issue:    Issue{Line: 5},
+			issue:    api.Issue{Line: 5},
 			expected: true,
 		},
 		{
 			doc:     "matched line, unmatched linter",
-			issue:   Issue{Line: 5},
+			issue:   api.Issue{Line: 5},
 			linters: []string{"vet"},
 		},
 		{
 			doc:      "matched line and linters",
-			issue:    Issue{Line: 20, Linter: "vet"},
+			issue:    api.Issue{Line: 20, Linter: "vet"},
 			linters:  []string{"vet"},
 			expected: true,
 		},

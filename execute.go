@@ -227,8 +227,7 @@ func processOutput(dbg debugFunction, state *linterState, out []byte) {
 			group = append(group, fragment)
 		}
 
-		issue, err := api.NewIssue(state.Linter.Name, config.formatTemplate)
-		kingpin.FatalIfError(err, "Invalid output format")
+		issue := api.NewIssue(state.Linter.Name)
 
 		for i, name := range re.SubexpNames() {
 			if group[i] == nil {

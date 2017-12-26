@@ -1,12 +1,11 @@
 package api
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"path/filepath"
 	"sort"
 	"strings"
-	"text/template"
 )
 
 // DefaultIssueFormat used to print an issue
@@ -28,34 +27,25 @@ type Issue struct {
 	Line       int      `json:"line"`
 	Col        int      `json:"col"`
 	Message    string   `json:"message"`
-	formatTmpl *template.Template
 }
 
 // NewIssue returns a new issue. Returns an error if formatTmpl is not a valid
 // template for an Issue.
-func NewIssue(linter string, formatTmpl *template.Template) (*Issue, error) {
-	issue := &Issue{
-		Line:       1,
-		Severity:   Warning,
-		Linter:     linter,
-		formatTmpl: formatTmpl,
+func NewIssue(linter string) *Issue {
+	return &Issue{
+		Line:     1,
+		Severity: Warning,
+		Linter:   linter,
 	}
-	err := formatTmpl.Execute(ioutil.Discard, issue)
-	return issue, err
 }
 
 func (i *Issue) String() string {
-	if i.formatTmpl == nil {
 		col := ""
 		if i.Col != 0 {
 			col = fmt.Sprintf("%d", i.Col)
 		}
 		return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
 	}
-	buf := new(bytes.Buffer)
-	_ = i.formatTmpl.Execute(buf, i)
-	return buf.String()
-}
 
 type sortedIssues struct {
 	issues []*Issue

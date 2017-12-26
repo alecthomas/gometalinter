@@ -220,7 +220,7 @@ Severity override map (default is "warning"):
 	} else if config.Checkstyle {
 		status |= outputToCheckstyle(issues)
 	} else {
-		status |= outputToConsole(issues)
+		status |= outputToConsole(config.formatTemplate, issues)
 	}
 	for err := range errch {
 		warning("%s", err)
@@ -270,13 +270,19 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	return include, exclude
 }
 
-func outputToConsole(issues chan *api.Issue) int {
+func outputToConsole(template *template.Template, issues chan *api.Issue) int {
 	status := 0
 	for issue := range issues {
 		if config.Errors && issue.Severity != api.Error {
 			continue
 		}
-		fmt.Println(issue.String())
+		if template == nil {
+			fmt.Println(issue.String())
+		} else {
+			buf := new(bytes.Buffer)
+			_ = template.Execute(buf, issue)
+			fmt.Println(buf.String())
+		}
 		status = 1
 	}
 	return status
