@@ -33,13 +33,14 @@ func outputToCheckstyle(issues chan *Issue) int {
 	}
 	status := 0
 	for issue := range issues {
-		path := issue.Path.Relative()
-		if lastFile != nil && lastFile.Name != path {
+		if lastFile != nil && lastFile.Name != issue.Path {
 			out.Files = append(out.Files, lastFile)
 			lastFile = nil
 		}
 		if lastFile == nil {
-			lastFile = &checkstyleFile{Name: path}
+			lastFile = &checkstyleFile{
+				Name: issue.Path,
+			}
 		}
 
 		if config.Errors && issue.Severity != Error {
