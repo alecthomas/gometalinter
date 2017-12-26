@@ -1,9 +1,7 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -21,16 +19,15 @@ const (
 )
 
 type Issue struct {
-	Linter     string   `json:"linter"`
-	Severity   Severity `json:"severity"`
-	Path       string   `json:"path"`
-	Line       int      `json:"line"`
-	Col        int      `json:"col"`
-	Message    string   `json:"message"`
+	Linter   string   `json:"linter"`
+	Severity Severity `json:"severity"`
+	Path     string   `json:"path"`
+	Line     int      `json:"line"`
+	Col      int      `json:"col"`
+	Message  string   `json:"message"`
 }
 
-// NewIssue returns a new issue. Returns an error if formatTmpl is not a valid
-// template for an Issue.
+// NewIssue returns a new issue.
 func NewIssue(linter string) *Issue {
 	return &Issue{
 		Line:     1,
@@ -40,12 +37,12 @@ func NewIssue(linter string) *Issue {
 }
 
 func (i *Issue) String() string {
-		col := ""
-		if i.Col != 0 {
-			col = fmt.Sprintf("%d", i.Col)
-		}
-		return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
+	col := ""
+	if i.Col != 0 {
+		col = fmt.Sprintf("%d", i.Col)
 	}
+	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
+}
 
 type sortedIssues struct {
 	issues []*Issue

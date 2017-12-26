@@ -206,22 +206,17 @@ func filterIssuesViaDirectives(directives *directiveParser, issues chan *api.Iss
 
 func warnOnUnusedDirective(directives *directiveParser) []*api.Issue {
 	out := []*api.Issue{}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		warning("failed to get working directory %s", err)
-	}
-
 	for path, ranges := range directives.Unmatched() {
 		for _, ignore := range ranges {
-			issue, _ := api.NewIssue("nolint", config.formatTemplate)
-			issue.Path = path
-			issue.Line = ignore.start
-			issue.Col = ignore.col
-			issue.Message = "nolint directive did not match any issue"
+			issue := &api.Issue{
+				Linter:  "nolint",
+				Path:    path,
+				Line:    ignore.start,
+				Col:     ignore.col,
+				Message: "nolint directive did not match any issue",
+			}
 			out = append(out, issue)
 		}
 	}
 	return out
 }
-
