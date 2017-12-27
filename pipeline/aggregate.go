@@ -1,4 +1,4 @@
-package main
+package pipeline
 
 import (
 	"sort"
@@ -18,13 +18,14 @@ type multiIssue struct {
 	linterNames []string
 }
 
-// AggregateIssueChan reads issues from a channel, aggregates issues which have
+// Aggregate reads issues from a channel, aggregates issues which have
 // the same file, line, vol, and message, and returns aggregated issues on
 // a new channel.
-func AggregateIssueChan(issues chan *api.Issue) chan *api.Issue {
-	out := make(chan *api.Issue, 1000000)
+func Aggregate(issues chan *api.Issue) chan *api.Issue {
+	out := make(chan *api.Issue, 1)
 	issueMap := make(map[issueKey]*multiIssue)
 	go func() {
+		defer close(out)
 		for issue := range issues {
 			key := issueKey{
 				path:    issue.Path,
@@ -47,7 +48,6 @@ func AggregateIssueChan(issues chan *api.Issue) chan *api.Issue {
 			issue.Linter = strings.Join(multi.linterNames, ", ")
 			out <- issue
 		}
-		close(out)
 	}()
 	return out
 }

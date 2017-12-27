@@ -17,6 +17,7 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 
 	"github.com/alecthomas/gometalinter/api"
+	"github.com/alecthomas/gometalinter/pipeline"
 )
 
 type Vars map[string]string
@@ -310,12 +311,12 @@ func maybeSortIssues(issues chan *api.Issue) chan *api.Issue {
 	if reflect.DeepEqual([]string{"none"}, config.Sort) {
 		return issues
 	}
-	return api.SortIssueChan(issues, config.Sort)
+	return pipeline.Sort(issues, config.Sort)
 }
 
 func maybeAggregateIssues(issues chan *api.Issue) chan *api.Issue {
 	if !config.Aggregate {
 		return issues
 	}
-	return AggregateIssueChan(issues)
+	return pipeline.Aggregate(issues)
 }

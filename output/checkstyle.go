@@ -1,10 +1,9 @@
-package main
+package output
 
 import (
 	"encoding/xml"
 	"fmt"
-
-	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
+	"io"
 
 	"github.com/alecthomas/gometalinter/api"
 )
@@ -28,12 +27,12 @@ type checkstyleError struct {
 	Source   string `xml:"source,attr"`
 }
 
-func outputToCheckstyle(issues chan *api.Issue) int {
+// Checkstyle writes issues in checkstyle XML format.
+func Checkstyle(w io.Writer, issues chan *api.Issue) error {
 	var lastFile *checkstyleFile
 	out := checkstyleOutput{
 		Version: "5.0",
 	}
-	status := 0
 	for issue := range issues {
 		if lastFile != nil && lastFile.Name != issue.Path {
 			out.Files = append(out.Files, lastFile)
@@ -45,10 +44,6 @@ func outputToCheckstyle(issues chan *api.Issue) int {
 			}
 		}
 
-		if config.Errors && issue.Severity != api.Error {
-			continue
-		}
-
 		lastFile.Errors = append(lastFile.Errors, &checkstyleError{
 			Column:   issue.Col,
 			Line:     issue.Line,
@@ -56,13 +51,15 @@ func outputToCheckstyle(issues chan *api.Issue) int {
 			Severity: string(issue.Severity),
 			Source:   issue.Linter,
 		})
-		status = 1
 	}
 	if lastFile != nil {
 		out.Files = append(out.Files, lastFile)
 	}
-	d, err := xml.Marshal(&out)
-	kingpin.FatalIfError(err, "")
-	fmt.Printf("%s%s\n", xml.Header, d)
-	return status
+	fmt.Fprint(w, xml.Header)
+	err := xml.NewEncoder(w).Encode(&out)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(w)
+	return nil
 }

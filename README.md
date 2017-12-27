@@ -6,6 +6,8 @@
 - [Editor integration](#editor-integration)
 - [Supported linters](#supported-linters)
 - [Configuration file](#configuration-file)
+    - [`Format` key](#format-key)
+  - [Adding Custom linters](#adding-custom-linters)
 - [Installing](#installing)
 - [Comment directives](#comment-directives)
 - [Quickstart](#quickstart)
@@ -274,10 +276,9 @@ gometalinter sets two bits of the exit status to indicate different issues:
 
 | Bit | Meaning
 |-----|----------
-| 0   | A linter generated an issue.
-| 1   | An underlying error occurred; eg. a linter failed to execute. In this situation a warning will also be displayed.
-
-eg. linter only = 1, underlying only = 2, linter + underlying = 3
+| 0   | At least one warning was generated.
+| 1   | At least one error was generated.
+| 2   | An underlying error occurred; eg. a linter failed to execute. In this situation a warning will also be displayed.
 
 ### What's the best way to use `gometalinter` in CI?
 

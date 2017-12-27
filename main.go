@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/user"
@@ -14,9 +13,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/alecthomas/gometalinter/pipeline"
+
+	"github.com/alecthomas/gometalinter/output"
 	"github.com/kisielk/gotool"
 
-	"github.com/alecthomas/gometalinter/api"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
@@ -216,19 +217,25 @@ Severity override map (default is "warning"):
 	kingpin.FatalIfError(err, "")
 
 	issues, errch := runLinters(linters, paths, config.Concurrency, exclude, include)
+	issueStatus, issues := pipeline.Status(issues)
 	status := 0
 	if config.JSON {
-		status |= outputToJSON(issues)
+		err = output.JSON(os.Stdout, issues)
 	} else if config.Checkstyle {
-		status |= outputToCheckstyle(issues)
+		err = output.Checkstyle(os.Stdout, issues)
 	} else {
-		status |= outputToConsole(config.formatTemplate, issues)
+		err = output.Text(os.Stdout, config.formatTemplate, issues)
+	}
+	if err != nil {
+		warning("%s", err)
+		status |= 4
 	}
 	for err := range errch {
 		warning("%s", err)
-		status |= 2
+		status |= 4
 	}
 	elapsed := time.Since(start)
+	status |= <-issueStatus
 	debug("total elapsed time %s", elapsed)
 	os.Exit(status)
 }
@@ -270,43 +277,6 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 
 	runtime.GOMAXPROCS(config.Concurrency)
 	return include, exclude
-}
-
-func outputToConsole(template *template.Template, issues chan *api.Issue) int {
-	status := 0
-	for issue := range issues {
-		if config.Errors && issue.Severity != api.Error {
-			continue
-		}
-		if template == nil {
-			fmt.Println(issue.String())
-		} else {
-			buf := new(bytes.Buffer)
-			_ = template.Execute(buf, issue)
-			fmt.Println(buf.String())
-		}
-		status = 1
-	}
-	return status
-}
-
-func outputToJSON(issues chan *api.Issue) int {
-	fmt.Println("[")
-	status := 0
-	for issue := range issues {
-		if config.Errors && issue.Severity != api.Error {
-			continue
-		}
-		if status != 0 {
-			fmt.Printf(",\n")
-		}
-		d, err := json.Marshal(issue)
-		kingpin.FatalIfError(err, "")
-		fmt.Printf("  %s", d)
-		status = 1
-	}
-	fmt.Printf("\n]\n")
-	return status
 }
 
 func resolvePaths(paths, skip []string) []string {
