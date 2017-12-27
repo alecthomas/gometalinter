@@ -14,6 +14,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kisielk/gotool"
+
 	"github.com/alecthomas/gometalinter/api"
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 )
@@ -49,7 +51,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder(fmt.Sprintf("%d", runtime.NumCPU())).Short('j').IntVar(&config.Concurrency)
 	app.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
 	app.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
-	app.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
+	app.Flag("skip", "Skip directories with this name.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
 	app.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").BoolVar(&config.Vendor)
 	app.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").PlaceHolder("10").IntVar(&config.Cyclo)
 	app.Flag("line-length", "Report lines longer than N (using lll).").PlaceHolder("80").IntVar(&config.LineLength)
@@ -314,32 +316,12 @@ func resolvePaths(paths, skip []string) []string {
 
 	skipPath := newPathFilter(skip)
 	dirs := newStringSet()
-	for _, path := range paths {
-		if strings.HasSuffix(path, "/...") {
-			root := filepath.Dir(path)
-			_ = filepath.Walk(root, func(p string, i os.FileInfo, err error) error {
-				if err != nil {
-					warning("invalid path %q: %s", p, err)
-					return err
-				}
-
-				skip := skipPath(p)
-				switch {
-				case i.IsDir() && skip:
-					return filepath.SkipDir
-				case !i.IsDir() && !skip && strings.HasSuffix(p, ".go"):
-					dirs.add(filepath.Clean(filepath.Dir(p)))
-				}
-				return nil
-			})
-		} else {
-			dirs.add(filepath.Clean(path))
+	for _, dir := range gotool.ImportPaths(paths) {
+		if !skipPath(dir) {
+			dirs.add(relativePackagePath(dir))
 		}
 	}
-	out := make([]string, 0, dirs.size())
-	for _, d := range dirs.asSlice() {
-		out = append(out, relativePackagePath(d))
-	}
+	out := dirs.asSlice()
 	sort.Strings(out)
 	for _, d := range out {
 		debug("linting path %s", d)

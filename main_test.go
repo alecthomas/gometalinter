@@ -45,13 +45,6 @@ func TestResolvePathsNoPaths(t *testing.T) {
 	assert.Equal(t, []string{"."}, paths)
 }
 
-func TestResolvePathsNoExpands(t *testing.T) {
-	// Non-expanded paths should not be filtered by the skip path list
-	paths := resolvePaths([]string{".", "foo", "foo/bar"}, []string{"foo/bar"})
-	expected := []string{".", "./foo", "./foo/bar"}
-	assert.Equal(t, expected, paths)
-}
-
 func TestResolvePathsWithExpands(t *testing.T) {
 	tmpdir, cleanup := setupTempDir(t)
 	defer cleanup()
@@ -71,7 +64,7 @@ func TestResolvePathsWithExpands(t *testing.T) {
 	paths := resolvePaths([]string{"./...", "foo", "duplicate"}, filterPaths)
 
 	expected := []string{
-		".",
+		"./.",
 		"./duplicate",
 		"./foo",
 		"./include",

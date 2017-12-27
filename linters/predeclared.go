@@ -13,7 +13,7 @@ import (
 var _ api.ASTLinter = &PredeclaredLinter{}
 
 func init() {
-	Register(&PredeclaredLinter{Config{}})
+	Register(&PredeclaredLinter{})
 }
 
 type PredeclaredConfig struct {
@@ -46,7 +46,7 @@ func (p *PredeclaredLinter) Config(unmarshal api.ConfigUnmarshaller) error {
 func (p *PredeclaredLinter) LintAST(fset *token.FileSet, files []*ast.File) ([]*api.Issue, error) {
 	issues := []*api.Issue{}
 	for _, file := range files {
-		pissues := predeclared.ProcessFile(p.config, fset, file)
+		pissues := predeclared.ProcessFile(&p.config, fset, file)
 		for _, pissue := range pissues {
 			pos := pissue.Pos()
 			issue := &api.Issue{
