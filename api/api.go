@@ -20,6 +20,31 @@ type Linter interface {
 	Config(unmarshal ConfigUnmarshaller) error
 }
 
+// DirectoryLinter lints by directory.
+type DirectoryLinter interface {
+	Linter
+	// LintDirectories lints a set of directories.
+	LintDirectories(dirs []string) ([]*Issue, error)
+}
+
+// PackageLinter lints by package.
+//
+// The lint runner will attempt to resolve all paths to packages relative to $GOPATH.
+type PackageLinter interface {
+	Linter
+	// LintPackage lints a set of packages.
+	LintPackage(packages []string) ([]*Issue, error)
+}
+
+// FileLinter lints individual files.
+type FileLinter interface {
+	Linter
+	// LintFiles lints a set of files grouped by directory.
+	//
+	// For linters that can lint individual files, simply flatten the slice of slices.
+	LintFiles(files [][]string) ([]*Issue, error)
+}
+
 // ASTLinter is a Linter that only needs an AST to lint.
 type ASTLinter interface {
 	Linter
