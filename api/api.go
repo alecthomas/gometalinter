@@ -12,12 +12,10 @@ type ConfigUnmarshaller func(v interface{}) error
 // Concrete implementations should implement this interface AND one of the interfaces below.
 type Linter interface {
 	Name() string
-	// Unmarshal TOML config for this linter.
+	// Return configuration struct (or nil) for this linter.
 	//
-	// Can be as simple as:
-	//
-	//     return unmarshal(&l.config)
-	Config(unmarshal ConfigUnmarshaller) error
+	// The TOML section for this linter will be loaded into the struct.
+	Config() interface{}
 }
 
 // DirectoryLinter lints by directory.

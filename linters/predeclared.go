@@ -18,35 +18,22 @@ func init() {
 
 type PredeclaredConfig struct {
 	// Include method names and field names while checking
-	Qualified bool
+	Qualified bool `toml:"qualified"`
 	// List of predeclared identifiers to not report on.
-	IgnoredIdents []string
+	IgnoredIdents []string `toml:"ignored_idents"`
 }
 
 type PredeclaredLinter struct {
-	config predeclared.Config
+	config PredeclaredConfig
 }
 
-func (p *PredeclaredLinter) Name() string { return "predeclared" }
-func (p *PredeclaredLinter) Config(unmarshal api.ConfigUnmarshaller) error {
-	config := PredeclaredConfig{}
-	err := unmarshal(&config)
-	if err != nil {
-		return err
-	}
-	p.config = predeclared.Config{
-		Qualified:     config.Qualified,
-		IgnoredIdents: map[string]bool{},
-	}
-	for _, ident := range config.IgnoredIdents {
-		p.config.IgnoredIdents[ident] = true
-	}
-	return nil
-}
+func (p *PredeclaredLinter) Name() string        { return "predeclared" }
+func (p *PredeclaredLinter) Config() interface{} { return &p.config }
 func (p *PredeclaredLinter) LintAST(fset *token.FileSet, files []*ast.File) ([]*api.Issue, error) {
+	config := p.makeConfig()
 	issues := []*api.Issue{}
 	for _, file := range files {
-		pissues := predeclared.ProcessFile(&p.config, fset, file)
+		pissues := predeclared.ProcessFile(config, fset, file)
 		for _, pissue := range pissues {
 			pos := pissue.Pos()
 			issue := &api.Issue{
@@ -61,4 +48,15 @@ func (p *PredeclaredLinter) LintAST(fset *token.FileSet, files []*ast.File) ([]*
 		}
 	}
 	return issues, nil
+}
+
+func (p *PredeclaredLinter) makeConfig() *predeclared.Config {
+	config := &predeclared.Config{
+		Qualified:     p.config.Qualified,
+		IgnoredIdents: map[string]bool{},
+	}
+	for _, id := range p.config.IgnoredIdents {
+		config.IgnoredIdents[id] = true
+	}
+	return config
 }
