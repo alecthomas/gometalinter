@@ -18,6 +18,7 @@ import (
 
 	"github.com/alecthomas/gometalinter/api"
 	"github.com/alecthomas/gometalinter/pipeline"
+	. "github.com/alecthomas/gometalinter/util" // nolint
 )
 
 type Vars map[string]string
@@ -147,7 +148,7 @@ func executeLinter(id int, state *linterState, args []string) error {
 	}
 
 	start := time.Now()
-	dbg := namespacedDebug(fmt.Sprintf("[%s.%d]: ", state.Name, id))
+	dbg := NamespacedDebug(fmt.Sprintf("[%s.%d]: ", state.Name, id))
 	dbg("executing %s", strings.Join(args, " "))
 	buf := bytes.NewBuffer(nil)
 	command := args[0]
@@ -174,7 +175,7 @@ func executeLinter(id int, state *linterState, args []string) error {
 			state.Name)
 		kerr := cmd.Process.Kill()
 		if kerr != nil {
-			warning("failed to kill %s: %s", state.Name, kerr)
+			Warning("failed to kill %s: %s", state.Name, kerr)
 		}
 		return err
 	}
@@ -205,14 +206,14 @@ func parseCommand(command string) ([]string, error) {
 }
 
 // nolint: gocyclo
-func processOutput(dbg debugFunction, state *linterState, out []byte) {
+func processOutput(dbg DebugFunction, state *linterState, out []byte) {
 	re := state.regex
 	all := re.FindAllSubmatchIndex(out, -1)
 	dbg("%s hits %d: %s", state.Name, len(all), state.Pattern)
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		warning("failed to get working directory %s", err)
+		Warning("failed to get working directory %s", err)
 	}
 
 	// Create a local copy of vars so they can be modified by the linter output
@@ -283,7 +284,7 @@ func relativePath(root, path string) string {
 	var err error
 	path, err = filepath.Rel(root, path)
 	if err != nil {
-		warning("failed to make %s a relative path: %s", fallback, err)
+		Warning("failed to make %s a relative path: %s", fallback, err)
 		return fallback
 	}
 	return path
@@ -295,13 +296,13 @@ func resolvePath(path string) string {
 	if !filepath.IsAbs(path) {
 		path, err = filepath.Abs(path)
 		if err != nil {
-			warning("failed to make %s an absolute path: %s", fallback, err)
+			Warning("failed to make %s an absolute path: %s", fallback, err)
 			return fallback
 		}
 	}
 	path, err = filepath.EvalSymlinks(path)
 	if err != nil {
-		warning("failed to resolve symlinks in %s: %s", fallback, err)
+		Warning("failed to resolve symlinks in %s: %s", fallback, err)
 		return fallback
 	}
 	return path

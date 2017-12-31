@@ -3,13 +3,12 @@ package config
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/alecthomas/gometalinter/api"
 )
 
 func TestConfig(t *testing.T) {
@@ -21,7 +20,9 @@ func TestConfig(t *testing.T) {
 		{`output = "json"`, "Output", OutputJSON},
 		{`output = "invalid"`, "Output", errors.New("InvalidEnum")},
 		{`deadline = "5m30s"`, "Deadline", Duration(time.Minute*5 + time.Second*30)},
-		{``, "Format", api.DefaultIssueFormat}, // Test that defaults do not get overwritten.
+		{``, "Format", Template{DefaultIssueFormat}}, // Test that defaults do not get overwritten.
+		{`exclude = ["foo"]`, "Exclude", []Regexp{{regexp.MustCompile("foo")}}},
+		{`exclude = ["*"]`, "Exclude", errors.New("InvalidRegex")},
 		{`fast = true`, "Fast", true},
 	}
 	for _, test := range tests {

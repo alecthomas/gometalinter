@@ -37,10 +37,7 @@ LINTERS="
   github.com/walle/lll/cmd/lll
   golang.org/x/tools/cmd/goimports
   golang.org/x/tools/cmd/gotype
-  honnef.co/go/tools/cmd/gosimple
   honnef.co/go/tools/cmd/megacheck
-  honnef.co/go/tools/cmd/staticcheck
-  honnef.co/go/tools/cmd/unused
   mvdan.cc/interfacer
   mvdan.cc/unparam
 "

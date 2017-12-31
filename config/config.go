@@ -6,12 +6,18 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/BurntSushi/toml"
+
 	"github.com/alecthomas/gometalinter/api"
 )
+
+// DefaultIssueFormat used to print an issue.
+var DefaultIssueFormat = template.Must(template.New("output").Parse("{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"))
 
 type Duration time.Duration
 
@@ -25,10 +31,9 @@ type Regexp struct {
 	*regexp.Regexp
 }
 
-func (r *Regexp) UnmarshalText(text []byte) error {
-	re, err := regexp.Compile(string(text))
-	r.Regexp = re
-	return err
+func (r *Regexp) UnmarshalText(text []byte) (err error) {
+	r.Regexp, err = regexp.Compile(string(text))
+	return
 }
 
 type OutputFormat int
@@ -53,12 +58,77 @@ func (o *OutputFormat) UnmarshalText(text []byte) error {
 	return nil
 }
 
+type Template struct {
+	*template.Template
+}
+
+func (t *Template) UnmarshalText(text []byte) (err error) {
+	t.Template, err = template.New("output").Parse(string(text))
+	return
+}
+
+// PartitionStrategy is the directory/file partitioning strategy for external linters.
+type PartitionStrategy int
+
+const (
+	PartitionByDirectories PartitionStrategy = iota
+	PartitionByFiles
+	PartitionByPackages
+	PartitionByFilesByPackage
+	PartitionBySingleDirectory
+)
+
+func (p *PartitionStrategy) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "directories":
+		*p = PartitionByDirectories
+	case "files":
+		*p = PartitionByFiles
+	case "packages":
+		*p = PartitionByPackages
+	case "files-by-package":
+		*p = PartitionByFilesByPackage
+	case "single-directory":
+		*p = PartitionBySingleDirectory
+	default:
+		return fmt.Errorf("unknown partition strategy %q", string(text))
+	}
+	return nil
+}
+
+// ExternalLinterDefinition defines how an external linter is to be executed.
+//
+// External linters are external commands executed by gometalinter.
+type ExternalLinterDefinition struct {
+	// Name of linter.
+	Name string `toml:"name"`
+	// Go package to install linter command from.
+	InstallFrom string `toml:"install_from"`
+	// Command to run the linter. Linter configuration variables may be referenced in the template.
+	Command Template `toml:"command"`
+	// Regex used to match lines from the linter's output.
+	Pattern Regexp `toml:"pattern"`
+	// Partitioning strategy used by this linter.
+	PartitionStrategy PartitionStrategy `toml:"partition"`
+	// If true this linter will be enabled when fast mode is used.
+	IsFast bool `toml:"is_fast"`
+	// Disable this linter by default.
+	Disable bool `toml:"disable"`
+	// Override the default message from the linter with this text template.
+	//
+	// Linter configuration variables and named regex captures from the line
+	// pattern may be referenced in this template.
+	MessageOverride Template `toml:"message_override"`
+	// Severity of the linter if messages do not contain a severity. Defaults to Warning.
+	Severity api.Severity `toml:"severity"`
+}
+
 // Config for gometalinter.
 //
 // This can be loaded from a TOML file with --config.
 type Config struct { // nolint: maligned
 	// Formatting string for text output.
-	Format string `toml:"format"`
+	Format Template `toml:"format"`
 	// Only run "fast" linters.
 	Fast bool `toml:"fast"`
 	// Set maximum number of linters to run in parallel.
@@ -91,6 +161,9 @@ type Config struct { // nolint: maligned
 	// Each linter can have its own configuration in a section of the form [linter.<linter>].
 	Linters map[string]toml.Primitive `toml:"linter"`
 
+	// Define an external linter.
+	Define map[string]ExternalLinterDefinition `toml:"define"`
+
 	md toml.MetaData
 }
 
@@ -102,7 +175,10 @@ func (c *Config) UnmarshalLinterConfig(linter string, v interface{}) error {
 // Read configuration from a reader.
 func Read(r io.Reader) (*Config, error) {
 	config := &Config{
-		Format: api.DefaultIssueFormat,
+		Format:      Template{DefaultIssueFormat},
+		Concurrency: runtime.NumCPU(),
+		Sort:        []string{"none"},
+		Deadline:    Duration(time.Second * 30),
 	}
 	md, err := toml.DecodeReader(r, config)
 	config.md = md

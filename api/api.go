@@ -5,7 +5,7 @@ import (
 	"go/token"
 )
 
-type ConfigUnmarshaller func(v interface{}) error
+type LinterFactory func() Linter
 
 // Linter base interface.
 //
@@ -14,7 +14,7 @@ type Linter interface {
 	Name() string
 	// Return configuration struct (or nil) for this linter.
 	//
-	// The TOML section for this linter will be loaded into the struct.
+	// The TOML configuration section for this linter will be will be deserialised into this value.
 	Config() interface{}
 }
 
@@ -39,12 +39,12 @@ type FileLinter interface {
 	Linter
 	// LintFiles lints a set of files grouped by directory.
 	//
-	// For linters that can lint individual files, simply flatten the slice of slices.
-	LintFiles(files [][]string) ([]*Issue, error)
+	// For linters that can lint individual files, simply flatten the map of slices.
+	LintFiles(files map[string][]string) ([]*Issue, error)
 }
 
 // ASTLinter is a Linter that only needs an AST to lint.
 type ASTLinter interface {
 	Linter
-	LintAST(fset *token.FileSet, files []*ast.File) ([]*Issue, error)
+	LintAST(fset *token.FileSet, files map[string]*ast.File) ([]*Issue, error)
 }

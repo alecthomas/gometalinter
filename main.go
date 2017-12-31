@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -13,12 +12,12 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/alecthomas/gometalinter/pipeline"
+	"github.com/kisielk/gotool"
+	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
 
 	"github.com/alecthomas/gometalinter/output"
-	"github.com/kisielk/gotool"
-
-	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
+	"github.com/alecthomas/gometalinter/pipeline"
+	. "github.com/alecthomas/gometalinter/util" // nolint
 )
 
 var (
@@ -32,6 +31,7 @@ var (
 )
 
 func setupFlags(app *kingpin.Application) {
+	app.Flag("help-man", "Show help as a man page.").Action(showManPage).Bool()
 	app.Flag("config", "Load JSON configuration from file.").Envar("GOMETALINTER_CONFIG").Action(loadConfig).String()
 	app.Flag("no-config", "Disable automatic loading of config file.").Bool()
 	app.Flag("disable", "Disable previously enabled linters.").PlaceHolder("LINTER").Short('D').Action(disableAction).Strings()
@@ -42,18 +42,12 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("disable-all", "Disable all linters.").Action(disableAllAction).Bool()
 	app.Flag("enable-all", "Enable all linters.").Action(enableAllAction).Bool()
 	app.Flag("format", "Output format.").PlaceHolder(config.Format).StringVar(&config.Format)
-	app.Flag("vendored-linters", "Use vendored linters (recommended) (DEPRECATED - use binary packages).").BoolVar(&config.VendoredLinters)
 	app.Flag("fast", "Only run fast linters.").BoolVar(&config.Fast)
-	app.Flag("install", "Attempt to install all known linters (DEPRECATED - use binary packages).").Short('i').BoolVar(&config.Install)
-	app.Flag("update", "Pass -u to go tool when installing (DEPRECATED - use binary packages).").Short('u').BoolVar(&config.Update)
-	app.Flag("force", "Pass -f to go tool when installing (DEPRECATED - use binary packages).").Short('f').BoolVar(&config.Force)
-	app.Flag("download-only", "Pass -d to go tool when installing (DEPRECATED - use binary packages).").BoolVar(&config.DownloadOnly)
 	app.Flag("debug", "Display messages for failed linters, etc.").Short('d').BoolVar(&config.Debug)
 	app.Flag("concurrency", "Number of concurrent linters to run.").PlaceHolder(fmt.Sprintf("%d", runtime.NumCPU())).Short('j').IntVar(&config.Concurrency)
 	app.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
 	app.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
 	app.Flag("skip", "Skip directories with this name.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
-	app.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").BoolVar(&config.Vendor)
 	app.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").PlaceHolder("10").IntVar(&config.Cyclo)
 	app.Flag("line-length", "Report lines longer than N (using lll).").PlaceHolder("80").IntVar(&config.LineLength)
 	app.Flag("misspell-locale", "Specify locale to use (using misspell).").PlaceHolder("").StringVar(&config.MisspellLocale)
@@ -71,6 +65,12 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
 	app.Flag("warn-unmatched-nolint", "Warn if a nolint directive is not matched with an issue.").BoolVar(&config.WarnUnmatchedDirective)
 	app.GetFlag("help").Short('h')
+}
+
+func showManPage(app *kingpin.Application, element *kingpin.ParseElement, context *kingpin.ParseContext) error {
+	app.UsageTemplate(kingpin.ManPageTemplate).Usage(nil)
+	os.Exit(0)
+	return nil
 }
 
 func cliLinterOverrides(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
@@ -141,24 +141,6 @@ func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ct
 	return nil
 }
 
-type debugFunction func(format string, args ...interface{})
-
-func debug(format string, args ...interface{}) {
-	if config.Debug {
-		fmt.Fprintf(os.Stderr, "DEBUG: "+format+"\n", args...)
-	}
-}
-
-func namespacedDebug(prefix string) debugFunction {
-	return func(format string, args ...interface{}) {
-		debug(prefix+format, args...)
-	}
-}
-
-func warning(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "WARNING: "+format+"\n", args...)
-}
-
 func formatLinters() string {
 	w := bytes.NewBuffer(nil)
 	for _, linter := range getDefaultLinters() {
@@ -198,13 +180,7 @@ Severity override map (default is "warning"):
 `, formatLinters(), formatSeverity())
 	kingpin.Parse()
 
-	if config.Install {
-		if config.VendoredLinters {
-			configureEnvironmentForInstall()
-		}
-		installLinters()
-		return
-	}
+	Debugging(config.Debug)
 
 	configureEnvironment()
 	include, exclude := processConfig(config)
@@ -227,16 +203,16 @@ Severity override map (default is "warning"):
 		err = output.Text(os.Stdout, config.formatTemplate, issues)
 	}
 	if err != nil {
-		warning("%s", err)
+		Warning("%s", err)
 		status |= 4
 	}
 	for err := range errch {
-		warning("%s", err)
+		Warning("%s", err)
 		status |= 4
 	}
 	elapsed := time.Since(start)
 	status |= <-issueStatus
-	debug("total elapsed time %s", elapsed)
+	Debug("total elapsed time %s", elapsed)
 	os.Exit(status)
 }
 
@@ -258,15 +234,6 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 		config.Sort = []string{"path"}
 	}
 
-	// PlaceHolder to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
-	// TODO(alec): This will probably need to be enabled by default at a later time.
-	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || config.Vendor {
-		if err := os.Setenv("GO15VENDOREXPERIMENT", "1"); err != nil {
-			warning("setenv GO15VENDOREXPERIMENT: %s", err)
-		}
-		config.Skip = append(config.Skip, "vendor")
-		config.Vendor = true
-	}
 	if len(config.Exclude) > 0 {
 		exclude = regexp.MustCompile(strings.Join(config.Exclude, "|"))
 	}
@@ -294,7 +261,7 @@ func resolvePaths(paths, skip []string) []string {
 	out := dirs.asSlice()
 	sort.Strings(out)
 	for _, d := range out {
-		debug("linting path %s", d)
+		Debug("linting path %s", d)
 	}
 	return out
 }
@@ -324,7 +291,6 @@ func relativePackagePath(dir string) string {
 
 func lintersFromConfig(config *Config) map[string]*Linter {
 	out := map[string]*Linter{}
-	config.Enable = replaceWithMegacheck(config.Enable, config.EnableAll)
 	for _, name := range config.Enable {
 		linter := getLinterByName(name, LinterConfig(config.Linters[name]))
 		if config.Fast && !linter.IsFast {
@@ -336,40 +302,6 @@ func lintersFromConfig(config *Config) map[string]*Linter {
 		delete(out, linter)
 	}
 	return out
-}
-
-// replaceWithMegacheck checks enabled linters if they duplicate megacheck and
-// returns a either a revised list removing those and adding megacheck or an
-// unchanged slice. Emits a warning if linters were removed and swapped with
-// megacheck.
-func replaceWithMegacheck(enabled []string, enableAll bool) []string {
-	var (
-		staticcheck,
-		gosimple,
-		unused bool
-		revised []string
-	)
-	for _, linter := range enabled {
-		switch linter {
-		case "staticcheck":
-			staticcheck = true
-		case "gosimple":
-			gosimple = true
-		case "unused":
-			unused = true
-		case "megacheck":
-			// Don't add to revised slice, we'll add it later
-		default:
-			revised = append(revised, linter)
-		}
-	}
-	if staticcheck && gosimple && unused {
-		if !enableAll {
-			warning("staticcheck, gosimple and unused are all set, using megacheck instead")
-		}
-		return append(revised, "megacheck")
-	}
-	return enabled
 }
 
 func findVendoredLinters() string {
@@ -384,21 +316,6 @@ func findVendoredLinters() string {
 		}
 	}
 	return ""
-}
-
-// Go 1.8 compatible GOPATH.
-func getGoPath() string {
-	path := os.Getenv("GOPATH")
-	if path == "" {
-		user, err := user.Current()
-		kingpin.FatalIfError(err, "")
-		path = filepath.Join(user.HomeDir, "go")
-	}
-	return path
-}
-
-func getGoPathList() []string {
-	return strings.Split(getGoPath(), string(os.PathListSeparator))
 }
 
 // addPath appends path to paths if path does not already exist in paths. Returns
@@ -431,44 +348,14 @@ func addGoBinsToPath(gopaths []string) []string {
 	return paths
 }
 
-// configureEnvironmentForInstall sets GOPATH and GOBIN so that vendored linters
-// can be installed
-func configureEnvironmentForInstall() {
-	if config.Update {
-		warning(`Linters are now vendored by default, --update ignored. The original
-behaviour can be re-enabled with --no-vendored-linters.
-
-To request an update for a vendored linter file an issue at:
-https://github.com/alecthomas/gometalinter/issues/new
-`)
-	}
-	gopaths := getGoPathList()
-	vendorRoot := findVendoredLinters()
-	if vendorRoot == "" {
-		kingpin.Fatalf("could not find vendored linters in GOPATH=%q", getGoPath())
-	}
-	debug("found vendored linters at %s, updating environment", vendorRoot)
-
-	gobin := os.Getenv("GOBIN")
-	if gobin == "" {
-		gobin = filepath.Join(gopaths[0], "bin")
-	}
-	setEnv("GOBIN", gobin)
-
-	// "go install" panics when one GOPATH element is beneath another, so set
-	// GOPATH to the vendor root
-	setEnv("GOPATH", vendorRoot)
-	debugPrintEnv()
-}
-
 func setEnv(key string, value string) {
 	if err := os.Setenv(key, value); err != nil {
-		warning("setenv %s: %s", key, err)
+		Warning("setenv %s: %s", key, err)
 	}
 }
 
 func debugPrintEnv() {
-	debug("PATH=%s", os.Getenv("PATH"))
-	debug("GOPATH=%s", os.Getenv("GOPATH"))
-	debug("GOBIN=%s", os.Getenv("GOBIN"))
+	Debug("PATH=%s", os.Getenv("PATH"))
+	Debug("GOPATH=%s", os.Getenv("GOPATH"))
+	Debug("GOBIN=%s", os.Getenv("GOBIN"))
 }

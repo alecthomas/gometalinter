@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// DefaultIssueFormat used to print an issue
-const DefaultIssueFormat = "{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"
-
 // Severity of linter message
 type Severity string
 
@@ -19,6 +16,18 @@ const (
 
 func (s Severity) Less(other Severity) bool {
 	return s != other && s == "warning"
+}
+
+func (s *Severity) UnmarshalText(text []byte) error {
+	switch string(text) {
+	case "warning":
+		*s = Warning
+	case "error":
+		*s = Error
+	default:
+		return fmt.Errorf("invalid severity %q", string(text))
+	}
+	return nil
 }
 
 type Issue struct {

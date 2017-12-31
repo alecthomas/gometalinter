@@ -1,40 +1,35 @@
-package main
+package external
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
+
+	"github.com/alecthomas/gometalinter/config"
 )
 
-// MaxCommandBytes is the maximum number of bytes used when executing a command
-const MaxCommandBytes = 32000
+// maxCommandBytes is the maximum number of bytes used when executing a command
+const maxCommandBytes = 32000
 
-type partitionStrategy func([]string, []string) ([][]string, error)
+// Partitioning function.
+type partitionStrategy func(cmdArgs []string, paths []string) (partitions [][]string, err error)
 
-func (ps *partitionStrategy) UnmarshalJSON(raw []byte) error {
-	var strategyName string
-	if err := json.Unmarshal(raw, &strategyName); err != nil {
-		return err
+func partitionStrategyFromConfig(strategy config.PartitionStrategy) partitionStrategy {
+	switch strategy {
+	case config.PartitionByDirectories:
+		return partitionPathsAsDirectories
+	case config.PartitionByFiles:
+		return partitionPathsAsFiles
+	case config.PartitionByPackages:
+		return partitionPathsAsPackages
+	case config.PartitionByFilesByPackage:
+		return partitionPathsAsFilesGroupedByPackage
+	case config.PartitionBySingleDirectory:
+		return partitionPathsByDirectory
 	}
-
-	switch strategyName {
-	case "directories":
-		*ps = partitionPathsAsDirectories
-	case "files":
-		*ps = partitionPathsAsFiles
-	case "packages":
-		*ps = partitionPathsAsPackages
-	case "files-by-package":
-		*ps = partitionPathsAsFilesGroupedByPackage
-	case "single-directory":
-		*ps = partitionPathsByDirectory
-	default:
-		return fmt.Errorf("unknown parition strategy %s", strategyName)
-	}
-	return nil
+	panic("invalid PartitionStrategy")
 }
 
 func pathsToFileGlobs(paths []string) ([]string, error) {
@@ -50,7 +45,7 @@ func pathsToFileGlobs(paths []string) ([]string, error) {
 }
 
 func partitionPathsAsDirectories(cmdArgs []string, paths []string) ([][]string, error) {
-	return partitionToMaxSize(cmdArgs, paths, MaxCommandBytes), nil
+	return partitionToMaxSize(cmdArgs, paths, maxCommandBytes), nil
 }
 
 func partitionToMaxSize(cmdArgs []string, paths []string, maxSize int) [][]string {

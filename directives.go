@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/gometalinter/api"
+	. "github.com/alecthomas/gometalinter/util" // nolint
 )
 
 type ignoredRange struct {
@@ -78,7 +79,7 @@ func (d *directiveParser) IsIgnored(issue *api.Issue) bool {
 	d.lock.Unlock()
 	for _, r := range ranges {
 		if r.matches(issue) {
-			debug("nolint: matched %s to issue %s", r, issue)
+			Debug("nolint: matched %s to issue %s", r, issue)
 			r.matched = true
 			return true
 		}
@@ -147,16 +148,16 @@ func (a *rangeExpander) Visit(node ast.Node) ast.Visitor {
 
 func (d *directiveParser) parseFile(path string) ignoredRanges {
 	start := time.Now()
-	debug("nolint: parsing %s for directives", path)
+	Debug("nolint: parsing %s for directives", path)
 	file, err := parser.ParseFile(d.fset, path, nil, parser.ParseComments)
 	if err != nil {
-		debug("nolint: failed to parse %q: %s", path, err)
+		Debug("nolint: failed to parse %q: %s", path, err)
 		return nil
 	}
 	ranges := extractCommentGroupRange(d.fset, file.Comments...)
 	visitor := &rangeExpander{fset: d.fset, ranges: ranges}
 	ast.Walk(visitor, file)
-	debug("nolint: parsing %s took %s", path, time.Since(start))
+	Debug("nolint: parsing %s took %s", path, time.Since(start))
 	return visitor.ranges
 }
 

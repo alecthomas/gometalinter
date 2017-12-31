@@ -2,10 +2,7 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"regexp"
-	"sort"
 	"strings"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v3-unstable"
@@ -89,80 +86,6 @@ func parseLinterConfigSpec(name string, spec string) (LinterConfig, error) {
 	}
 
 	return config, nil
-}
-
-func makeInstallCommand(linters ...string) []string {
-	cmd := []string{"get"}
-	if config.VendoredLinters {
-		cmd = []string{"install"}
-	} else {
-		if config.Update {
-			cmd = append(cmd, "-u")
-		}
-		if config.Force {
-			cmd = append(cmd, "-f")
-		}
-		if config.DownloadOnly {
-			cmd = append(cmd, "-d")
-		}
-	}
-	if config.Debug {
-		cmd = append(cmd, "-v")
-	}
-	cmd = append(cmd, linters...)
-	return cmd
-}
-
-func installLintersWithOneCommand(targets []string) error {
-	cmd := makeInstallCommand(targets...)
-	debug("go %s", strings.Join(cmd, " "))
-	c := exec.Command("go", cmd...) // nolint: gas
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-	return c.Run()
-}
-
-func installLintersIndividually(targets []string) {
-	failed := []string{}
-	for _, target := range targets {
-		cmd := makeInstallCommand(target)
-		debug("go %s", strings.Join(cmd, " "))
-		c := exec.Command("go", cmd...) // nolint: gas
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		if err := c.Run(); err != nil {
-			warning("failed to install %s: %s", target, err)
-			failed = append(failed, target)
-		}
-	}
-	if len(failed) > 0 {
-		kingpin.Fatalf("failed to install the following linters: %s", strings.Join(failed, ", "))
-	}
-}
-
-func installLinters() {
-	names := make([]string, 0, len(defaultLinters))
-	targets := make([]string, 0, len(defaultLinters))
-	for name, config := range defaultLinters {
-		if config.InstallFrom == "" {
-			continue
-		}
-		names = append(names, name)
-		targets = append(targets, config.InstallFrom)
-	}
-	sort.Strings(names)
-	namesStr := strings.Join(names, "\n  ")
-	if config.DownloadOnly {
-		fmt.Printf("Downloading:\n  %s\n", namesStr)
-	} else {
-		fmt.Printf("Installing:\n  %s\n", namesStr)
-	}
-	err := installLintersWithOneCommand(targets)
-	if err == nil {
-		return
-	}
-	warning("failed to install one or more linters: %s (installing individually)", err)
-	installLintersIndividually(targets)
 }
 
 func getDefaultLinters() []*Linter {
@@ -276,12 +199,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
-	"gosimple": {
-		Command:           `gosimple`,
-		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "honnef.co/go/tools/cmd/gosimple",
-		PartitionStrategy: partitionPathsAsPackages,
-	},
 	"gotype": {
 		Command:           `gotype -e {tests=-t}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
@@ -346,12 +263,6 @@ var defaultLinters = map[string]LinterConfig{
 		InstallFrom:       "github.com/stripe/safesql",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
-	"staticcheck": {
-		Command:           `staticcheck`,
-		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "honnef.co/go/tools/cmd/staticcheck",
-		PartitionStrategy: partitionPathsAsPackages,
-	},
 	"structcheck": {
 		Command:           `structcheck {tests=-t}`,
 		Pattern:           `^(?:[^:]+: )?(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.+)$`,
@@ -380,12 +291,6 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `unparam {not_tests=-tests=false}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/unparam",
-		PartitionStrategy: partitionPathsAsPackages,
-	},
-	"unused": {
-		Command:           `unused`,
-		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "honnef.co/go/tools/cmd/unused",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"varcheck": {
