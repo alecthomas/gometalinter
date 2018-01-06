@@ -13,7 +13,7 @@ import (
 var _ api.ASTLinter = &PredeclaredLinter{}
 
 func init() {
-	Register(&PredeclaredLinter{})
+	Register(func() api.Linter { return &PredeclaredLinter{} })
 }
 
 type PredeclaredConfig struct {
