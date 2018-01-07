@@ -3,7 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 )
 
 func TestIgnoreRangeMatch(t *testing.T) {
@@ -37,6 +38,6 @@ func TestIgnoreRangeMatch(t *testing.T) {
 
 	for _, testcase := range testcases {
 		ir := ignoredRange{col: 20, start: 5, end: 20, linters: testcase.linters}
-		assert.Equal(t, testcase.expected, ir.matches(&testcase.issue), testcase.doc)
+		assert.Check(t, is.Equal(testcase.expected, ir.matches(&testcase.issue)), testcase.doc)
 	}
 }

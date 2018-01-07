@@ -109,10 +109,12 @@ func (i *Issue) String() string {
 	return buf.String()
 }
 
+
 type sortedIssues struct {
 	issues []*Issue
 	order  []string
 }
+
 
 func (s *sortedIssues) Len() int      { return len(s.issues) }
 func (s *sortedIssues) Swap(i, j int) { s.issues[i], s.issues[j] = s.issues[j], s.issues[i] }

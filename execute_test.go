@@ -3,7 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 )
 
 func TestLinterStateCommand(t *testing.T) {
@@ -46,13 +47,13 @@ func TestLinterStateCommand(t *testing.T) {
 			expected: `structcheck -t`,
 		},
 		{
-			linter: "unparam",
-			vars: varsDefault,
+			linter:   "unparam",
+			vars:     varsDefault,
 			expected: `unparam -tests=false`,
 		},
 		{
-			linter: "unparam",
-			vars: varsWithTest,
+			linter:   "unparam",
+			vars:     varsWithTest,
 			expected: `unparam `,
 		},
 	}
@@ -62,6 +63,6 @@ func TestLinterStateCommand(t *testing.T) {
 			Linter: getLinterByName(testcase.linter, LinterConfig{}),
 			vars:   testcase.vars,
 		}
-		assert.Equal(t, testcase.expected, ls.command())
+		assert.Check(t, is.Equal(testcase.expected, ls.command()))
 	}
 }

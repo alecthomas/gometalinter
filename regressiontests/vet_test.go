@@ -3,8 +3,9 @@ package regressiontests
 import (
 	"testing"
 
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 	"github.com/gotestyourself/gotestyourself/fs"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestVet(t *testing.T) {
@@ -27,7 +28,7 @@ func TestVet(t *testing.T) {
 		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "unreachable code"},
 	}
 	actual := RunLinter(t, "vet", dir.Path(), "--skip=excluded")
-	assert.Equal(t, expected, actual)
+	assert.Check(t, is.Compare(expected, actual))
 }
 
 func vetFile(pkg string) string {

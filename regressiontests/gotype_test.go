@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 	"github.com/gotestyourself/gotestyourself/fs"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGoType(t *testing.T) {
@@ -24,7 +25,7 @@ func TestGoType(t *testing.T) {
 		{Linter: "gotype", Severity: "error", Path: "sub/file.go", Line: 4, Col: 6, Message: "foo declared but not used"},
 	}
 	actual := RunLinter(t, "gotype", dir.Path(), "--skip=excluded")
-	assert.Equal(t, expected, actual)
+	assert.Check(t, is.Compare(expected, actual))
 }
 
 func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
@@ -41,9 +42,8 @@ func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
 	}
 	actual := RunLinter(t, "gotype", dir.Path())
 	actual = append(actual, RunLinter(t, "gotypex", dir.Path())...)
-	assert.Equal(t, expected, actual)
+	assert.Check(t, is.Compare(expected, actual))
 }
-
 
 func goTypeFile(pkg string) string {
 	return fmt.Sprintf(`package %s

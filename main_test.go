@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 	"gopkg.in/alecthomas/kingpin.v3-unstable"
 )
 
@@ -36,20 +36,20 @@ func TestRelativePackagePath(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		assert.Equal(t, testcase.expected, relativePackagePath(testcase.dir))
+		assert.Check(t, is.Equal(testcase.expected, relativePackagePath(testcase.dir)))
 	}
 }
 
 func TestResolvePathsNoPaths(t *testing.T) {
 	paths := resolvePaths(nil, nil)
-	assert.Equal(t, []string{"."}, paths)
+	assert.Check(t, is.Compare([]string{"."}, paths))
 }
 
 func TestResolvePathsNoExpands(t *testing.T) {
 	// Non-expanded paths should not be filtered by the skip path list
 	paths := resolvePaths([]string{".", "foo", "foo/bar"}, []string{"foo/bar"})
 	expected := []string{".", "./foo", "./foo/bar"}
-	assert.Equal(t, expected, paths)
+	assert.Check(t, is.Compare(expected, paths))
 }
 
 func TestResolvePathsWithExpands(t *testing.T) {
@@ -77,35 +77,35 @@ func TestResolvePathsWithExpands(t *testing.T) {
 		"./include",
 		"./include/foo",
 	}
-	assert.Equal(t, expected, paths)
+	assert.Check(t, is.Compare(expected, paths))
 }
 
 func setupTempDir(t *testing.T) (string, func()) {
 	tmpdir, err := ioutil.TempDir("", "test-expand-paths")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	tmpdir, err = filepath.EvalSymlinks(tmpdir)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	oldwd, err := os.Getwd()
-	require.NoError(t, err)
-	require.NoError(t, os.Chdir(tmpdir))
+	assert.NilError(t, err)
+	assert.NilError(t, os.Chdir(tmpdir))
 
 	return tmpdir, func() {
 		os.RemoveAll(tmpdir)
-		require.NoError(t, os.Chdir(oldwd))
+		assert.NilError(t, os.Chdir(oldwd))
 	}
 }
 
 func mkDir(t *testing.T, paths ...string) {
 	fullPath := filepath.Join(paths...)
-	require.NoError(t, os.MkdirAll(fullPath, 0755))
+	assert.NilError(t, os.MkdirAll(fullPath, 0755))
 	mkGoFile(t, fullPath, "file.go")
 }
 
 func mkFile(t *testing.T, path string, filename string, content string) {
 	err := ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0644)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 }
 
 func mkGoFile(t *testing.T, path string, filename string) {
@@ -131,7 +131,7 @@ func TestPathFilter(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		assert.Equal(t, testcase.expected, pathFilter(testcase.path), testcase.path)
+		assert.Check(t, is.Equal(testcase.expected, pathFilter(testcase.path)), testcase.path)
 	}
 }
 
@@ -149,8 +149,8 @@ func TestLoadDefaultConfig(t *testing.T) {
 	setupFlags(app)
 
 	_, err := app.Parse([]string{})
-	require.NoError(t, err)
-	require.Equal(t, 3*time.Minute, config.Deadline.Duration())
+	assert.NilError(t, err)
+	assert.Assert(t, is.Equal(3*time.Minute, config.Deadline.Duration()))
 }
 
 func TestNoConfigFlag(t *testing.T) {
@@ -167,8 +167,8 @@ func TestNoConfigFlag(t *testing.T) {
 	setupFlags(app)
 
 	_, err := app.Parse([]string{"--no-config"})
-	require.NoError(t, err)
-	require.Equal(t, 30*time.Second, config.Deadline.Duration())
+	assert.NilError(t, err)
+	assert.Assert(t, is.Equal(30*time.Second, config.Deadline.Duration()))
 }
 
 func TestConfigFlagSkipsDefault(t *testing.T) {
@@ -186,9 +186,9 @@ func TestConfigFlagSkipsDefault(t *testing.T) {
 	setupFlags(app)
 
 	_, err := app.Parse([]string{"--config", filepath.Join(tmpdir, "test-config")})
-	require.NoError(t, err)
-	require.Equal(t, 30*time.Second, config.Deadline.Duration())
-	require.Equal(t, true, config.Fast)
+	assert.NilError(t, err)
+	assert.Assert(t, is.Equal(30*time.Second, config.Deadline.Duration()))
+	assert.Assert(t, is.Equal(true, config.Fast))
 }
 
 func TestLoadConfigWithDeadline(t *testing.T) {
@@ -196,33 +196,33 @@ func TestLoadConfigWithDeadline(t *testing.T) {
 	defer func() { config = &originalConfig }()
 
 	tmpfile, err := ioutil.TempFile("", "test-config")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(`{"Deadline": "3m"}`))
-	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
+	assert.NilError(t, err)
+	assert.NilError(t, tmpfile.Close())
 
 	filename := tmpfile.Name()
 	err = loadConfig(nil, &kingpin.ParseElement{Value: &filename}, nil)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
-	require.Equal(t, 3*time.Minute, config.Deadline.Duration())
+	assert.Assert(t, is.Equal(3*time.Minute, config.Deadline.Duration()))
 }
 
 func TestDeadlineFlag(t *testing.T) {
 	app := kingpin.New("test-app", "")
 	setupFlags(app)
 	_, err := app.Parse([]string{"--deadline", "2m"})
-	require.NoError(t, err)
-	require.Equal(t, 2*time.Minute, config.Deadline.Duration())
+	assert.NilError(t, err)
+	assert.Assert(t, is.Equal(2*time.Minute, config.Deadline.Duration()))
 }
 
 func TestAddPath(t *testing.T) {
 	paths := []string{"existing"}
-	assert.Equal(t, paths, addPath(paths, "existing"))
+	assert.Check(t, is.Compare(paths, addPath(paths, "existing")))
 	expected := []string{"existing", "new"}
-	assert.Equal(t, expected, addPath(paths, "new"))
+	assert.Check(t, is.Compare(expected, addPath(paths, "new")))
 }
 
 func TestSetupFlagsLinterFlag(t *testing.T) {
@@ -232,11 +232,11 @@ func TestSetupFlagsLinterFlag(t *testing.T) {
 	app := kingpin.New("test-app", "")
 	setupFlags(app)
 	_, err := app.Parse([]string{"--linter", "a:b:c"})
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	linter, ok := config.Linters["a"]
-	assert.True(t, ok)
-	assert.Equal(t, "b", linter.Command)
-	assert.Equal(t, "c", linter.Pattern)
+	assert.Check(t, ok)
+	assert.Check(t, is.Equal("b", linter.Command))
+	assert.Check(t, is.Equal("c", linter.Pattern))
 }
 
 func TestSetupFlagsConfigWithLinterString(t *testing.T) {
@@ -244,22 +244,22 @@ func TestSetupFlagsConfigWithLinterString(t *testing.T) {
 	defer func() { config = &originalConfig }()
 
 	tmpfile, err := ioutil.TempFile("", "test-config")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(`{"Linters": {"linter": "command:path"} }`))
-	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
+	assert.NilError(t, err)
+	assert.NilError(t, tmpfile.Close())
 
 	app := kingpin.New("test-app", "")
 	setupFlags(app)
 
 	_, err = app.Parse([]string{"--config", tmpfile.Name()})
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	linter, ok := config.Linters["linter"]
-	assert.True(t, ok)
-	assert.Equal(t, "command", linter.Command)
-	assert.Equal(t, "path", linter.Pattern)
+	assert.Check(t, ok)
+	assert.Check(t, is.Equal("command", linter.Command))
+	assert.Check(t, is.Equal("path", linter.Pattern))
 }
 
 func TestSetupFlagsConfigWithLinterMap(t *testing.T) {
@@ -267,24 +267,24 @@ func TestSetupFlagsConfigWithLinterMap(t *testing.T) {
 	defer func() { config = &originalConfig }()
 
 	tmpfile, err := ioutil.TempFile("", "test-config")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(`{"Linters":
 		{"linter":
 			{ "Command": "command" }}}`))
-	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
+	assert.NilError(t, err)
+	assert.NilError(t, tmpfile.Close())
 
 	app := kingpin.New("test-app", "")
 	setupFlags(app)
 
 	_, err = app.Parse([]string{"--config", tmpfile.Name()})
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	linter, ok := config.Linters["linter"]
-	assert.True(t, ok)
-	assert.Equal(t, "command", linter.Command)
-	assert.Equal(t, "", linter.Pattern)
+	assert.Check(t, ok)
+	assert.Check(t, is.Equal("command", linter.Command))
+	assert.Check(t, is.Equal("", linter.Pattern))
 }
 
 func TestSetupFlagsConfigAndLinterFlag(t *testing.T) {
@@ -292,13 +292,13 @@ func TestSetupFlagsConfigAndLinterFlag(t *testing.T) {
 	defer func() { config = &originalConfig }()
 
 	tmpfile, err := ioutil.TempFile("", "test-config")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer os.Remove(tmpfile.Name())
 
 	_, err = tmpfile.Write([]byte(`{"Linters":
 		{"linter": { "Command": "some-command" }}}`))
-	require.NoError(t, err)
-	require.NoError(t, tmpfile.Close())
+	assert.NilError(t, err)
+	assert.NilError(t, tmpfile.Close())
 
 	app := kingpin.New("test-app", "")
 	setupFlags(app)
@@ -306,9 +306,9 @@ func TestSetupFlagsConfigAndLinterFlag(t *testing.T) {
 	_, err = app.Parse([]string{
 		"--config", tmpfile.Name(),
 		"--linter", "linter:command:pattern"})
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	linter, ok := config.Linters["linter"]
-	assert.True(t, ok)
-	assert.Equal(t, "command", linter.Command)
-	assert.Equal(t, "pattern", linter.Pattern)
+	assert.Check(t, ok)
+	assert.Check(t, is.Equal("command", linter.Command))
+	assert.Check(t, is.Equal("pattern", linter.Pattern))
 }

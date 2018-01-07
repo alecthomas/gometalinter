@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 	"github.com/gotestyourself/gotestyourself/fs"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGas(t *testing.T) {
@@ -20,7 +21,7 @@ func TestGas(t *testing.T) {
 		{Linter: "gas", Severity: "warning", Path: "sub/file.go", Line: 3, Col: 0, Message: "Errors unhandled.,LOW,HIGH"},
 	}
 	actual := RunLinter(t, "gas", dir.Path())
-	assert.Equal(t, expected, actual)
+	assert.Check(t, is.Compare(expected, actual))
 }
 
 func gasFileErrorUnhandled(pkg string) string {

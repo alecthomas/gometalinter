@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 )
 
 func TestNewLinterWithCustomLinter(t *testing.T) {
@@ -15,11 +15,11 @@ func TestNewLinterWithCustomLinter(t *testing.T) {
 		Pattern: "path",
 	}
 	linter, err := NewLinter("thename", config)
-	require.NoError(t, err)
-	assert.Equal(t, functionName(partitionPathsAsDirectories), functionName(linter.LinterConfig.PartitionStrategy))
-	assert.Equal(t, "(?m:path)", linter.regex.String())
-	assert.Equal(t, "thename", linter.Name)
-	assert.Equal(t, config.Command, linter.Command)
+	assert.NilError(t, err)
+	assert.Check(t, is.Equal(functionName(partitionPathsAsDirectories), functionName(linter.LinterConfig.PartitionStrategy)))
+	assert.Check(t, is.Equal("(?m:path)", linter.regex.String()))
+	assert.Check(t, is.Equal("thename", linter.Name))
+	assert.Check(t, is.Equal(config.Command, linter.Command))
 }
 
 func TestGetLinterByName(t *testing.T) {
@@ -31,11 +31,11 @@ func TestGetLinterByName(t *testing.T) {
 		IsFast:            true,
 	}
 	overrideConfig := getLinterByName(config.Command, config)
-	assert.Equal(t, config.Command, overrideConfig.Command)
-	assert.Equal(t, config.Pattern, overrideConfig.Pattern)
-	assert.Equal(t, config.InstallFrom, overrideConfig.InstallFrom)
-	assert.Equal(t, functionName(config.PartitionStrategy), functionName(overrideConfig.PartitionStrategy))
-	assert.Equal(t, config.IsFast, overrideConfig.IsFast)
+	assert.Check(t, is.Equal(config.Command, overrideConfig.Command))
+	assert.Check(t, is.Equal(config.Pattern, overrideConfig.Pattern))
+	assert.Check(t, is.Equal(config.InstallFrom, overrideConfig.InstallFrom))
+	assert.Check(t, is.Equal(functionName(config.PartitionStrategy), functionName(overrideConfig.PartitionStrategy)))
+	assert.Check(t, is.Equal(config.IsFast, overrideConfig.IsFast))
 }
 
 func TestValidateLinters(t *testing.T) {
@@ -47,13 +47,13 @@ func TestValidateLinters(t *testing.T) {
 	}
 
 	err := validateLinters(lintersFromConfig(config), config)
-	require.Error(t, err, "expected unknown linter error for _dummylinter_")
+	assert.Assert(t, is.Error(err, "unknown linters: _dummylinter_"))
 
 	config = &Config{
 		Enable: defaultEnabled(),
 	}
 	err = validateLinters(lintersFromConfig(config), config)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 }
 
 func functionName(i interface{}) string {
