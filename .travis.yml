@@ -9,7 +9,7 @@ go:
 - 1.9.x
 script: go test -v . ./regressiontests
 before_deploy:
-  - ./package.sh
+  - ./scripts/package.sh
 deploy:
   provider: releases
   api_key:
@@ -18,7 +18,10 @@ deploy:
   file:
     - dist/gometalinter-*.zip
     - dist/gometalinter-*.tar.bz2
+    - dist/gometalinter-*.sha256
   skip_cleanup: true
   on:
     tags: true
     repo: alecthomas/gometalinter
+    condition: $TRAVIS_GO_VERSION =~ ^1\.9\.[0-9]+$
+
