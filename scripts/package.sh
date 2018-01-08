@@ -59,9 +59,11 @@ function install_go_binary() {
 
 function packager() {
   if [ "$GOOS" = "windows" ]; then
-    zip -9 -r -o "${1}".zip "${1}"
+    zip -9 -r -o "${1}".zip "${1}" 1>&2
+    echo "${1}".zip
   else
-    tar cvfj "${1}".tar.bz2 "${1}"
+    tar cvfj "${1}".tar.bz2 "${1}" 1>&2
+    echo "${1}".tar.bz2
   fi
 }
 
@@ -78,14 +80,7 @@ for GOOS in linux darwin windows; do
     DEST="${PWD}/dist/gometalinter-${TAG}-${GOOS}-${GOARCH}"
     install -d -m 755 "${DEST}/linters"
     install -m 644 COPYING "${DEST}"
-    cat << EOF > "${DEST}/README.txt"
-gometalinter is a tool to normalise the output of Go linters.
-See https://github.com/alecthomas/gometalinter for more information.
-
-This is a binary distribution of gometalinter ${TAG}.
-
-All binaries must be installed in the PATH for gometalinter to operate correctly.
-EOF
+    install -m 644 README.md "${DEST}"
     echo "${DEST}"
     export GOOS GOARCH
 
@@ -99,6 +94,7 @@ EOF
       install_go_binary $(basename ${LINTER}) "${DEST}/linters"
     done
 
-    (cd "${DEST}/.." && packager "$(basename ${DEST})")
+    OUTPUT="$(cd "${PWD}/dist" && packager "$(basename ${DEST})")"
+    (cd "${PWD}/dist" && shasum -a 256 "${OUTPUT}" > "${OUTPUT}.sha256")
   done
 done

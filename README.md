@@ -3,10 +3,13 @@
 
 <!-- MarkdownTOC -->
 
+- [Installing](#installing)
 - [Editor integration](#editor-integration)
 - [Supported linters](#supported-linters)
 - [Configuration file](#configuration-file)
-- [Installing](#installing)
+    - [`Format` key](#format-key)
+    - [Format Methods](#format-methods)
+  - [Adding Custom linters](#adding-custom-linters)
 - [Comment directives](#comment-directives)
 - [Quickstart](#quickstart)
 - [FAQ](#faq)
@@ -38,6 +41,16 @@ eg.
     stutter.go:12:6:warning: exported type MyStruct should have comment or be unexported (golint)
 
 It is intended for use with editor/IDE integration.
+
+## Installing
+
+There are two options for installing gometalinter.
+
+1. Install a stable version, eg. `go get -u gopkg.in/alecthomas/gometalinter.v2`.
+   I will generally only tag a new stable version when it has passed the Travis
+  regression tests. The downside is that the binary will be called `gometalinter.v2`.
+2. Install from HEAD with: `go get -u github.com/alecthomas/gometalinter`.
+   This has the downside that changes to gometalinter may break.
 
 ## Editor integration
 
@@ -160,16 +173,6 @@ Example:
 ```
 $ gometalinter --linter='vet:go tool vet -printfuncs=Infof,Debugf,Warningf,Errorf:PATH:LINE:MESSAGE' .
 ```
-
-## Installing
-
-There are two options for installing gometalinter.
-
-1. Install a stable version, eg. `go get -u gopkg.in/alecthomas/gometalinter.v2`.
-   I will generally only tag a new stable version when it has passed the Travis
-  regression tests. The downside is that the binary will be called `gometalinter.v2`.
-2. Install from HEAD with: `go get -u github.com/alecthomas/gometalinter`.
-   This has the downside that changes to gometalinter may break.
 
 ## Comment directives
 
