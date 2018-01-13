@@ -33,7 +33,7 @@ LINTERS="
   github.com/opennota/check/cmd/structcheck
   github.com/opennota/check/cmd/varcheck
   github.com/stripe/safesql
-  github.com/tsenart/deadcode
+  github.com/remyoudompheng/go-misc/deadcode
   github.com/walle/lll/cmd/lll
   golang.org/x/tools/cmd/goimports
   golang.org/x/tools/cmd/gotype
