@@ -213,7 +213,7 @@ var defaultLinters = map[string]LinterConfig{
 	"deadcode": {
 		Command:           "deadcode",
 		Pattern:           `^deadcode: (?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
-		InstallFrom:       "github.com/tsenart/deadcode",
+		InstallFrom:       "github.com/remyoudompheng/go-misc/deadcode",
 		PartitionStrategy: partitionPathsAsDirectories,
 		defaultEnabled:    true,
 	},

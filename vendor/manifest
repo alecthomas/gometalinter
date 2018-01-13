@@ -27,6 +27,42 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/remyoudompheng/go-misc/deadcode",
+			"repository": "https://github.com/remyoudompheng/go-misc",
+			"vcs": "git",
+			"revision": "dfc465eaf84f1a48122fb39b93c8f3d3130ab87f",
+			"branch": "master",
+			"path": "/deadcode",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/tools/go/ast/astutil",
+			"repository": "https://go.googlesource.com/tools",
+			"vcs": "git",
+			"revision": "fbec762f837dc349b73d1eaa820552e2ad177942",
+			"branch": "master",
+			"path": "go/ast/astutil",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/tools/go/buildutil",
+			"repository": "https://go.googlesource.com/tools",
+			"vcs": "git",
+			"revision": "fbec762f837dc349b73d1eaa820552e2ad177942",
+			"branch": "master",
+			"path": "go/buildutil",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/tools/go/loader",
+			"repository": "https://go.googlesource.com/tools",
+			"vcs": "git",
+			"revision": "fbec762f837dc349b73d1eaa820552e2ad177942",
+			"branch": "master",
+			"path": "/go/loader",
+			"notests": true
+		},
+		{
 			"importpath": "gopkg.in/alecthomas/kingpin.v3-unstable",
 			"repository": "https://gopkg.in/alecthomas/kingpin.v3-unstable",
 			"vcs": "git",
