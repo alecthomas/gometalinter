@@ -56,9 +56,8 @@ func (i *Issue) String() string {
 	return fmt.Sprintf("%s:%d:%s:%s: %s (%s)", strings.TrimSpace(i.Path), i.Line, col, i.Severity, strings.TrimSpace(i.Message), i.Linter)
 }
 
-// CompareIssue two Issues and return true if left should sort before right
-// nolint: gocyclo
-func CompareIssue(l, r Issue, order []string) bool {
+// CompareIssue's Issues and return true if left should sort before right
+func CompareIssue(l, r Issue, order []string) bool { // nolint: gocyclo
 	for _, key := range order {
 		switch {
 		case key == "path" && l.Path != r.Path:

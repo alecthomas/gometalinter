@@ -29,7 +29,7 @@ type PredeclaredLinter struct {
 
 func (p *PredeclaredLinter) Name() string        { return "predeclared" }
 func (p *PredeclaredLinter) Config() interface{} { return &p.config }
-func (p *PredeclaredLinter) LintAST(fset *token.FileSet, files map[string]*ast.File) ([]*api.Issue, error) {
+func (p *PredeclaredLinter) LintAST(ctx api.Context, fset *token.FileSet, files map[string]*ast.File) ([]*api.Issue, error) {
 	config := p.makeConfig()
 	pissues := []predeclared.Issue{}
 	// Process files.

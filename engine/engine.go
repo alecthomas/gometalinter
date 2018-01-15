@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -18,17 +17,19 @@ import (
 	. "github.com/alecthomas/gometalinter/util" // nolint: golint
 )
 
-var (
-	DirectoryLinterType = reflect.TypeOf((*api.DirectoryLinter)(nil)).Elem()
-	PackageLinterType   = reflect.TypeOf((*api.PackageLinter)(nil)).Elem()
-	FileLinterType      = reflect.TypeOf((*api.FileLinter)(nil)).Elem()
-	ASTLinterType       = reflect.TypeOf((*api.ASTLinter)(nil)).Elem()
+type LinterType int
+
+const (
+	DirectoryLinterType LinterType = iota
+	PackageLinterType
+	FileLinterType
+	ASTLinterType
 )
 
 type Engine struct {
 	config        *config.Config
 	linters       map[string]api.Linter
-	lintersByType map[reflect.Type][]api.Linter
+	lintersByType map[LinterType][]api.Linter
 	sort          []string
 	include       *regexp.Regexp
 	exclude       *regexp.Regexp
@@ -37,7 +38,7 @@ type Engine struct {
 // New creates a new linter engine.
 func New(conf *config.Config, linters []api.LinterFactory) (*Engine, error) {
 	mapping := map[string]api.Linter{}
-	lintersByType := map[reflect.Type][]api.Linter{}
+	lintersByType := map[LinterType][]api.Linter{}
 	for _, f := range linters {
 		l := f()
 		err := conf.UnmarshalLinterConfig(l.Name(), l.Config())
@@ -100,6 +101,8 @@ func (e *Engine) Lint(targets []string) (chan *api.Issue, chan error) {
 	filesByDir, err := expandDirs(e.resolvePaths(targets))
 	if err != nil {
 		errors <- err
+		close(issues)
+		close(errors)
 		return issues, errors
 	}
 	context := &lintContext{

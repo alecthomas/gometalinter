@@ -10,19 +10,23 @@ import (
 	"github.com/alecthomas/gometalinter/api"
 )
 
+// Contains all of the context required for linting and outputting issues.
 type lintContext struct {
 	files       map[string][]string
 	errors      chan error
 	issues      chan *api.Issue
 	concurrency chan bool
+	context     api.Context
 }
 
+// Go runs f concurrently, respecting the concurrency limit of the context.
 func (l *lintContext) Go(f func()) {
 	l.concurrency <- true
 	f()
 	<-l.concurrency
 }
 
+// Emit issues within the context.
 func (l *lintContext) Emit(issues []*api.Issue) {
 	for _, i := range issues {
 		l.issues <- i

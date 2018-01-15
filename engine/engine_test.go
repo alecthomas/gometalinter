@@ -30,6 +30,20 @@ func ExpectIssues(t *testing.T, linter string, source string, expected []*api.Is
 }
 
 func RunLinter(t *testing.T, linter string, path string) []*api.Issue {
+	engine, err := New(&config.Config{}, []api.LinterFactory{
+		func() api.Linter { return &testLinter{} },
+	})
+	require.NoError(t, err)
+	out := []*api.Issue{}
+	issues, errors := engine.Lint([]string{path})
+	for {
+		select {
+		case issue := <-issues:
+			out = append(out, issue)
+		case err := <-errors:
+			require.NoError(t, err)
+		}
+	}
 }
 
 type testLinter struct{}
@@ -40,9 +54,4 @@ func (t *testLinter) LintDirectories(dirs []string) ([]*api.Issue, error) {
 }
 
 func TestEngine(t *testing.T) {
-	engine, err := New(&config.Config{}, []api.LinterFactory{
-		func() api.Linter { return &testLinter{} },
-	})
-	require.NoError(t, err)
-	engine.Lint(targets)
 }

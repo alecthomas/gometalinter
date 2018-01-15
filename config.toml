@@ -1,0 +1,1 @@
+format = "{{if eq .Severity \"warning\"}}\u001b[33mwarning{{else if eq .Severity \"error\"}}\u001b[31m  error{{end}}\u001b[0m \u001b[35m{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}} \u001b[36m{{.Message}}\u001b[1m\u001b[30m ({{.Linter}})\u001b[0m"

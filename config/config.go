@@ -1,4 +1,3 @@
-// Package config reads the gometalinter TOML configuration file.
 package config
 
 import (
@@ -14,10 +13,12 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/alecthomas/gometalinter/api"
+	"github.com/alecthomas/gometalinter/linters"
 )
 
 // DefaultIssueFormat used to print an issue.
-var DefaultIssueFormat = template.Must(template.New("output").Parse("{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"))
+var DefaultIssueFormat = &Template{template.Must(template.New("output").
+	Parse("{{.Path}}:{{.Line}}:{{if .Col}}{{.Col}}{{end}}:{{.Severity}}: {{.Message}} ({{.Linter}})"))}
 
 type Duration time.Duration
 
@@ -27,12 +28,21 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	return err
 }
 
+var predefinedPatterns = map[string]string{
+	"PATH:LINE:COL:MESSAGE": `^(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*)$`,
+	"PATH:LINE:MESSAGE":     `^(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*)$`,
+}
+
 type Regexp struct {
 	*regexp.Regexp
 }
 
-func (r *Regexp) UnmarshalText(text []byte) (err error) {
-	r.Regexp, err = regexp.Compile(string(text))
+func (r *Regexp) UnmarshalText(data []byte) (err error) {
+	text := string(data)
+	if replace, ok := predefinedPatterns[text]; ok {
+		text = replace
+	}
+	r.Regexp, err = regexp.Compile(text)
 	return
 }
 
@@ -64,7 +74,7 @@ type Template struct {
 
 func (t *Template) UnmarshalText(text []byte) (err error) {
 	t.Template, err = template.New("output").Parse(string(text))
-	return
+	return err
 }
 
 // PartitionStrategy is the directory/file partitioning strategy for external linters.
@@ -77,6 +87,23 @@ const (
 	PartitionByFilesByPackage
 	PartitionBySingleDirectory
 )
+
+func (p PartitionStrategy) String() string {
+	switch p {
+	case PartitionByDirectories:
+		return "directories"
+	case PartitionByFiles:
+		return "files"
+	case PartitionByPackages:
+		return "packages"
+	case PartitionByFilesByPackage:
+		return "files-by-package"
+	case PartitionBySingleDirectory:
+		return "single-directory"
+	default:
+		panic("unknown partition strategy")
+	}
+}
 
 func (p *PartitionStrategy) UnmarshalText(text []byte) error {
 	switch string(text) {
@@ -105,7 +132,7 @@ type ExternalLinterDefinition struct {
 	// Go package to install linter command from.
 	InstallFrom string `toml:"install_from"`
 	// Command to run the linter. Linter configuration variables may be referenced in the template.
-	Command Template `toml:"command"`
+	Command *Template `toml:"command"`
 	// Regex used to match lines from the linter's output.
 	Pattern Regexp `toml:"pattern"`
 	// Partitioning strategy used by this linter.
@@ -118,7 +145,7 @@ type ExternalLinterDefinition struct {
 	//
 	// Linter configuration variables and named regex captures from the line
 	// pattern may be referenced in this template.
-	MessageOverride Template `toml:"message_override"`
+	MessageOverride *Template `toml:"message_override"`
 	// Severity of the linter if messages do not contain a severity. Defaults to Warning.
 	Severity api.Severity `toml:"severity"`
 }
@@ -128,9 +155,7 @@ type ExternalLinterDefinition struct {
 // This can be loaded from a TOML file with --config.
 type Config struct { // nolint: maligned
 	// Formatting string for text output.
-	Format Template `toml:"format"`
-	// Only run "fast" linters.
-	Fast bool `toml:"fast"`
+	Format *Template `toml:"format"`
 	// Set maximum number of linters to run in parallel.
 	Concurrency int `toml:"concurrency"`
 	// Regex matching linter issue messages to exclude from output.
@@ -141,8 +166,6 @@ type Config struct { // nolint: maligned
 	SkipDirs []string `toml:"skip_dirs"`
 	// Sort order (defaults to no sorting): path, line, column, severity, message, linter
 	Sort []string `toml:"sort"`
-	// Enable linting of tests for those linters that support it.
-	Test bool `toml:"test"`
 	// Total deadline before terminating linting.
 	Deadline Duration `toml:"deadline"`
 	// Only show errors.
@@ -151,10 +174,15 @@ type Config struct { // nolint: maligned
 	Output OutputFormat `toml:"output"`
 	// Aggregate identical issues from multiple linters into one.
 	Aggregate bool `toml:"aggregate"`
-	// Enable all linters, even default-disabled ones.
-	EnableAll bool `toml:"enable_all"`
 	// Warn if a nolint directive did not suppress any issues.
 	WarnUnmatchedDirective bool `toml:"warn_unmatched_directive"`
+
+	// Only run "fast" linters.
+	Fast bool `toml:"fast"`
+	// Linters to run.
+	//
+	// The default is to run all linters.
+	Enabled []string `toml:"enabled"`
 
 	// Per-linter configuration sections.
 	//
@@ -162,6 +190,9 @@ type Config struct { // nolint: maligned
 	Linters map[string]toml.Primitive `toml:"linter"`
 
 	// Define an external linter.
+	//
+	// Note that this just defines the linter. Configuration for the linter, such as extra variables, etc. is
+	// specified in the corresponding [linter.<linter>] section.
 	Define map[string]ExternalLinterDefinition `toml:"define"`
 
 	md toml.MetaData
@@ -175,12 +206,31 @@ func (c *Config) UnmarshalLinterConfig(linter string, v interface{}) error {
 // Read configuration from a reader.
 func Read(r io.Reader) (*Config, error) {
 	config := &Config{
-		Format:      Template{DefaultIssueFormat},
+		Format:      DefaultIssueFormat,
 		Concurrency: runtime.NumCPU(),
 		Sort:        []string{"none"},
 		Deadline:    Duration(time.Second * 30),
 	}
+	// This is effectively a constant.
+	for name := range linters.Linters {
+		config.Enabled = append(config.Enabled, name)
+	}
 	md, err := toml.DecodeReader(r, config)
+	if err != nil {
+		return nil, err
+	}
+	if len(md.Undecoded()) > 0 {
+		keys := []string{}
+		// Ignore linter keys.
+		for _, key := range md.Undecoded() {
+			if !strings.HasPrefix(key.String(), "linter.") {
+				keys = append(keys, key.String())
+			}
+		}
+		if len(keys) > 0 {
+			return nil, fmt.Errorf("unknown keys %s", strings.Join(keys, ","))
+		}
+	}
 	config.md = md
 	return config, err
 }
