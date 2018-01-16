@@ -59,10 +59,10 @@ function install_go_binary() {
 
 function packager() {
   if [ "$GOOS" = "windows" ]; then
-    zip -9 -r -o "${1}".zip "${1}"
+    zip -9 -r -o "${1}".zip "${1}" 1>&2
     echo "${1}".zip
   else
-    tar cvfj "${1}".tar.bz2 "${1}"
+    tar cvfj "${1}".tar.bz2 "${1}" 1>&2
     echo "${1}".tar.bz2
   fi
 }
@@ -94,7 +94,7 @@ for GOOS in linux darwin windows; do
       install_go_binary $(basename ${LINTER}) "${DEST}/linters"
     done
 
-    OUTPUT="$(cd "${DEST}/.." && packager "$(basename ${DEST})")"
-    (cd "${DEST}/.." && sha256sum "${OUTPUT}" > "${OUTPUT}.sha256")
+    OUTPUT="$(cd "${PWD}/dist" && packager "$(basename ${DEST})")"
+    (cd "${PWD}/dist" && shasum -a 256 "${OUTPUT}" > "${OUTPUT}.sha256")
   done
 done
