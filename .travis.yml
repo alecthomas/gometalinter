@@ -9,7 +9,7 @@ go:
 - 1.9.x
 script: go test -v . ./regressiontests
 before_deploy:
-  - ./scripts/package.sh
+  - curl -sL https://git.io/goreleaser | bash
 deploy:
   provider: releases
   api_key:
