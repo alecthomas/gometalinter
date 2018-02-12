@@ -1,10 +1,10 @@
 ---
 project_name: gometalinter
 
-# release:
-#   github:
-#     owner: alecthomas
-#     name: gometalinter
+release:
+  github:
+    owner: alecthomas
+    name: gometalinter
 
 brew:
   skip_upload: true
