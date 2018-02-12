@@ -29,7 +29,7 @@ builds:
     goarch: *goarch
     env: &env
       - CGO_ENABLED=0
-      - GOPATH=/Users/aat/.go/src/github.com/alecthomas/gometalinter/_linters
+      - GOPATH=$PWD/_linters
     main: ./_linters/src/github.com/alecthomas/gocyclo
 
   - binary: nakedret
