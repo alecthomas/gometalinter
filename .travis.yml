@@ -10,6 +10,7 @@ go:
 script: go test -v . ./regressiontests
 before_deploy:
   - go get github.com/goreleaser/goreleaser
+  - goreleaser
 deploy:
   provider: releases
   api_key:
