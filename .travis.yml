@@ -13,7 +13,7 @@ before_deploy:
 deploy:
   provider: releases
   api_key:
-    secure: OBLrJXJvOLI0PPM15Jo0IEcJYl4CpQTBVXT4pjTeEFzukHdEmfQU0BmPoIsDsaqtbJLf+oQT4NfefQFEqFQqJidHKAxUFMttIlfv7LfIkVZVOFg/tDwqOg/VVFmWFOR696RwjlbOTKzGqFbEwmFnYgMwOXMlFl1en+R+40PEuos=
+    secure: AFHdOq5gTUFodz06wFMwSxM/mjF9BtwiUxHq5eODTymARPp+DBkTLFcZgf77VE8wFEGuM9/5eedsuCna3FmQwY3ClGoINaAa8ouZHyYkqMhEZyhnTu9848zqJQxy46VKpwcXw1se/qyN6tNNIgJizrAbwfSgbdktCFxWZU2xB00
   file_glob: true
   file:
     - dist/gometalinter-*.zip
