@@ -14,11 +14,11 @@ builds:
   - binary: gometalinter
     goos: &goos
       - darwin
-      # - windows
-      # - linux
+      - windows
+      - linux
     goarch: &goarch
       - amd64
-      # - i386
+      - i386
     env:
       - CGO_ENABLED=0
     main: ./
