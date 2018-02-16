@@ -8,7 +8,7 @@ release:
 
 brew:
   skip_upload: true
-  description: Concurrently run Go lint tools and normalise their output Edit
+  description: Concurrently run Go lint tools and normalise their output.
 
 builds:
   - binary: gometalinter

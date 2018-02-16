@@ -24,7 +24,11 @@ var (
 		{"gopkg.in", "alecthomas", "gometalinter.v2", "_linters"},
 	}
 	defaultConfigPath = ".gometalinter.json"
-	Version           = "master"
+
+	// Populated by goreleaser.
+	version = "master"
+	commit  = "?"
+	date    = ""
 )
 
 func setupFlags(app *kingpin.Application) {
@@ -177,7 +181,7 @@ func formatSeverity() string {
 }
 
 func main() {
-	kingpin.Version(Version)
+	kingpin.Version(fmt.Sprintf("gometalinter version %s built from %s on %s", version, commit, date))
 	pathsArg := kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	app := kingpin.CommandLine
 	app.Action(loadDefaultConfig)
