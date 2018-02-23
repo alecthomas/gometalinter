@@ -145,7 +145,9 @@ type debugFunction func(format string, args ...interface{})
 
 func debug(format string, args ...interface{}) {
 	if config.Debug {
-		fmt.Fprintf(os.Stderr, "DEBUG: "+format+"\n", args...)
+		t := time.Now().UTC()
+		fmt.Fprintf(os.Stderr, "DEBUG: [%s] ", t.Format(time.StampMilli))
+		fmt.Fprintf(os.Stderr, format+"\n", args...)
 	}
 }
 
