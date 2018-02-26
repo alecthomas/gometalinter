@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 )
 
 func TestLinterConfigUnmarshalJSON(t *testing.T) {
@@ -17,9 +17,9 @@ func TestLinterConfigUnmarshalJSON(t *testing.T) {
 	}`
 	var config StringOrLinterConfig
 	err := json.Unmarshal([]byte(source), &config)
-	require.NoError(t, err)
-	assert.Equal(t, "/bin/custom", config.Command)
-	assert.Equal(t, functionName(partitionPathsAsDirectories), functionName(config.PartitionStrategy))
+	assert.NilError(t, err)
+	assert.Check(t, is.Equal("/bin/custom", config.Command))
+	assert.Check(t, is.Equal(functionName(partitionPathsAsDirectories), functionName(config.PartitionStrategy)))
 }
 
 func TestFindDefaultConfigFile(t *testing.T) {
@@ -73,10 +73,10 @@ func TestFindDefaultConfigFile(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		require.NoError(t, os.Chdir(testcase.dir))
+		assert.NilError(t, os.Chdir(testcase.dir))
 		configFile, found, err := findDefaultConfigFile()
-		assert.Equal(t, testcase.expected, configFile)
-		assert.Equal(t, testcase.found, found)
-		assert.NoError(t, err)
+		assert.Check(t, is.Equal(testcase.expected, configFile))
+		assert.Check(t, is.Equal(testcase.found, found))
+		assert.Check(t, is.NilError(err))
 	}
 }

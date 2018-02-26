@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gotestyourself/gotestyourself/assert"
+	is "github.com/gotestyourself/gotestyourself/assert/cmp"
 	"github.com/gotestyourself/gotestyourself/fs"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type Issue struct {
@@ -40,15 +40,15 @@ type Issues []Issue
 func ExpectIssues(t *testing.T, linter string, source string, expected Issues, extraFlags ...string) {
 	// Write source to temporary directory.
 	dir, err := ioutil.TempDir(".", "gometalinter-")
-	require.NoError(t, err)
+	assert.NilError(t, err)
 	defer os.RemoveAll(dir)
 
 	testFile := filepath.Join(dir, "test.go")
 	err = ioutil.WriteFile(testFile, []byte(source), 0644)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	actual := RunLinter(t, linter, dir, extraFlags...)
-	assert.Equal(t, expected, actual)
+	assert.Check(t, is.Compare(expected, actual))
 }
 
 // RunLinter runs the gometalinter as a binary against the files at path and
@@ -73,7 +73,7 @@ func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) I
 
 	var actual Issues
 	err := json.Unmarshal(output, &actual)
-	if !assert.NoError(t, err) {
+	if !assert.Check(t, is.NilError(err)) {
 		fmt.Printf("Stderr: %s\n", errBuffer)
 		fmt.Printf("Output: %s\n", output)
 		return nil
@@ -85,7 +85,7 @@ func buildBinary(t *testing.T) (string, func()) {
 	tmpdir := fs.NewDir(t, "regression-test-binary")
 	path := tmpdir.Join("gometalinter")
 	cmd := exec.Command("go", "build", "-o", path, "..")
-	require.NoError(t, cmd.Run())
+	assert.NilError(t, cmd.Run())
 	return path, tmpdir.Remove
 }
 
