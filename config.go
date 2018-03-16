@@ -37,7 +37,6 @@ type Config struct { // nolint: maligned
 	Exclude         []string
 	Include         []string
 	Skip            []string
-	Vendor          bool
 	Cyclo           int
 	LineLength      int
 	MisspellLocale  string

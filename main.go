@@ -53,7 +53,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("exclude", "Exclude messages matching these regular expressions.").Short('e').PlaceHolder("REGEXP").StringsVar(&config.Exclude)
 	app.Flag("include", "Include messages matching these regular expressions.").Short('I').PlaceHolder("REGEXP").StringsVar(&config.Include)
 	app.Flag("skip", "Skip directories with this name when expanding '...'.").Short('s').PlaceHolder("DIR...").StringsVar(&config.Skip)
-	app.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").BoolVar(&config.Vendor)
+	app.Flag("vendor", "Enable vendoring support (skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1).").Hidden().Bool()
 	app.Flag("cyclo-over", "Report functions with cyclomatic complexity over N (using gocyclo).").PlaceHolder("10").IntVar(&config.Cyclo)
 	app.Flag("line-length", "Report lines longer than N (using lll).").PlaceHolder("80").IntVar(&config.LineLength)
 	app.Flag("misspell-locale", "Specify locale to use (using misspell).").PlaceHolder("").StringVar(&config.MisspellLocale)
@@ -264,15 +264,11 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 		config.Sort = []string{"path"}
 	}
 
-	// PlaceHolder to skipping "vendor" directory if GO15VENDOREXPERIMENT=1 is enabled.
-	// TODO(alec): This will probably need to be enabled by default at a later time.
-	if os.Getenv("GO15VENDOREXPERIMENT") == "1" || config.Vendor {
-		if err := os.Setenv("GO15VENDOREXPERIMENT", "1"); err != nil {
-			warning("setenv GO15VENDOREXPERIMENT: %s", err)
-		}
-		config.Skip = append(config.Skip, "vendor")
-		config.Vendor = true
+	if err := os.Setenv("GO15VENDOREXPERIMENT", "1"); err != nil {
+		warning("setenv GO15VENDOREXPERIMENT: %s", err)
 	}
+	config.Skip = append(config.Skip, "vendor")
+
 	if len(config.Exclude) > 0 {
 		exclude = regexp.MustCompile(strings.Join(config.Exclude, "|"))
 	}
