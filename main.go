@@ -162,8 +162,18 @@ func warning(format string, args ...interface{}) {
 }
 
 func formatLinters() string {
-	w := bytes.NewBuffer(nil)
+	nameToLinter := map[string]*Linter{}
+	var linterNames []string
 	for _, linter := range getDefaultLinters() {
+		linterNames = append(linterNames, linter.Name)
+		nameToLinter[linter.Name] = linter
+	}
+	sort.Strings(linterNames)
+
+	w := bytes.NewBuffer(nil)
+	for _, linterName := range linterNames {
+		linter := nameToLinter[linterName]
+
 		install := "(" + linter.InstallFrom + ")"
 		if install == "()" {
 			install = ""
