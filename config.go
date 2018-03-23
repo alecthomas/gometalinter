@@ -23,37 +23,38 @@ type Config struct { // nolint: maligned
 
 	// A map of linter name to message that is displayed. This is useful when linters display text
 	// that is useful only in isolation, such as errcheck which just reports the construct.
-	MessageOverride map[string]string
-	Severity        map[string]string
-	VendoredLinters bool
-	Format          string
-	Fast            bool
-	Install         bool
-	Update          bool
-	Force           bool
-	DownloadOnly    bool
-	Debug           bool
-	Concurrency     int
-	Exclude         []string
-	Include         []string
-	Skip            []string
-	Vendor          bool
-	Cyclo           int
-	LineLength      int
-	MisspellLocale  string
-	MinConfidence   float64
-	MinOccurrences  int
-	MinConstLength  int
-	DuplThreshold   int
-	Sort            []string
-	Test            bool
-	Deadline        jsonDuration
-	Errors          bool
-	JSON            bool
-	Checkstyle      bool
-	EnableGC        bool
-	Aggregate       bool
-	EnableAll       bool
+	MessageOverride      map[string]string
+	Severity             map[string]string
+	VendoredLinters      bool
+	Format               string
+	Fast                 bool
+	Install              bool
+	Update               bool
+	Force                bool
+	DownloadOnly         bool
+	Debug                bool
+	Concurrency          int
+	Exclude              []string
+	Include              []string
+	Skip                 []string
+	Vendor               bool
+	Cyclo                int
+	LineLength           int
+	MisspellLocale       string
+	MinConfidence        float64
+	MinOccurrences       int
+	MinConstLength       int
+	DuplThreshold        int
+	Sort                 []string
+	Test                 bool
+	Deadline             jsonDuration
+	Errors               bool
+	JSON                 bool
+	Checkstyle           bool
+	CheckstyleAndConsole bool
+	EnableGC             bool
+	Aggregate            bool
+	EnableAll            bool
 
 	// Warn if a nolint directive was never matched to a linter issue
 	WarnUnmatchedDirective bool
