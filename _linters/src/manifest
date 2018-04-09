@@ -34,14 +34,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/dnephin/govet",
-			"repository": "https://github.com/dnephin/govet",
-			"vcs": "git",
-			"revision": "4a96d43e39d340b63daa8bc5576985aa599885f6",
-			"branch": "fork",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/golang/lint",
 			"repository": "https://github.com/golang/lint",
 			"vcs": "git",

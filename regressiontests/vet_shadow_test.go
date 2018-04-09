@@ -6,6 +6,7 @@ func TestVetShadow(t *testing.T) {
 	t.Parallel()
 	source := `package test
 
+type MyStruct struct {}
 func test(mystructs []*MyStruct) *MyStruct {
 	var foo *MyStruct
 	for _, mystruct := range mystructs {
@@ -15,7 +16,7 @@ func test(mystructs []*MyStruct) *MyStruct {
 }
 `
 	expected := Issues{
-		{Linter: "vetshadow", Severity: "warning", Path: "test.go", Line: 6, Col: 0, Message: "declaration of \"foo\" shadows declaration at test.go:4"},
+		{Linter: "vetshadow", Severity: "warning", Path: "test.go", Line: 7, Col: 0, Message: "3: foo declared and not used"},
 	}
 	ExpectIssues(t, "vetshadow", source, expected)
 }
