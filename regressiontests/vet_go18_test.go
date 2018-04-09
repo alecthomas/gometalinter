@@ -1,4 +1,4 @@
-// +build go1.10
+// +build go1.8,!go1.10
 
 package regressiontests
 
@@ -22,13 +22,12 @@ func TestVet(t *testing.T) {
 	defer dir.Remove()
 
 	expected := Issues{
-		{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "Printf format %d reads arg #1, but call has only 0 args"},
+		{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "missing argument for Printf(\"%d\"): format reads arg 1, have only 0 args"},
 		{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "unreachable code"},
-		{Linter: "vet", Severity: "error", Path: "file_test.go", Line: 5, Col: 0, Message: "unreachable code"},
-		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "Printf format %d reads arg #1, but call has only 0 args"},
+		{Linter: "vet", Severity: "error", Path: "file_test.go", Line: 7, Col: 0, Message: "unreachable code"},
+		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "missing argument for Printf(\"%d\"): format reads arg 1, have only 0 args"},
 		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "unreachable code"},
 	}
-
 	actual := RunLinter(t, "vet", dir.Path(), "--skip=excluded")
 	assert.Equal(t, expected, actual)
 }
@@ -48,9 +47,11 @@ func Something() {
 func vetExternalPackageFile(pkg string) string {
 	return `package ` + pkg + `
 
-func Example() {
+import "fmt"
+
+func ExampleSomething() {
 	return
-	println("example")
+	root.Something()
 }
 `
 }
