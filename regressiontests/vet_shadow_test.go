@@ -16,7 +16,7 @@ func test(mystructs []*MyStruct) *MyStruct {
 }
 `
 	expected := Issues{
-		{Linter: "vetshadow", Severity: "warning", Path: "test.go", Line: 7, Col: 0, Message: "3: foo declared and not used"},
+		{Linter: "vetshadow", Severity: "warning", Path: "test.go", Line: 7, Col: 3, Message: "foo declared and not used"},
 	}
 	ExpectIssues(t, "vetshadow", source, expected)
 }
