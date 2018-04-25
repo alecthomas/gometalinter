@@ -1,6 +1,8 @@
 package regressiontests
 
 import (
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/gotestyourself/gotestyourself/fs"
@@ -20,12 +22,23 @@ func TestVet(t *testing.T) {
 	defer dir.Remove()
 
 	expected := Issues{
-		{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "missing argument for Printf(\"%d\"): format reads arg 1, have only 0 args"},
+		{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "Printf format %d reads arg #1, but call has only 0 args"},
 		{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "unreachable code"},
-		{Linter: "vet", Severity: "error", Path: "file_test.go", Line: 7, Col: 0, Message: "unreachable code"},
-		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "missing argument for Printf(\"%d\"): format reads arg 1, have only 0 args"},
+		{Linter: "vet", Severity: "error", Path: "file_test.go", Line: 5, Col: 0, Message: "unreachable code"},
+		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "Printf format %d reads arg #1, but call has only 0 args"},
 		{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "unreachable code"},
 	}
+
+	if version := runtime.Version(); strings.HasPrefix(version, "go1.8") || strings.HasPrefix(version, "go1.9") {
+		expected = Issues{
+			{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "missing argument for Printf(\"%d\"): format reads arg 1, have only 0 args"},
+			{Linter: "vet", Severity: "error", Path: "file.go", Line: 7, Col: 0, Message: "unreachable code"},
+			{Linter: "vet", Severity: "error", Path: "file_test.go", Line: 5, Col: 0, Message: "unreachable code"},
+			{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "missing argument for Printf(\"%d\"): format reads arg 1, have only 0 args"},
+			{Linter: "vet", Severity: "error", Path: "sub/file.go", Line: 7, Col: 0, Message: "unreachable code"},
+		}
+	}
+
 	actual := RunLinter(t, "vet", dir.Path(), "--skip=excluded")
 	assert.Equal(t, expected, actual)
 }
@@ -45,11 +58,9 @@ func Something() {
 func vetExternalPackageFile(pkg string) string {
 	return `package ` + pkg + `
 
-import "fmt"
-
-func ExampleSomething() {
+func Example() {
 	return
-	root.Something()
+	println("example")
 }
 `
 }

@@ -21,7 +21,6 @@ LINTERS="
   github.com/alecthomas/gocyclo
   github.com/alexkohler/nakedret
   github.com/client9/misspell/cmd/misspell
-  github.com/dnephin/govet
   github.com/GoASTScanner/gas
   github.com/golang/lint/golint
   github.com/gordonklaus/ineffassign

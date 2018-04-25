@@ -200,7 +200,7 @@ func validateLinters(linters map[string]*Linter, config *Config) error {
 	return nil
 }
 
-const vetPattern = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
+const vetPattern = `^(?:vet:.*?\.go:\s+(?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|((?P<path>.*?\.go):(?P<line>\d+):(?P<col>\d+):\s*(?P<message>.*))|(?:(?P<path>.*?\.go):(?P<line>\d+):\s*(?P<message>.*))$`
 
 var defaultLinters = map[string]LinterConfig{
 	"maligned": {
@@ -396,17 +396,16 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 	},
 	"vet": {
-		Command:           `govet --no-recurse`,
+		Command:           `go vet`,
 		Pattern:           vetPattern,
-		InstallFrom:       "github.com/dnephin/govet",
-		PartitionStrategy: partitionPathsAsDirectories,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
 	"vetshadow": {
-		Command:           `govet --no-recurse --shadow`,
+		Command:           `go vet --shadow`,
 		Pattern:           vetPattern,
-		PartitionStrategy: partitionPathsAsDirectories,
+		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
