@@ -257,6 +257,8 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	if !config.EnableGC {
 		_ = os.Setenv("GOGC", "off")
 	}
+	// Ensure that gometalinter manages threads, not linters.
+	os.Setenv("GOMAXPROCS", "1")
 	// Force sorting by path if checkstyle mode is selected
 	// !jsonFlag check is required to handle:
 	// 	gometalinter --json --checkstyle --sort=severity
