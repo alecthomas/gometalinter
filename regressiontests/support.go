@@ -58,7 +58,7 @@ func RunLinter(t *testing.T, linter string, path string, extraFlags ...string) I
 	defer cleanup()
 
 	args := []string{
-		"-d", "--disable-all", "--enable", linter, "--json",
+		"-d", "--no-config", "--disable-all", "--enable", linter, "--json",
 		"--sort=path", "--sort=line", "--sort=column", "--sort=message",
 		"./...",
 	}
