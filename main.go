@@ -252,11 +252,6 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	kingpin.FatalIfError(err, "invalid format %q", config.Format)
 	config.formatTemplate = tmpl
 
-	// Linters are by their very nature, short lived, so disable GC.
-	// Reduced (user) linting time on kingpin from 0.97s to 0.64s.
-	if !config.EnableGC {
-		_ = os.Setenv("GOGC", "off")
-	}
 	// Ensure that gometalinter manages threads, not linters.
 	os.Setenv("GOMAXPROCS", "1")
 	// Force sorting by path if checkstyle mode is selected
