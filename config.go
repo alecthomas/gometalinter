@@ -21,6 +21,8 @@ type Config struct { // nolint: maligned
 	Enable  []string
 	Disable []string
 
+	Installable []string
+
 	// A map of linter name to message that is displayed. This is useful when linters display text
 	// that is useful only in isolation, such as errcheck which just reports the construct.
 	MessageOverride map[string]string

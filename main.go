@@ -113,29 +113,46 @@ func loadConfig(app *kingpin.Application, element *kingpin.ParseElement, ctx *ki
 }
 
 func disableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	out := []string{}
+	enabled := []string{}
+	installable := []string{}
 	for _, linter := range config.Enable {
 		if linter != *element.Value {
-			out = append(out, linter)
+			enabled = append(enabled, linter)
 		}
 	}
-	config.Enable = out
+	for _, linter := range config.Installable {
+		if linter != *element.Value {
+			installable = append(installable, linter)
+		}
+	}
+	config.Enable = enabled
+	config.Installable = installable
 	return nil
 }
 
 func enableAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	config.Enable = append(config.Enable, *element.Value)
+	name := *element.Value
+	config.Enable = append(config.Enable, name)
+	if linterConfig, ok := defaultLinters[name]; ok && linterConfig.InstallFrom != "" {
+		config.Installable = append(config.Installable, name)
+	}
 	return nil
 }
 
 func disableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
 	config.Enable = []string{}
+	config.Installable = []string{}
 	return nil
 }
 
 func enableAllAction(app *kingpin.Application, element *kingpin.ParseElement, ctx *kingpin.ParseContext) error {
-	for linter := range defaultLinters {
+	for linter, linterConfig := range defaultLinters {
 		config.Enable = append(config.Enable, linter)
+
+		// Make sure the linter is actually installable.
+		if linterConfig.InstallFrom != "" {
+			config.Installable = append(config.Installable, linter)
+		}
 	}
 	config.EnableAll = true
 	return nil
@@ -192,11 +209,21 @@ func formatSeverity() string {
 	return w.String()
 }
 
+func installableLinters() {
+	for linter, linterConfig := range defaultLinters {
+		// Make sure the linter is actually installable.
+		if linterConfig.InstallFrom != "" {
+			config.Installable = append(config.Installable, linter)
+		}
+	}
+}
+
 func main() {
 	kingpin.Version(fmt.Sprintf("gometalinter version %s built from %s on %s", version, commit, date))
 	pathsArg := kingpin.Arg("path", "Directories to lint. Defaults to \".\". <path>/... will recurse.").Strings()
 	app := kingpin.CommandLine
 	app.Action(loadDefaultConfig)
+	installableLinters()
 	setupFlags(app)
 	app.Help = fmt.Sprintf(`Aggregate and normalise the output of a whole bunch of Go linters.
 

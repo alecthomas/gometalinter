@@ -151,7 +151,7 @@ func retrieveLinterConfigs(names []string) map[string]LinterConfig {
 }
 
 func installLinters() {
-	linters := retrieveLinterConfigs(config.Enable)
+	linters := retrieveLinterConfigs(config.Installable)
 	names := make([]string, 0, len(linters))
 	targets := make([]string, 0, len(linters))
 	for name, config := range linters {
