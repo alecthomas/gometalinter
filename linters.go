@@ -140,10 +140,21 @@ func installLintersIndividually(targets []string) {
 	}
 }
 
+func retrieveLinterConfigs(names []string) map[string]LinterConfig {
+	configs := make(map[string]LinterConfig)
+	for _, v := range names {
+		if config, ok := defaultLinters[v]; ok {
+			configs[v] = config
+		}
+	}
+	return configs
+}
+
 func installLinters() {
-	names := make([]string, 0, len(defaultLinters))
-	targets := make([]string, 0, len(defaultLinters))
-	for name, config := range defaultLinters {
+	linters := retrieveLinterConfigs(config.Enable)
+	names := make([]string, 0, len(linters))
+	targets := make([]string, 0, len(linters))
+	for name, config := range linters {
 		if config.InstallFrom == "" {
 			continue
 		}
