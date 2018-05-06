@@ -303,9 +303,10 @@ ones you want:
 
 ### How do I make `gometalinter` work with Go 1.5 vendoring?
 
-`gometalinter` has a `--vendor` flag that just sets `GO15VENDOREXPERIMENT=1`, however the
-underlying tools must support it. Ensure that all of the linters are up to date and built with Go 1.5
-(`gometalinter --install --force`) then run `gometalinter --vendor .`. That should be it.
+`gometalinter` always sets `GO15VENDOREXPERIMENT=1` and ignores `vendor`
+directories, however the underlying tools must support it. Ensure that all
+of the linters are up to date and built with at least Go 1.5 (`gometalinter
+--install --force`) then run `gometalinter .`. That should be it.
 
 ### Why does `gometalinter --install` install a fork of gocyclo?
 
