@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -470,7 +471,18 @@ func addPath(paths []string, path string) []string {
 func configureEnvironment() {
 	paths := addGoBinsToPath(getGoPathList())
 	setEnv("PATH", strings.Join(paths, string(os.PathListSeparator)))
+	setEnv("GOROOT", discoverGoRoot())
 	debugPrintEnv()
+}
+
+func discoverGoRoot() string {
+	goroot := os.Getenv("GOROOT")
+	if goroot == "" {
+		output, err := exec.Command("go", "env", "GOROOT").Output()
+		kingpin.FatalIfError(err, "could not find go binary")
+		goroot = string(output)
+	}
+	return strings.TrimSpace(goroot)
 }
 
 func addGoBinsToPath(gopaths []string) []string {
@@ -515,14 +527,18 @@ https://github.com/alecthomas/gometalinter/issues/new
 	debugPrintEnv()
 }
 
-func setEnv(key string, value string) {
+func setEnv(key, value string) {
 	if err := os.Setenv(key, value); err != nil {
 		warning("setenv %s: %s", key, err)
+	} else {
+		debug("setenv %s=%q", key, value)
 	}
 }
 
 func debugPrintEnv() {
-	debug("PATH=%s", os.Getenv("PATH"))
-	debug("GOPATH=%s", os.Getenv("GOPATH"))
-	debug("GOBIN=%s", os.Getenv("GOBIN"))
+	debug("Current environment:")
+	debug("PATH=%q", os.Getenv("PATH"))
+	debug("GOPATH=%q", os.Getenv("GOPATH"))
+	debug("GOBIN=%q", os.Getenv("GOBIN"))
+	debug("GOROOT=%q", os.Getenv("GOROOT"))
 }
