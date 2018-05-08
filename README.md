@@ -17,6 +17,7 @@
   - [What's the best way to use `gometalinter` in CI?](#whats-the-best-way-to-use-gometalinter-in-ci)
   - [How do I make `gometalinter` work with Go 1.5 vendoring?](#how-do-i-make-gometalinter-work-with-go-15-vendoring)
   - [Why does `gometalinter --install` install a fork of gocyclo?](#why-does-gometalinter---install-install-a-fork-of-gocyclo)
+  - [Many unexpected errors are being reported](#many-unexpected-errors-are-being-reported)
   - [Gometalinter is not working](#gometalinter-is-not-working)
     - [1. Update to the latest build of gometalinter and all linters](#1-update-to-the-latest-build-of-gometalinter-and-all-linters)
     - [2. Analyse the debug output](#2-analyse-the-debug-output)
@@ -314,6 +315,13 @@ subdirectories even when just a single directory is specified. This made it
 unusably slow when vendoring. The recursive behaviour can be achieved with
 gometalinter by explicitly specifying `<path>/...`. There is a
 [pull request](https://github.com/fzipp/gocyclo/pull/1) open.
+
+### Many unexpected errors are being reported
+
+If you see a whole bunch of errors being reported that you wouldn't expect,
+such as compile errors, this typically means that something is wrong with your
+Go environment. Try `go install` and fix any issues with your go installation,
+then try gometalinter again.
 
 ### Gometalinter is not working
 

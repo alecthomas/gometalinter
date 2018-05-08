@@ -4,7 +4,6 @@ install:
 - go get -t -v . ./regressiontests
 - gometalinter --install
 go:
-- 1.8.x
 - 1.9.x
 - 1.10.x
 script: go test -v . ./regressiontests

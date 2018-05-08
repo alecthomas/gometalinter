@@ -185,7 +185,7 @@ archive:
   name_template: '{{ .Binary }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
   files:
     - COPYING
-    - README*
+    - README.md
 
 snapshot:
   name_template: SNAPSHOT-{{ .Commit }}
