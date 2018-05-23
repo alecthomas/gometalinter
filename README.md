@@ -80,7 +80,7 @@ There are two options for installing gometalinter.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [megacheck](https://github.com/dominikh/go-tools/tree/master/cmd/megacheck) - Run staticcheck, gosimple and unused, sharing work.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
-- [ineffassign](https://github.com/gordonklaus/ineffassign/blob/master/list) - Detect when assignments to *existing* variables are not used.
+- [ineffassign](https://github.com/gordonklaus/ineffassign) - Detect when assignments to *existing* variables are not used.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
