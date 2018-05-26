@@ -2,6 +2,22 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "4d63.com/gochecknoglobals",
+			"repository": "https://github.com/leighmcculloch/gochecknoglobals",
+			"vcs": "git",
+			"revision": "9a66a4a931c82990a7eb42e057408ac5f2bb6bee",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "4d63.com/gochecknoinits",
+			"repository": "https://github.com/leighmcculloch/gochecknoinits",
+			"vcs": "git",
+			"revision": "2f2a3632b636d6ff3c8a43214b2c9ca95da08d5d",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/GoASTScanner/gas",
 			"repository": "https://github.com/GoASTScanner/gas",
 			"vcs": "git",
