@@ -7,8 +7,18 @@ release:
     name: gometalinter
 
 brew:
-  skip_upload: true
-  description: Concurrently run Go lint tools and normalise their output.
+  name: gometalinter
+  github:
+    owner: alecthomas
+    name: homebrew-tap
+
+  commit_author:
+    name: goreleaserbot
+    email: goreleaser@carlosbecker.com
+
+  folder: Formula
+  homepage: "https://github.com/alecthomas/gometalinter"
+  description: "Concurrently run Go lint tools and normalise their output."
 
 builds:
   - binary: gometalinter
