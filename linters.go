@@ -361,12 +361,12 @@ var defaultLinters = map[string]LinterConfig{
 	},
 	"test": {
 		Command:           `go test`,
-		Pattern:           `^--- FAIL: .*$\s+(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.*)$`,
+		Pattern:           `(?m:^\t(?P<path>.*?\.go):(?P<line>\d+): (?P<message>.+)$)`,
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"testify": {
 		Command:           `go test`,
-		Pattern:           `Location:\s+(?P<path>.*?\.go):(?P<line>\d+)$\s+Error:\s+(?P<message>[^\n]+)`,
+		Pattern:           `(?m:^\s+Error Trace:\s+(?P<path>.+?.go):(?P<line>\d+)\n\s+Error:\s+(?P<message>.+?)[:\s]*$)`,
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"unconvert": {
