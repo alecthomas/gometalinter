@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"gotest.tools/fs"
 	"github.com/stretchr/testify/assert"
+	"gotest.tools/fs"
 )
 
 func TestVet(t *testing.T) {

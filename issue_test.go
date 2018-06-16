@@ -23,8 +23,8 @@ func TestSortedIssues(t *testing.T) {
 	expected := []*Issue{
 		{Path: newIssuePath("", "a.go"), Line: 1, Col: 4},
 		{Path: newIssuePath("", "a.go"), Line: 3, Col: 2},
-		{Path: newIssuePath( "", "b.go"), Line: 1, Col: 3},
-		{Path: newIssuePath( "", "b.go"), Line: 5, Col: 1},
+		{Path: newIssuePath("", "b.go"), Line: 1, Col: 3},
+		{Path: newIssuePath("", "b.go"), Line: 5, Col: 1},
 	}
 	require.Equal(t, expected, actual)
 }
