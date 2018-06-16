@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/fs"
 	"github.com/stretchr/testify/assert"
+	"gotest.tools/fs"
 )
 
 func TestGoType(t *testing.T) {
@@ -43,7 +43,6 @@ func TestGoTypeWithMultiPackageDirectoryTest(t *testing.T) {
 	actual = append(actual, RunLinter(t, "gotypex", dir.Path())...)
 	assert.Equal(t, expected, actual)
 }
-
 
 func goTypeFile(pkg string) string {
 	return fmt.Sprintf(`package %s

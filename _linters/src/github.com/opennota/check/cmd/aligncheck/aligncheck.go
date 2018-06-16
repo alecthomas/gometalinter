@@ -23,8 +23,8 @@ import (
 	"unsafe"
 
 	"github.com/kisielk/gotool"
-	"golang.org/x/tools/go/loader"
 	"go/types"
+	"golang.org/x/tools/go/loader"
 )
 
 var stdSizes = types.StdSizes{

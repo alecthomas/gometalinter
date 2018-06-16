@@ -46,13 +46,13 @@ func TestLinterStateCommand(t *testing.T) {
 			expected: `structcheck -t`,
 		},
 		{
-			linter: "unparam",
-			vars: varsDefault,
+			linter:   "unparam",
+			vars:     varsDefault,
 			expected: `unparam -tests=false`,
 		},
 		{
-			linter: "unparam",
-			vars: varsWithTest,
+			linter:   "unparam",
+			vars:     varsWithTest,
 			expected: `unparam `,
 		},
 	}

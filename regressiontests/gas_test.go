@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/fs"
 	"github.com/stretchr/testify/assert"
+	"gotest.tools/fs"
 )
 
 func TestGas(t *testing.T) {
