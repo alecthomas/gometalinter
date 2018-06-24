@@ -44,12 +44,6 @@ builds:
     env: *env
     main: ./_linters/src/github.com/client9/misspell/cmd/misspell
 
-  - binary: govet
-    goos: *goos
-    goarch: *goarch
-    env: *env
-    main: ./_linters/src/github.com/dnephin/govet
-
   - binary: gas
     goos: *goos
     goarch: *goarch
