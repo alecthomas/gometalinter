@@ -80,15 +80,34 @@ func TestPartitionToMaxArgSizeWithFileGlobsNoFiles(t *testing.T) {
 }
 
 func TestPathsToPackagePaths(t *testing.T) {
-	root := "/fake/root"
-	defer fakeGoPath(t, root)()
+	root1 := "/fake/root1"
+	root2 := "/fake/root2"
+	root3 := "/fake/root3"
+	gopath := root1 + ":" + root2 + ":" + root3
+	defer fakeGoPath(t, gopath)()
+
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	outsidePath := "/fake/outside/example4.com/foo4"
+	outsidePackage, _ := filepath.Rel(wd, outsidePath)
 
 	packagePaths, err := pathsToPackagePaths([]string{
-		filepath.Join(root, "src", "example.com", "foo"),
+		filepath.Join(root1, "src", "example1.com", "foo1"),
+		filepath.Join(root2, "src", "example2.com", "foo2"),
+		filepath.Join(root3, "src", "example3.com", "foo3"),
+		outsidePath,
 		"./relative/package",
 	})
 	require.NoError(t, err)
-	expected := []string{"example.com/foo", "./relative/package"}
+
+	expected := []string{
+		"example1.com/foo1",
+		"example2.com/foo2",
+		"example3.com/foo3",
+		outsidePackage,
+		"./relative/package",
+	}
 	assert.Equal(t, expected, packagePaths)
 }
 

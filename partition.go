@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -146,12 +147,23 @@ func packageNameFromPath(path string) (string, error) {
 	}
 	for _, gopath := range getGoPathList() {
 		rel, err := filepath.Rel(filepath.Join(gopath, "src"), path)
-		if err != nil {
+		if err != nil || rel[0] == '.' {
 			continue
 		}
 		return rel, nil
 	}
-	return "", fmt.Errorf("%s not in GOPATH", path)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("Can't get package name from path %s, err: %v", path, err)
+	}
+
+	rel, err := filepath.Rel(wd, path)
+	if err != nil {
+		return "", fmt.Errorf("Can't get package name from path %s, err: %v", path, err)
+	}
+
+	return rel, nil
 }
 
 func partitionPathsByDirectory(cmdArgs []string, paths []string) ([][]string, error) {
