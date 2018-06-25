@@ -68,6 +68,7 @@ func setupFlags(app *kingpin.Application) {
 	app.Flag("errors", "Only show errors.").BoolVar(&config.Errors)
 	app.Flag("json", "Generate structured JSON rather than standard line-based output.").BoolVar(&config.JSON)
 	app.Flag("checkstyle", "Generate checkstyle XML rather than standard line-based output.").BoolVar(&config.Checkstyle)
+	app.Flag("checkstyle-console", "Generate checkstyle XML and also standard line-based output.").BoolVar(&config.CheckstyleAndConsole)
 	app.Flag("enable-gc", "Enable GC for linters (useful on large repositories).").BoolVar(&config.EnableGC)
 	app.Flag("aggregate", "Aggregate issues reported by several linters.").BoolVar(&config.Aggregate)
 	app.Flag("warn-unmatched-nolint", "Warn if a nolint directive is not matched with an issue.").BoolVar(&config.WarnUnmatchedDirective)
@@ -235,6 +236,9 @@ Severity override map (default is "warning"):
 		status |= outputToJSON(issues)
 	} else if config.Checkstyle {
 		status |= outputToCheckstyle(issues)
+	} else if config.CheckstyleAndConsole {
+		status |= outputToCheckstyle(issues)
+		status |= outputToConsole(issues)
 	} else {
 		status |= outputToConsole(issues)
 	}
