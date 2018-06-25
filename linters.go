@@ -239,6 +239,22 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
+	"gochecknoinits": {
+		Command:           `gochecknoinits`,
+		Pattern:           `^(?P<path>.*?\.go):(?P<line>\d+) (?P<message>.*)`,
+		InstallFrom:       "4d63.com/gochecknoinits",
+		PartitionStrategy: partitionPathsAsDirectories,
+		defaultEnabled:    false,
+		IsFast:            true,
+	},
+	"gochecknoglobals": {
+		Command:           `gochecknoglobals`,
+		Pattern:           `^(?P<path>.*?\.go):(?P<line>\d+) (?P<message>.*)`,
+		InstallFrom:       "4d63.com/gochecknoglobals",
+		PartitionStrategy: partitionPathsAsDirectories,
+		defaultEnabled:    false,
+		IsFast:            true,
+	},
 	"goconst": {
 		Command:           `goconst -min-occurrences {min_occurrences} -min-length {min_const_length}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,

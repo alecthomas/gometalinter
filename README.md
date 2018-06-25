@@ -93,6 +93,8 @@ Disabled by default (enable with `--enable=<linter>`):
 - [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
 - [gosimple](https://github.com/dominikh/go-tools/tree/master/cmd/gosimple) - Report simplifications in code.
+- [gochecknoinits](https://4d63.com/gochecknoinits) - Report init functions, to reduce side effects in code.
+- [gochecknoglobals](https://4d63.com/gochecknoglobals) - Report global vars, to reduce side effects in code.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
 - [nakedret](https://github.com/alexkohler/nakedret) - Finds naked returns.
