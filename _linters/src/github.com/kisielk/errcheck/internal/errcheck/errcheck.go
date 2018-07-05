@@ -17,7 +17,6 @@ import (
 	"strings"
 	"sync"
 
-	"go/parser"
 	"golang.org/x/tools/go/loader"
 )
 
@@ -106,11 +105,8 @@ type Checker struct {
 
 	Verbose bool
 
-	// If true, checking of _test.go files is disabled
+	// If true, checking of of _test.go files is disabled
 	WithoutTests bool
-
-	// If true, checking of files with generated code is disabled
-	WithoutGeneratedCode bool
 
 	exclude map[string]bool
 }
@@ -122,38 +118,16 @@ func NewChecker() *Checker {
 }
 
 func (c *Checker) SetExclude(l map[string]bool) {
-	c.exclude = map[string]bool{}
-
 	// Default exclude for stdlib functions
-	for _, exc := range []string{
-		// bytes
-		"(*bytes.Buffer).Write",
-		"(*bytes.Buffer).WriteByte",
-		"(*bytes.Buffer).WriteRune",
-		"(*bytes.Buffer).WriteString",
+	c.exclude = map[string]bool{
+		"math/rand.Read":         true,
+		"(*math/rand.Rand).Read": true,
 
-		// fmt
-		"fmt.Errorf",
-		"fmt.Print",
-		"fmt.Printf",
-		"fmt.Println",
-
-		// math/rand
-		"math/rand.Read",
-		"(*math/rand.Rand).Read",
-
-		// strings
-		"(*strings.Builder).Write",
-		"(*strings.Builder).WriteByte",
-		"(*strings.Builder).WriteRune",
-		"(*strings.Builder).WriteString",
-
-		// hash
-		"(hash.Hash).Write",
-	} {
-		c.exclude[exc] = true
+		"(*bytes.Buffer).Write":       true,
+		"(*bytes.Buffer).WriteByte":   true,
+		"(*bytes.Buffer).WriteRune":   true,
+		"(*bytes.Buffer).WriteString": true,
 	}
-
 	for k := range l {
 		c.exclude[k] = true
 	}
@@ -173,11 +147,6 @@ func (c *Checker) load(paths ...string) (*loader.Program, error) {
 	loadcfg := loader.Config{
 		Build: &ctx,
 	}
-
-	if c.WithoutGeneratedCode {
-		loadcfg.ParserMode = parser.ParseComments
-	}
-
 	rest, err := loadcfg.FromArgs(paths, !c.WithoutTests)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse arguments: %s", err)
@@ -187,24 +156,6 @@ func (c *Checker) load(paths ...string) (*loader.Program, error) {
 	}
 
 	return loadcfg.Load()
-}
-
-var generatedCodeRegexp = regexp.MustCompile("^// Code generated .* DO NOT EDIT\\.$")
-
-func (c *Checker) shouldSkipFile(file *ast.File) bool {
-	if !c.WithoutGeneratedCode {
-		return false
-	}
-
-	for _, cg := range file.Comments {
-		for _, comment := range cg.List {
-			if generatedCodeRegexp.MatchString(comment.Text) {
-				return true
-			}
-		}
-	}
-
-	return false
 }
 
 // CheckPackages checks packages for errors.
@@ -239,9 +190,6 @@ func (c *Checker) CheckPackages(paths ...string) error {
 			}
 
 			for _, astFile := range v.pkg.Files {
-				if c.shouldSkipFile(astFile) {
-					continue
-				}
 				ast.Walk(v, astFile)
 			}
 			u.Append(v.errors...)
@@ -269,105 +217,29 @@ type visitor struct {
 	errors []UncheckedError
 }
 
-// selectorAndFunc tries to get the selector and function from call expression.
-// For example, given the call expression representing "a.b()", the selector
-// is "a.b" and the function is "b" itself.
-//
-// The final return value will be true if it is able to do extract a selector
-// from the call and look up the function object it refers to.
-//
-// If the call does not include a selector (like if it is a plain "f()" function call)
-// then the final return value will be false.
-func (v *visitor) selectorAndFunc(call *ast.CallExpr) (*ast.SelectorExpr, *types.Func, bool) {
+func (v *visitor) fullName(call *ast.CallExpr) (string, bool) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {
-		return nil, nil, false
+		return "", false
 	}
-
 	fn, ok := v.pkg.ObjectOf(sel.Sel).(*types.Func)
 	if !ok {
 		// Shouldn't happen, but be paranoid
-		return nil, nil, false
+		return "", false
 	}
-
-	return sel, fn, true
-
-}
-
-// fullName will return a package / receiver-type qualified name for a called function
-// if the function is the result of a selector. Otherwise it will return
-// the empty string.
-//
-// The name is fully qualified by the import path, possible type,
-// function/method name and pointer receiver.
-//
-// For example,
-//   - for "fmt.Printf(...)" it will return "fmt.Printf"
-//   - for "base64.StdEncoding.Decode(...)" it will return "(*encoding/base64.Encoding).Decode"
-//   - for "myFunc()" it will return ""
-func (v *visitor) fullName(call *ast.CallExpr) string {
-	_, fn, ok := v.selectorAndFunc(call)
-	if !ok {
-		return ""
-	}
-
+	// The name is fully qualified by the import path, possible type,
+	// function/method name and pointer receiver.
+	//
 	// TODO(dh): vendored packages will have /vendor/ in their name,
 	// thus not matching vendored standard library packages. If we
 	// want to support vendored stdlib packages, we need to implement
 	// FullName with our own logic.
-	return fn.FullName()
-}
-
-// namesForExcludeCheck will return a list of fully-qualified function names
-// from a function call that can be used to check against the exclusion list.
-//
-// If a function call is against a local function (like "myFunc()") then no
-// names are returned. If the function is package-qualified (like "fmt.Printf()")
-// then just that function's fullName is returned.
-//
-// Otherwise, we walk through all the potentially embeddded interfaces of the receiver
-// the collect a list of type-qualified function names that we will check.
-func (v *visitor) namesForExcludeCheck(call *ast.CallExpr) []string {
-	sel, fn, ok := v.selectorAndFunc(call)
-	if !ok {
-		return nil
-	}
-
-	name := v.fullName(call)
-	if name == "" {
-		return nil
-	}
-
-	// This will be missing for functions without a receiver (like fmt.Printf),
-	// so just fall back to the the function's fullName in that case.
-	selection, ok := v.pkg.Selections[sel]
-	if !ok {
-		return []string{name}
-	}
-
-	// This will return with ok false if the function isn't defined
-	// on an interface, so just fall back to the fullName.
-	ts, ok := walkThroughEmbeddedInterfaces(selection)
-	if !ok {
-		return []string{name}
-	}
-
-	result := make([]string, len(ts))
-	for i, t := range ts {
-		// Like in fullName, vendored packages will have /vendor/ in their name,
-		// thus not matching vendored standard library packages. If we
-		// want to support vendored stdlib packages, we need to implement
-		// additional logic here.
-		result[i] = fmt.Sprintf("(%s).%s", t.String(), fn.Name())
-	}
-	return result
+	return fn.FullName(), true
 }
 
 func (v *visitor) excludeCall(call *ast.CallExpr) bool {
-	for _, name := range v.namesForExcludeCheck(call) {
-		if v.exclude[name] {
-			return true
-		}
+	if name, ok := v.fullName(call); ok {
+		return v.exclude[name]
 	}
 
 	return false
@@ -499,7 +371,7 @@ func (v *visitor) addErrorAtPosition(position token.Pos, call *ast.CallExpr) {
 
 	var name string
 	if call != nil {
-		name = v.fullName(call)
+		name, _ = v.fullName(call)
 	}
 
 	v.errors = append(v.errors, UncheckedError{pos, line, name})
