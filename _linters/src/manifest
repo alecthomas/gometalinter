@@ -77,7 +77,7 @@
 			"importpath": "github.com/kisielk/errcheck",
 			"repository": "https://github.com/kisielk/errcheck",
 			"vcs": "git",
-			"revision": "e96dacdb078a5166c20b48dd667fb26d2ce0379f",
+			"revision": "23699b7e2cbfdb89481023524954ba2aeff6be90",
 			"branch": "master",
 			"notests": true
 		},
