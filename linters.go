@@ -116,7 +116,7 @@ func makeInstallCommand(linters ...string) []string {
 func installLintersWithOneCommand(targets []string) error {
 	cmd := makeInstallCommand(targets...)
 	debug("go %s", strings.Join(cmd, " "))
-	c := exec.Command("go", cmd...) // nolint: gas
+	c := exec.Command("go", cmd...) // nolint: gosec
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
@@ -127,7 +127,7 @@ func installLintersIndividually(targets []string) {
 	for _, target := range targets {
 		cmd := makeInstallCommand(target)
 		debug("go %s", strings.Join(cmd, " "))
-		c := exec.Command("go", cmd...) // nolint: gas
+		c := exec.Command("go", cmd...) // nolint: gosec
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		if err := c.Run(); err != nil {
@@ -231,10 +231,10 @@ var defaultLinters = map[string]LinterConfig{
 		PartitionStrategy: partitionPathsAsPackages,
 		defaultEnabled:    true,
 	},
-	"gas": {
-		Command:           `gas -fmt=csv`,
+	"gosec": {
+		Command:           `gosec -fmt=csv`,
 		Pattern:           `^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
-		InstallFrom:       "github.com/GoASTScanner/gas",
+		InstallFrom:       "github.com/securego/gosec",
 		PartitionStrategy: partitionPathsAsFiles,
 		defaultEnabled:    true,
 		IsFast:            true,

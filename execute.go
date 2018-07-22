@@ -147,7 +147,7 @@ func executeLinter(id int, state *linterState, args []string) error {
 	dbg("executing %s", strings.Join(args, " "))
 	buf := bytes.NewBuffer(nil)
 	command := args[0]
-	cmd := exec.Command(command, args[1:]...) // nolint: gas
+	cmd := exec.Command(command, args[1:]...) // nolint: gosec
 	cmd.Stdout = buf
 	cmd.Stderr = buf
 	err := cmd.Start()

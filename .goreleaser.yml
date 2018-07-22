@@ -54,11 +54,11 @@ builds:
     env: *env
     main: ./_linters/src/github.com/client9/misspell/cmd/misspell
 
-  - binary: gas
+  - binary: gosec
     goos: *goos
     goarch: *goarch
     env: *env
-    main: ./_linters/src/github.com/GoASTScanner/gas
+    main: ./_linters/src/github.com/securego/gosec
 
   - binary: golint
     goos: *goos

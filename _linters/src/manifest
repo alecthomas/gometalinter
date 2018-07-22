@@ -18,14 +18,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/GoASTScanner/gas",
-			"repository": "https://github.com/GoASTScanner/gas",
-			"vcs": "git",
-			"revision": "f22c701483ba201fbdb79c3667a28ef6a4e4a25c",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/alecthomas/gocyclo",
 			"repository": "https://github.com/alecthomas/gocyclo",
 			"vcs": "git",
@@ -114,10 +106,51 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/mozilla/tls-observatory/constants",
+			"repository": "https://github.com/mozilla/tls-observatory",
+			"vcs": "git",
+			"revision": "3ac0b6e8fb856155e2d83fb170038f4ca4316029",
+			"branch": "master",
+			"path": "/constants",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/nbutton23/zxcvbn-go",
+			"repository": "https://github.com/nbutton23/zxcvbn-go",
+			"vcs": "git",
+			"revision": "780cc39d5c78bcc7a47926818c450bb6749b89af",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/opennota/check",
 			"repository": "https://github.com/opennota/check",
 			"vcs": "git",
 			"revision": "0ec6d92e97559edf84eebe7c51b069953d4b522c",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/ryanuber/go-glob",
+			"repository": "https://github.com/ryanuber/go-glob",
+			"vcs": "git",
+			"revision": "256dc444b735e061061cf46c809487313d5b0065",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/securego/gosec",
+			"repository": "https://github.com/securego/gosec",
+			"vcs": "git",
+			"revision": "3f2b81461f928d1933d9afbce153cbbb1c061ba2",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/stretchr/objx",
+			"repository": "https://github.com/stretchr/objx",
+			"vcs": "git",
+			"revision": "b8b73a35e9830ae509858c10dec5866b4d5c8bff",
 			"branch": "master",
 			"notests": true
 		},
@@ -323,6 +356,14 @@
 			"revision": "9c477bae194915bfd4bc8c314e90e28b9ec1c831",
 			"branch": "master",
 			"path": "/refactor/importgraph",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/yaml.v2",
+			"repository": "https://gopkg.in/yaml.v2",
+			"vcs": "git",
+			"revision": "5420a8b6744d3b0345ab293f6fcba19c978f1183",
+			"branch": "master",
 			"notests": true
 		},
 		{
