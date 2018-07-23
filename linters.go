@@ -234,7 +234,7 @@ var defaultLinters = map[string]LinterConfig{
 	"gosec": {
 		Command:           `gosec -fmt=csv`,
 		Pattern:           `^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)`,
-		InstallFrom:       "github.com/securego/gosec",
+		InstallFrom:       "github.com/securego/gosec/cmd/gosec",
 		PartitionStrategy: partitionPathsAsFiles,
 		defaultEnabled:    true,
 		IsFast:            true,
