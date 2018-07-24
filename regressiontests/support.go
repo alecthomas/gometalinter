@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"gotest.tools/fs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gotest.tools/fs"
 )
 
 type Issue struct {

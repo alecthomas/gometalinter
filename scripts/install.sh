@@ -51,7 +51,7 @@ execute() {
   rm -rf "${srcdir}"
   (cd "${tmpdir}" && untar "${TARBALL}")
   install -d "${BINDIR}"
-  for binexe in "gometalinter" "gocyclo" "nakedret" "misspell" "govet" "gas" "golint" "ineffassign" "goconst" "errcheck" "maligned" "unconvert" "dupl" "structcheck" "varcheck" "safesql" "deadcode" "lll" "goimports" "gotype" "gosimple" "megacheck" "staticcheck" "unused" "interfacer" "unparam" ; do
+  for binexe in "gometalinter" "gocyclo" "nakedret" "misspell" "govet" "gosec" "golint" "ineffassign" "goconst" "errcheck" "maligned" "unconvert" "dupl" "structcheck" "varcheck" "safesql" "deadcode" "lll" "goimports" "gotype" "gosimple" "megacheck" "staticcheck" "unused" "interfacer" "unparam" ; do
     if [ "$OS" = "windows" ]; then
       binexe="${binexe}.exe"
     fi
