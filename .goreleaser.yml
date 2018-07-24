@@ -58,7 +58,7 @@ builds:
     goos: *goos
     goarch: *goarch
     env: *env
-    main: ./_linters/src/github.com/securego/gosec
+    main: ./_linters/src/github.com/securego/gosec/cmd/gosec
 
   - binary: golint
     goos: *goos
