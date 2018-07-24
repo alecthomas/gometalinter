@@ -84,7 +84,7 @@ There are two options for installing gometalinter.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
 - [unconvert](https://github.com/mdempsky/unconvert) - Detect redundant type conversions.
 - [goconst](https://github.com/jgautheron/goconst) - Finds repeated strings that could be replaced by a constant.
-- [goesc](https://github.com/securego/gosec) - Inspects source code for security problems by scanning the Go AST.
+- [gosec](https://github.com/securego/gosec) - Inspects source code for security problems by scanning the Go AST.
 
 Disabled by default (enable with `--enable=<linter>`):
 
