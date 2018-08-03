@@ -55,6 +55,8 @@ type Config struct { // nolint: maligned
 	Aggregate       bool
 	EnableAll       bool
 
+	DefaultScope bool // 默认范围 "./..."  add at 2018.08.03
+
 	// Warn if a nolint directive was never matched to a linter issue
 	WarnUnmatchedDirective bool
 
