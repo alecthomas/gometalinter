@@ -150,14 +150,21 @@ func loadConfigFile(filename string) error {
 	if err != nil {
 		return err
 	}
-	for _, disable := range config.Disable {
-		for i, enable := range config.Enable {
-			if enable == disable {
-				config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
-				break
+	if config.EnableAll {
+		for linter := range defaultLinters {
+			config.Enable = append(config.Enable, linter)
+		}
+	} else {
+		for _, disable := range config.Disable {
+			for i, enable := range config.Enable {
+				if enable == disable {
+					config.Enable = append(config.Enable[:i], config.Enable[i+1:]...)
+					break
+				}
 			}
 		}
 	}
+
 	return err
 }
 
