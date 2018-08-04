@@ -223,6 +223,10 @@ Severity override map (default is "warning"):
 	include, exclude := processConfig(config)
 
 	start := time.Now()
+	if config.DefaultScope {
+		pathsArg = &[]string{"./..."}
+	}
+
 	paths := resolvePaths(*pathsArg, config.Skip)
 
 	linters := lintersFromConfig(config)

@@ -55,6 +55,8 @@ type Config struct { // nolint: maligned
 	Aggregate       bool
 	EnableAll       bool
 
+	DefaultScope bool // 默认范围 "./..."  add at 2018.08.03
+
 	// Warn if a nolint directive was never matched to a linter issue
 	WarnUnmatchedDirective bool
 
@@ -150,6 +152,12 @@ func loadConfigFile(filename string) error {
 	if err != nil {
 		return err
 	}
+
+	if config.EnableAll {
+		for linter := range defaultLinters {
+			config.Enable = append(config.Enable, linter)
+		}
+	}
 	for _, disable := range config.Disable {
 		for i, enable := range config.Enable {
 			if enable == disable {
@@ -158,6 +166,7 @@ func loadConfigFile(filename string) error {
 			}
 		}
 	}
+
 	return err
 }
 
