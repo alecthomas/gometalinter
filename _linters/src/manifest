@@ -142,7 +142,7 @@
 			"importpath": "github.com/securego/gosec",
 			"repository": "https://github.com/securego/gosec",
 			"vcs": "git",
-			"revision": "2785f7aaf8c5236da2412f85e76351123b21b350",
+			"revision": "a7cff91312e4ea979b7ec590792a289b9d199391",
 			"branch": "master",
 			"notests": true
 		},
