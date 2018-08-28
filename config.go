@@ -150,6 +150,12 @@ func loadConfigFile(filename string) error {
 	if err != nil {
 		return err
 	}
+
+	if config.EnableAll {
+		for linter := range defaultLinters {
+			config.Enable = append(config.Enable, linter)
+		}
+	}
 	for _, disable := range config.Disable {
 		for i, enable := range config.Enable {
 			if enable == disable {
@@ -158,6 +164,7 @@ func loadConfigFile(filename string) error {
 			}
 		}
 	}
+
 	return err
 }
 
