@@ -180,6 +180,18 @@ builds:
     env: *env
     main: ./_linters/src/mvdan.cc/unparam
 
+  - binary: gochecknoinits
+    goos: *goos
+    goarch: *goarch
+    env: *env
+    main: ./_linters/src/4d63.com/gochecknoinits
+
+  - binary: gochecknoglobals
+    goos: *goos
+    goarch: *goarch
+    env: *env
+    main: ./_linters/src/4d63.com/gochecknoglobals
+
 archive:
   format: tar.gz
   wrap_in_directory: true
