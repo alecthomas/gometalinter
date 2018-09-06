@@ -192,6 +192,43 @@ import (
 func main() {
         _ =  ssh.InsecureIgnoreHostKey()
 }`, 1}}
+
+	// SampleCodeG107 - SSRF via http requests with variable url
+	SampleCodeG107 = []CodeSample{{`
+package main
+import (
+	"net/http"
+	"io/ioutil"
+	"fmt"
+	"os"
+)
+func main() {
+	url := os.Getenv("tainted_url")
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+  	defer resp.Body.Close()
+  	body, err := ioutil.ReadAll(resp.Body)
+  	if err != nil {
+    		panic(err)
+  	}
+  	fmt.Printf("%s", body)
+}`, 1}, {`
+package main
+
+import (
+	"fmt"
+	"net/http"
+)
+const url = "http://127.0.0.1"
+func main() {
+	resp, err := http.Get(url)
+	if err != nil {
+		fmt.Println(err)
+    	}
+      	fmt.Println(resp.Status)
+}`, 0}}
 	// SampleCodeG201 - SQL injection via format string
 	SampleCodeG201 = []CodeSample{
 		{`
@@ -500,7 +537,7 @@ import (
 
 func main() {
 	http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
-		title := r.URL.Query().Get("title")
+  		title := r.URL.Query().Get("title")
 		f, err := os.Open(title)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
@@ -512,6 +549,65 @@ func main() {
 		fmt.Fprintf(w, "%s", body)
 	})
 	log.Fatal(http.ListenAndServe(":3000", nil))
+}`, 1}, {`
+package main
+
+import (
+	"log"
+	"os"
+	"io/ioutil"
+)
+
+	func main() {
+		f2 := os.Getenv("tainted_file2")
+		body, err := ioutil.ReadFile("/tmp/" + f2)
+		if err != nil {
+		log.Printf("Error: %v\n", err)
+	  }
+		log.Print(body)
+ }`, 1}, {`
+ package main
+
+ import (
+	 "bufio"
+	 "fmt"
+	 "os"
+	 "path/filepath"
+ )
+
+func main() {
+	reader := bufio.NewReader(os.Stdin)
+  fmt.Print("Please enter file to read: ")
+	file, _ := reader.ReadString('\n')
+	file = file[:len(file)-1]
+	f, err := os.Open(filepath.Join("/tmp/service/", file))
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+	contents := make([]byte, 15)
+  if _, err = f.Read(contents); err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
+  fmt.Println(string(contents))
+}`, 1}, {`
+package main
+
+import (
+	"log"
+	"os"
+	"io/ioutil"
+	"path/filepath"
+)
+
+func main() {
+	dir := os.Getenv("server_root")
+	f3 := os.Getenv("tainted_file3")
+	// edge case where both a binary expression and file Join are used.
+	body, err := ioutil.ReadFile(filepath.Join("/var/"+dir, f3))
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	}
+	log.Print(body)
 }`, 1}}
 
 	// SampleCodeG305 - File path traversal when extracting zip archives
