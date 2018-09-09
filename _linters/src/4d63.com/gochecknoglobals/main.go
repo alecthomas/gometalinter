@@ -7,9 +7,11 @@ import (
 )
 
 func main() {
-	flagPrintHelp := flag.Bool("help", false, "")
+	flagPrintHelp := flag.Bool("h", false, "Print help")
+	flagIncludeTests := flag.Bool("t", false, "Include tests")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: gochecknoglobals [path] [path] ...\n")
+		fmt.Fprintf(os.Stderr, "Usage: gochecknoglobals [-t] [path] [path] ...\n")
+		flag.PrintDefaults()
 	}
 	flag.Parse()
 
@@ -17,6 +19,8 @@ func main() {
 		flag.Usage()
 		return
 	}
+
+	includeTests := *flagIncludeTests
 
 	paths := flag.Args()
 	if len(paths) == 0 {
@@ -26,7 +30,7 @@ func main() {
 	exitWithError := false
 
 	for _, path := range paths {
-		messages, err := checkNoGlobals(path)
+		messages, err := checkNoGlobals(path, includeTests)
 		for _, message := range messages {
 			fmt.Fprintf(os.Stdout, "%s\n", message)
 			exitWithError = true
