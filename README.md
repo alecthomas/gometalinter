@@ -4,6 +4,8 @@
 <!-- MarkdownTOC -->
 
 - [Installing](#installing)
+    - [curl](#curl)
+    - [Homebrew](#homebrew)
 - [Editor integration](#editor-integration)
 - [Supported linters](#supported-linters)
 - [Configuration file](#configuration-file)
@@ -45,7 +47,7 @@ It is intended for use with editor/IDE integration.
 
 ## Installing
 
-### install.sh
+### curl
 
 To install the latest stable release:
 
