@@ -4,7 +4,7 @@
 <!-- MarkdownTOC -->
 
 - [Installing](#installing)
-    - [curl](#curl)
+    - [Binary Releases](#binary-releases)
     - [Homebrew](#homebrew)
 - [Editor integration](#editor-integration)
 - [Supported linters](#supported-linters)
@@ -47,7 +47,7 @@ It is intended for use with editor/IDE integration.
 
 ## Installing
 
-### curl
+### Binary Releases
 
 To install the latest stable release:
 
