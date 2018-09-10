@@ -47,7 +47,7 @@ It is intended for use with editor/IDE integration.
 
 To install the latest stable release:
 
-    curl https://git.io/vp6lP | sh
+    curl -L https://git.io/vp6lP | sh
 
 Alternatively you can install a specific version from the [releases](https://github.com/alecthomas/gometalinter/releases) list.
 
@@ -332,7 +332,7 @@ are three things to try in that case:
 
 #### 1. Update to the latest build of gometalinter and all linters
 
-    curl https://git.io/vp6lP | sh
+    curl -L https://git.io/vp6lP | sh
 
 If you're lucky, this will fix the problem.
 
