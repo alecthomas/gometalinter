@@ -4,6 +4,8 @@
 <!-- MarkdownTOC -->
 
 - [Installing](#installing)
+    - [Binary Releases](#binary-releases)
+    - [Homebrew](#homebrew)
 - [Editor integration](#editor-integration)
 - [Supported linters](#supported-linters)
 - [Configuration file](#configuration-file)
@@ -45,11 +47,20 @@ It is intended for use with editor/IDE integration.
 
 ## Installing
 
+### Binary Releases
+
 To install the latest stable release:
 
     curl -L https://git.io/vp6lP | sh
 
 Alternatively you can install a specific version from the [releases](https://github.com/alecthomas/gometalinter/releases) list.
+
+### Homebrew
+
+```sh
+brew tap alecthomas/homebrew-tap
+brew install gometalinter
+```
 
 ## Editor integration
 
