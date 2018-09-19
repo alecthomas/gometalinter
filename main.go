@@ -257,7 +257,7 @@ func processConfig(config *Config) (include *regexp.Regexp, exclude *regexp.Rege
 	os.Setenv("GOMAXPROCS", "1")
 	// Force sorting by path if checkstyle mode is selected
 	// !jsonFlag check is required to handle:
-	// 	gometalinter --json --checkstyle --sort=severity
+	//	gometalinter --json --checkstyle --sort=severity
 	if config.Checkstyle && !config.JSON {
 		config.Sort = []string{"path"}
 	}
@@ -379,7 +379,7 @@ func relativePackagePath(dir string) string {
 
 func lintersFromConfig(config *Config) map[string]*Linter {
 	out := map[string]*Linter{}
-	config.Enable = replaceWithMegacheck(config.Enable, config.EnableAll)
+	config.Enable = replaceWithMegacheck(config.Enable, config.Disable, config.EnableAll)
 	for _, name := range config.Enable {
 		linter := getLinterByName(name, LinterConfig(config.Linters[name]))
 		if config.Fast && !linter.IsFast {
@@ -397,13 +397,18 @@ func lintersFromConfig(config *Config) map[string]*Linter {
 // returns a either a revised list removing those and adding megacheck or an
 // unchanged slice. Emits a warning if linters were removed and swapped with
 // megacheck.
-func replaceWithMegacheck(enabled []string, enableAll bool) []string {
+func replaceWithMegacheck(enabled []string, disabled []string, enableAll bool) []string {
 	var (
 		staticcheck,
 		gosimple,
 		unused bool
 		revised []string
 	)
+	for _, linter := range disabled {
+		if linter == "megacheck" {
+			return enabled
+		}
+	}
 	for _, linter := range enabled {
 		switch linter {
 		case "staticcheck":
