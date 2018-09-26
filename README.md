@@ -233,35 +233,6 @@ message for a file, that file is parsed for directives.
 
 Install gometalinter (see above).
 
-Install all known linters:
-
-```
-$ gometalinter --install
-Installing:
-  structcheck
-  maligned
-  nakedret
-  deadcode
-  gocyclo
-  ineffassign
-  dupl
-  golint
-  gotype
-  goimports
-  errcheck
-  varcheck
-  interfacer
-  goconst
-  gosimple
-  staticcheck
-  unparam
-  unused
-  misspell
-  lll
-  gosec
-  safesql
-```
-
 Run it:
 
 ```
@@ -281,7 +252,6 @@ stutter.go:27:6:warning: error return value not checked (doit()           // tes
 stutter.go:29::error: unreachable code (vet)
 stutter.go:26::error: missing argument for Printf("%d"): format reads arg 1, have only 0 args (vet)
 ```
-
 
 Gometalinter also supports the commonly seen `<path>/...` recursive path
 format. Note that this can be *very* slow, and you may need to increase the linter `--deadline` to allow linters to complete.
