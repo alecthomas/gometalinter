@@ -6,7 +6,7 @@ install:
 go:
 - 1.9.x
 - 1.10.x
-- 1.11
+- 1.11.x
 script: go test -v . ./regressiontests
 before_deploy:
   - curl -sL https://git.io/goreleaser | bash
