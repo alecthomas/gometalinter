@@ -26,9 +26,13 @@ builds:
       - darwin
       - windows
       - linux
+      - freebsd
+      - openbsd
+      - netbsd
     goarch: &goarch
       - amd64
       - i386
+      - arm64
     env:
       - CGO_ENABLED=0
     main: ./
