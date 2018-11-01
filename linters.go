@@ -332,7 +332,7 @@ var defaultLinters = map[string]LinterConfig{
 	"lll": {
 		Command:           `lll -g -l {maxlinelength}`,
 		Pattern:           `PATH:LINE:MESSAGE`,
-		InstallFrom:       "github.com/walle/lll/cmd/lll",
+		InstallFrom:       "github.com/walle/lll/tree/master/cmd/lll",
 		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
