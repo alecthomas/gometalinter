@@ -324,6 +324,12 @@ func resolvePaths(paths, skip []string) []string {
 	for _, path := range paths {
 		if strings.HasSuffix(path, "/...") {
 			root := filepath.Dir(path)
+			if lstat, err := os.Lstat(root); err == nil && (lstat.Mode()&os.ModeSymlink) != 0 {
+				// if we have a symlink append os.PathSeparator to force a dereference of the symlink
+				// to workaround bug in filepath.Walk that won't dereference a root path that
+				// is a dir symlink
+				root = root + string(os.PathSeparator)
+			}
 			_ = filepath.Walk(root, func(p string, i os.FileInfo, err error) error {
 				if err != nil {
 					warning("invalid path %q: %s", p, err)
