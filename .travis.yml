@@ -23,5 +23,4 @@ deploy:
   on:
     tags: true
     repo: alecthomas/gometalinter
-    condition: $TRAVIS_GO_VERSION =~ ^1\.11(\.[0-9]+)?$
-
+    condition: $TRAVIS_GO_VERSION =~ ^1\.11
