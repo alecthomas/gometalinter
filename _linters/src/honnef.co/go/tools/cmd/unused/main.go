@@ -3,9 +3,11 @@
 package main // import "honnef.co/go/tools/cmd/unused"
 
 import (
+	"fmt"
 	"log"
 	"os"
 
+	"honnef.co/go/tools/lint"
 	"honnef.co/go/tools/lint/lintutil"
 	"honnef.co/go/tools/unused"
 )
@@ -38,6 +40,7 @@ func newChecker(mode unused.CheckMode) *unused.Checker {
 }
 
 func main() {
+	fmt.Fprintln(os.Stderr, "Unused has been deprecated. Please use staticcheck instead.")
 	log.SetFlags(0)
 
 	fs := lintutil.FlagSet("unused")
@@ -70,9 +73,5 @@ func main() {
 
 	checker := newChecker(mode)
 	l := unused.NewLintChecker(checker)
-	cfg := lintutil.CheckerConfig{
-		Checker:     l,
-		ExitNonZero: true,
-	}
-	lintutil.ProcessFlagSet([]lintutil.CheckerConfig{cfg}, fs)
+	lintutil.ProcessFlagSet([]lint.Checker{l}, fs)
 }

@@ -2,8 +2,10 @@
 package main // import "honnef.co/go/tools/cmd/megacheck"
 
 import (
+	"fmt"
 	"os"
 
+	"honnef.co/go/tools/lint"
 	"honnef.co/go/tools/lint/lintutil"
 	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
@@ -11,16 +13,16 @@ import (
 )
 
 func main() {
+	fmt.Fprintln(os.Stderr, "Megacheck has been deprecated. Please use staticcheck instead.")
+
 	var flags struct {
 		staticcheck struct {
-			enabled     bool
-			generated   bool
-			exitNonZero bool
+			enabled   bool
+			generated bool
 		}
 		gosimple struct {
-			enabled     bool
-			generated   bool
-			exitNonZero bool
+			enabled   bool
+			generated bool
 		}
 		unused struct {
 			enabled      bool
@@ -29,29 +31,23 @@ func main() {
 			functions    bool
 			types        bool
 			variables    bool
-			debug        string
 			wholeProgram bool
 			reflection   bool
-			exitNonZero  bool
 		}
 	}
 	fs := lintutil.FlagSet("megacheck")
 	fs.BoolVar(&flags.gosimple.enabled,
-		"simple.enabled", true, "Run gosimple")
+		"simple.enabled", true, "Deprecated: use -checks instead")
 	fs.BoolVar(&flags.gosimple.generated,
 		"simple.generated", false, "Check generated code")
-	fs.BoolVar(&flags.gosimple.exitNonZero,
-		"simple.exit-non-zero", false, "Exit non-zero if any problems were found")
 
 	fs.BoolVar(&flags.staticcheck.enabled,
-		"staticcheck.enabled", true, "Run staticcheck")
+		"staticcheck.enabled", true, "Deprecated: use -checks instead")
 	fs.BoolVar(&flags.staticcheck.generated,
 		"staticcheck.generated", false, "Check generated code (only applies to a subset of checks)")
-	fs.BoolVar(&flags.staticcheck.exitNonZero,
-		"staticcheck.exit-non-zero", true, "Exit non-zero if any problems were found")
 
 	fs.BoolVar(&flags.unused.enabled,
-		"unused.enabled", true, "Run unused")
+		"unused.enabled", true, "Deprecated: use -checks instead")
 	fs.BoolVar(&flags.unused.constants,
 		"unused.consts", true, "Report unused constants")
 	fs.BoolVar(&flags.unused.fields,
@@ -66,29 +62,25 @@ func main() {
 		"unused.exported", false, "Treat arguments as a program and report unused exported identifiers")
 	fs.BoolVar(&flags.unused.reflection,
 		"unused.reflect", true, "Consider identifiers as used when it's likely they'll be accessed via reflection")
-	fs.BoolVar(&flags.unused.exitNonZero,
-		"unused.exit-non-zero", true, "Exit non-zero if any problems were found")
+
+	fs.Bool("simple.exit-non-zero", true, "Deprecated: use -fail instead")
+	fs.Bool("staticcheck.exit-non-zero", true, "Deprecated: use -fail instead")
+	fs.Bool("unused.exit-non-zero", true, "Deprecated: use -fail instead")
 
 	fs.Parse(os.Args[1:])
 
-	var checkers []lintutil.CheckerConfig
+	var checkers []lint.Checker
 
 	if flags.staticcheck.enabled {
 		sac := staticcheck.NewChecker()
 		sac.CheckGenerated = flags.staticcheck.generated
-		checkers = append(checkers, lintutil.CheckerConfig{
-			Checker:     sac,
-			ExitNonZero: flags.staticcheck.exitNonZero,
-		})
+		checkers = append(checkers, sac)
 	}
 
 	if flags.gosimple.enabled {
 		sc := simple.NewChecker()
 		sc.CheckGenerated = flags.gosimple.generated
-		checkers = append(checkers, lintutil.CheckerConfig{
-			Checker:     sc,
-			ExitNonZero: flags.gosimple.exitNonZero,
-		})
+		checkers = append(checkers, sc)
 	}
 
 	if flags.unused.enabled {
@@ -111,11 +103,7 @@ func main() {
 		uc := unused.NewChecker(mode)
 		uc.WholeProgram = flags.unused.wholeProgram
 		uc.ConsiderReflection = flags.unused.reflection
-		checkers = append(checkers, lintutil.CheckerConfig{
-			Checker:     unused.NewLintChecker(uc),
-			ExitNonZero: flags.unused.exitNonZero,
-		})
-
+		checkers = append(checkers, unused.NewLintChecker(uc))
 	}
 
 	lintutil.ProcessFlagSet(checkers, fs)

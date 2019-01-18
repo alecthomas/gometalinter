@@ -292,12 +292,6 @@ var defaultLinters = map[string]LinterConfig{
 		defaultEnabled:    true,
 		IsFast:            true,
 	},
-	"gosimple": {
-		Command:           `gosimple`,
-		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "honnef.co/go/tools/cmd/gosimple",
-		PartitionStrategy: partitionPathsAsPackages,
-	},
 	"gotype": {
 		Command:           `gotype -e {tests=-t}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
@@ -336,13 +330,6 @@ var defaultLinters = map[string]LinterConfig{
 		PartitionStrategy: partitionPathsAsFiles,
 		IsFast:            true,
 	},
-	"megacheck": {
-		Command:           `megacheck`,
-		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "honnef.co/go/tools/cmd/megacheck",
-		PartitionStrategy: partitionPathsAsPackages,
-		defaultEnabled:    true,
-	},
 	"misspell": {
 		Command:           `misspell -j 1 --locale "{misspelllocale}"`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
@@ -367,6 +354,7 @@ var defaultLinters = map[string]LinterConfig{
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "honnef.co/go/tools/cmd/staticcheck",
 		PartitionStrategy: partitionPathsAsPackages,
+		defaultEnabled: true,
 	},
 	"structcheck": {
 		Command:           `structcheck {tests=-t}`,
@@ -396,12 +384,6 @@ var defaultLinters = map[string]LinterConfig{
 		Command:           `unparam {not_tests=-tests=false}`,
 		Pattern:           `PATH:LINE:COL:MESSAGE`,
 		InstallFrom:       "mvdan.cc/unparam",
-		PartitionStrategy: partitionPathsAsPackages,
-	},
-	"unused": {
-		Command:           `unused`,
-		Pattern:           `PATH:LINE:COL:MESSAGE`,
-		InstallFrom:       "honnef.co/go/tools/cmd/unused",
 		PartitionStrategy: partitionPathsAsPackages,
 	},
 	"varcheck": {
