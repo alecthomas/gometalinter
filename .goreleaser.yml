@@ -167,12 +167,6 @@ builds:
     env: *env
     main: ./_linters/src/honnef.co/go/tools/cmd/staticcheck
 
-  - binary: unused
-    goos: *goos
-    goarch: *goarch
-    env: *env
-    main: ./_linters/src/honnef.co/go/tools/cmd/unused
-
   - binary: interfacer
     goos: *goos
     goarch: *goarch
