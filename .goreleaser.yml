@@ -33,6 +33,7 @@ builds:
       - amd64
       - i386
       - arm64
+      - ppc64le
     env:
       - CGO_ENABLED=0
     main: ./
