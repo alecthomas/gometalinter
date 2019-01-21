@@ -5,7 +5,7 @@
 			"importpath": "4d63.com/gochecknoglobals",
 			"repository": "https://github.com/leighmcculloch/gochecknoglobals",
 			"vcs": "git",
-			"revision": "5090db600a84f7a401cb031f4e8e2e420b0e1ecd",
+			"revision": "abbdf6ec0afbf03522985f899c67ead98818854d",
 			"branch": "master",
 			"notests": true
 		},
