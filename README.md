@@ -88,7 +88,7 @@ brew install gometalinter
 - [structcheck](https://github.com/opennota/check) - Find unused struct fields.
 - [maligned](https://github.com/mdempsky/maligned) -  Detect structs that would take less memory if their fields were sorted.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
-- [megacheck](https://github.com/dominikh/go-tools/tree/master/cmd/megacheck) - Run staticcheck, gosimple and unused, sharing work.
+- [staticcheck](https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck) - Statically detect bugs, both obvious and subtle ones.
 - [dupl](https://github.com/mibk/dupl) - Reports potentially duplicated code.
 - [ineffassign](https://github.com/gordonklaus/ineffassign) - Detect when assignments to *existing* variables are not used.
 - [interfacer](https://github.com/mvdan/interfacer) - Suggest narrower interfaces that can be used.
@@ -102,16 +102,13 @@ Disabled by default (enable with `--enable=<linter>`):
 - [test](http://golang.org/pkg/testing/) - Show location of test failures from the stdlib testing module.
 - [gofmt -s](https://golang.org/cmd/gofmt/) - Checks if the code is properly formatted and could not be further simplified.
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) - Checks missing or unreferenced package imports.
-- [gosimple](https://github.com/dominikh/go-tools/tree/master/cmd/gosimple) - Report simplifications in code.
 - [gochecknoinits](https://4d63.com/gochecknoinits) - Report init functions, to reduce side effects in code.
 - [gochecknoglobals](https://4d63.com/gochecknoglobals) - Report global vars, to reduce side effects in code.
 - [lll](https://github.com/walle/lll) - Report long lines (see `--line-length=N`).
 - [misspell](https://github.com/client9/misspell) - Finds commonly misspelled English words.
 - [nakedret](https://github.com/alexkohler/nakedret) - Finds naked returns.
 - [unparam](https://github.com/mvdan/unparam) - Find unused function parameters.
-- [unused](https://github.com/dominikh/go-tools/tree/master/cmd/unused) - Find unused variables.
 - [safesql](https://github.com/stripe/safesql) - Finds potential SQL injection vulnerabilities.
-- [staticcheck](https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck) - Statically detect bugs, both obvious and subtle ones.
 
 Additional linters can be added through the command line with `--linter=NAME:COMMAND:PATTERN` (see [below](#details)).
 
