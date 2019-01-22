@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
-	"go/build"
 	"go/token"
 	"go/types"
 	"os"
@@ -17,8 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"go/parser"
-	"golang.org/x/tools/go/loader"
+	"golang.org/x/tools/go/packages"
 )
 
 var errorType *types.Interface
@@ -137,6 +135,15 @@ func (c *Checker) SetExclude(l map[string]bool) {
 		"fmt.Print",
 		"fmt.Printf",
 		"fmt.Println",
+		"fmt.Fprint(*bytes.Buffer)",
+		"fmt.Fprintf(*bytes.Buffer)",
+		"fmt.Fprintln(*bytes.Buffer)",
+		"fmt.Fprint(*strings.Builder)",
+		"fmt.Fprintf(*strings.Builder)",
+		"fmt.Fprintln(*strings.Builder)",
+		"fmt.Fprint(os.Stderr)",
+		"fmt.Fprintf(os.Stderr)",
+		"fmt.Fprintln(os.Stderr)",
 
 		// math/rand
 		"math/rand.Read",
@@ -165,28 +172,18 @@ func (c *Checker) logf(msg string, args ...interface{}) {
 	}
 }
 
-func (c *Checker) load(paths ...string) (*loader.Program, error) {
-	ctx := build.Default
-	for _, tag := range c.Tags {
-		ctx.BuildTags = append(ctx.BuildTags, tag)
-	}
-	loadcfg := loader.Config{
-		Build: &ctx,
-	}
+// loadPackages is used for testing.
+var loadPackages = func(cfg *packages.Config, paths ...string) ([]*packages.Package, error) {
+	return packages.Load(cfg, paths...)
+}
 
-	if c.WithoutGeneratedCode {
-		loadcfg.ParserMode = parser.ParseComments
+func (c *Checker) load(paths ...string) ([]*packages.Package, error) {
+	cfg := &packages.Config{
+		Mode:       packages.LoadAllSyntax,
+		Tests:      !c.WithoutTests,
+		BuildFlags: []string{fmt.Sprintf("-tags=%s", strings.Join(c.Tags, " "))},
 	}
-
-	rest, err := loadcfg.FromArgs(paths, !c.WithoutTests)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse arguments: %s", err)
-	}
-	if len(rest) > 0 {
-		return nil, fmt.Errorf("unhandled extra arguments: %v", rest)
-	}
-
-	return loadcfg.Load()
+	return loadPackages(cfg, paths...)
 }
 
 var generatedCodeRegexp = regexp.MustCompile("^// Code generated .* DO NOT EDIT\\.$")
@@ -209,27 +206,28 @@ func (c *Checker) shouldSkipFile(file *ast.File) bool {
 
 // CheckPackages checks packages for errors.
 func (c *Checker) CheckPackages(paths ...string) error {
-	program, err := c.load(paths...)
+	pkgs, err := c.load(paths...)
 	if err != nil {
-		return fmt.Errorf("could not type check: %s", err)
+		return err
+	}
+	// Check for errors in the initial packages.
+	for _, pkg := range pkgs {
+		if len(pkg.Errors) > 0 {
+			return fmt.Errorf("errors while loading package %s: %v", pkg.ID, pkg.Errors)
+		}
 	}
 
 	var wg sync.WaitGroup
 	u := &UncheckedErrors{}
-	for _, pkgInfo := range program.InitialPackages() {
-		if pkgInfo.Pkg.Path() == "unsafe" { // not a real package
-			continue
-		}
-
+	for _, pkg := range pkgs {
 		wg.Add(1)
 
-		go func(pkgInfo *loader.PackageInfo) {
+		go func(pkg *packages.Package) {
 			defer wg.Done()
-			c.logf("Checking %s", pkgInfo.Pkg.Path())
+			c.logf("Checking %s", pkg.Types.Path())
 
 			v := &visitor{
-				prog:    program,
-				pkg:     pkgInfo,
+				pkg:     pkg,
 				ignore:  c.Ignore,
 				blank:   c.Blank,
 				asserts: c.Asserts,
@@ -238,19 +236,28 @@ func (c *Checker) CheckPackages(paths ...string) error {
 				errors:  []UncheckedError{},
 			}
 
-			for _, astFile := range v.pkg.Files {
+			for _, astFile := range v.pkg.Syntax {
 				if c.shouldSkipFile(astFile) {
 					continue
 				}
 				ast.Walk(v, astFile)
 			}
 			u.Append(v.errors...)
-		}(pkgInfo)
+		}(pkg)
 	}
 
 	wg.Wait()
 	if u.Len() > 0 {
+		// Sort unchecked errors and remove duplicates. Duplicates may occur when a file
+		// containing an unchecked error belongs to > 1 package.
 		sort.Sort(byName{u})
+		uniq := u.Errors[:0] // compact in-place
+		for i, err := range u.Errors {
+			if i == 0 || err != u.Errors[i-1] {
+				uniq = append(uniq, err)
+			}
+		}
+		u.Errors = uniq
 		return u
 	}
 	return nil
@@ -258,8 +265,7 @@ func (c *Checker) CheckPackages(paths ...string) error {
 
 // visitor implements the errcheck algorithm
 type visitor struct {
-	prog    *loader.Program
-	pkg     *loader.PackageInfo
+	pkg     *packages.Package
 	ignore  map[string]*regexp.Regexp
 	blank   bool
 	asserts bool
@@ -284,7 +290,7 @@ func (v *visitor) selectorAndFunc(call *ast.CallExpr) (*ast.SelectorExpr, *types
 		return nil, nil, false
 	}
 
-	fn, ok := v.pkg.ObjectOf(sel.Sel).(*types.Func)
+	fn, ok := v.pkg.TypesInfo.ObjectOf(sel.Sel).(*types.Func)
 	if !ok {
 		// Shouldn't happen, but be paranoid
 		return nil, nil, false
@@ -340,7 +346,7 @@ func (v *visitor) namesForExcludeCheck(call *ast.CallExpr) []string {
 
 	// This will be missing for functions without a receiver (like fmt.Printf),
 	// so just fall back to the the function's fullName in that case.
-	selection, ok := v.pkg.Selections[sel]
+	selection, ok := v.pkg.TypesInfo.Selections[sel]
 	if !ok {
 		return []string{name}
 	}
@@ -363,13 +369,37 @@ func (v *visitor) namesForExcludeCheck(call *ast.CallExpr) []string {
 	return result
 }
 
+// isBufferType checks if the expression type is a known in-memory buffer type.
+func (v *visitor) argName(expr ast.Expr) string {
+	// Special-case literal "os.Stdout" and "os.Stderr"
+	if sel, ok := expr.(*ast.SelectorExpr); ok {
+		if obj := v.pkg.TypesInfo.ObjectOf(sel.Sel); obj != nil {
+			vr, ok := obj.(*types.Var)
+			if ok && vr.Pkg() != nil && vr.Pkg().Name() == "os" && (vr.Name() == "Stderr" || vr.Name() == "Stdout") {
+				return "os." + vr.Name()
+			}
+		}
+	}
+	t := v.pkg.TypesInfo.TypeOf(expr)
+	if t == nil {
+		return ""
+	}
+	return t.String()
+}
+
 func (v *visitor) excludeCall(call *ast.CallExpr) bool {
+	var arg0 string
+	if len(call.Args) > 0 {
+		arg0 = v.argName(call.Args[0])
+	}
 	for _, name := range v.namesForExcludeCheck(call) {
 		if v.exclude[name] {
 			return true
 		}
+		if arg0 != "" && v.exclude[name+"("+arg0+")"] {
+			return true
+		}
 	}
-
 	return false
 }
 
@@ -401,7 +431,7 @@ func (v *visitor) ignoreCall(call *ast.CallExpr) bool {
 		return true
 	}
 
-	if obj := v.pkg.Uses[id]; obj != nil {
+	if obj := v.pkg.TypesInfo.Uses[id]; obj != nil {
 		if pkg := obj.Pkg(); pkg != nil {
 			if re, ok := v.ignore[pkg.Path()]; ok {
 				return re.MatchString(id.Name)
@@ -435,7 +465,7 @@ func nonVendoredPkgPath(pkgPath string) (string, bool) {
 // len(s) == number of return types of call
 // s[i] == true iff return type at position i from left is an error type
 func (v *visitor) errorsByArg(call *ast.CallExpr) []bool {
-	switch t := v.pkg.Types[call].Type.(type) {
+	switch t := v.pkg.TypesInfo.Types[call].Type.(type) {
 	case *types.Named:
 		// Single return
 		return []bool{isErrorType(t)}
@@ -477,7 +507,7 @@ func (v *visitor) callReturnsError(call *ast.CallExpr) bool {
 // isRecover returns true if the given CallExpr is a call to the built-in recover() function.
 func (v *visitor) isRecover(call *ast.CallExpr) bool {
 	if fun, ok := call.Fun.(*ast.Ident); ok {
-		if _, ok := v.pkg.Uses[fun].(*types.Builtin); ok {
+		if _, ok := v.pkg.TypesInfo.Uses[fun].(*types.Builtin); ok {
 			return fun.Name == "recover"
 		}
 	}
@@ -485,7 +515,7 @@ func (v *visitor) isRecover(call *ast.CallExpr) bool {
 }
 
 func (v *visitor) addErrorAtPosition(position token.Pos, call *ast.CallExpr) {
-	pos := v.prog.Fset.Position(position)
+	pos := v.pkg.Fset.Position(position)
 	lines, ok := v.lines[pos.Filename]
 	if !ok {
 		lines = readfile(pos.Filename)
