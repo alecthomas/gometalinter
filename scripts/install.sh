@@ -9,7 +9,7 @@ usage() {
 $this: download go binaries for alecthomas/gometalinter
 
 Usage: $this [-b] bindir [-d] [tag]
-  -b sets bindir or installation directory, Defaults to ./bin
+  -b sets bindir or installation directory.  If not provided, checks for GOPATH bin. Otherwise defaults to ./bin
   -d turns on debug logging
    [tag] is a tag from
    https://github.com/alecthomas/gometalinter/releases
@@ -23,8 +23,10 @@ EOF
 }
 
 parse_args() {
-  #BINDIR is ./bin unless set be ENV
+  #BINDIR is ./bin unless set be ENV or GOPATH is not set
   # over-ridden by flag below
+
+  test -n "$GOPATH" && BINDIR="${GOPATH}/bin"
 
   BINDIR=${BINDIR:-./bin}
   while getopts "b:dh?" arg; do
@@ -97,8 +99,8 @@ tag_to_version() {
   VERSION=${TAG#v}
 }
 adjust_format() {
-  # change format (tar.gz or zip) based on ARCH
-  case ${ARCH} in
+  # change format (tar.gz or zip) based on OS
+  case ${OS} in
     windows) FORMAT=zip ;;
   esac
   true
@@ -172,7 +174,7 @@ log_crit() {
 uname_os() {
   os=$(uname -s | tr '[:upper:]' '[:lower:]')
   case "$os" in
-    msys_nt) os="windows" ;;
+    msys_nt*) os="windows" ;;
   esac
   echo "$os"
 }
@@ -356,7 +358,7 @@ PREFIX="$OWNER/$REPO"
 
 # use in logging routines
 log_prefix() {
-	echo "$PREFIX"
+  echo "$PREFIX"
 }
 PLATFORM="${OS}/${ARCH}"
 GITHUB_DOWNLOAD=https://github.com/${OWNER}/${REPO}/releases/download
