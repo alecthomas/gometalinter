@@ -149,18 +149,6 @@ builds:
     env: *env
     main: ./_linters/src/golang.org/x/tools/cmd/gotype
 
-  - binary: gosimple
-    goos: *goos
-    goarch: *goarch
-    env: *env
-    main: ./_linters/src/honnef.co/go/tools/cmd/gosimple
-
-  - binary: megacheck
-    goos: *goos
-    goarch: *goarch
-    env: *env
-    main: ./_linters/src/honnef.co/go/tools/cmd/megacheck
-
   - binary: staticcheck
     goos: *goos
     goarch: *goarch
