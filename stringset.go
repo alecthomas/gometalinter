@@ -17,7 +17,7 @@ func (s *stringSet) add(item string) {
 }
 
 func (s *stringSet) asSlice() []string {
-	items := []string{}
+	items := make([]string, 0, len(s.items))
 	for item := range s.items {
 		items = append(items, item)
 	}
