@@ -248,7 +248,7 @@ var defaultLinters = map[string]LinterConfig{
 		IsFast:            true,
 	},
 	"gochecknoglobals": {
-		Command:           `gochecknoglobals`,
+		Command:           `gochecknoglobals {tests=-t}`,
 		Pattern:           `^(?P<path>.*?\.go):(?P<line>\d+) (?P<message>.*)`,
 		InstallFrom:       "4d63.com/gochecknoglobals",
 		PartitionStrategy: partitionPathsAsDirectories,
