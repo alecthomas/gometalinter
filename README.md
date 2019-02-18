@@ -85,7 +85,7 @@ brew install gometalinter
 - [gocyclo](https://github.com/alecthomas/gocyclo) - Computes the cyclomatic complexity of functions.
 - [golint](https://github.com/golang/lint) - Google's (mostly stylistic) linter.
 - [varcheck](https://github.com/opennota/check) - Find unused global variables and constants.
-- [structcheck](https://github.com/opennota/check) - Find unused struct fields.
+- [structcheck](https://gitlab.com/opennota/check) - Find unused struct fields.
 - [maligned](https://github.com/mdempsky/maligned) -  Detect structs that would take less memory if their fields were sorted.
 - [errcheck](https://github.com/kisielk/errcheck) - Check that error return values are used.
 - [staticcheck](https://github.com/dominikh/go-tools/tree/master/cmd/staticcheck) - Statically detect bugs, both obvious and subtle ones.
