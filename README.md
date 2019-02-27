@@ -1,4 +1,12 @@
 # Go Meta Linter
+
+----
+
+gometalinter is **DEPRECATED** and the project will be archived on 2019-04-07. See [#590](https://github.com/alecthomas/gometalinter/issues/590) for discussion.
+
+----
+
+
 [![Build Status](https://travis-ci.org/alecthomas/gometalinter.svg)](https://travis-ci.org/alecthomas/gometalinter) [![Gitter chat](https://badges.gitter.im/alecthomas.svg)](https://gitter.im/alecthomas/Lobby)
 
 <!-- MarkdownTOC -->
